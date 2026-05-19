@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:5000/api'; // Change to production URL for prod
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api'; // Backend API URL
 
 async function apiCall(endpoint, method = 'GET', body = null) {
     const headers = {

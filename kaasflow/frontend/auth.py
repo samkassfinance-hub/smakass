@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
-from utils.supabase_client import supabase
-from utils.pin_utils import hash_pin, verify_pin
+from supabase_client import supabase
+from pin_utils import hash_pin, verify_pin
 from datetime import datetime, timedelta
 import traceback
 
