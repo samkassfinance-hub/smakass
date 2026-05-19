@@ -677,6 +677,82 @@
       font-family: "Font Awesome 6 Brands" !important;
       font-weight: 400 !important;
     }
+
+    /* ── Google Sign-In Button ── */
+    .btn-google-signin {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 13px 20px;
+      background: #ffffff;
+      color: #3c4043;
+      font-family: 'Plus Jakarta Sans', 'Inter', 'Roboto', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      border: 1.5px solid #dadce0;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-google-signin::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(66,133,244,0.04), rgba(234,67,53,0.04), rgba(251,188,5,0.04), rgba(52,168,83,0.04));
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .btn-google-signin:hover {
+      border-color: #4285F4;
+      box-shadow: 0 4px 16px rgba(66, 133, 244, 0.15), 0 2px 6px rgba(0,0,0,0.06);
+      transform: translateY(-1px);
+    }
+    .btn-google-signin:hover::before {
+      opacity: 1;
+    }
+    .btn-google-signin:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px rgba(66, 133, 244, 0.1);
+    }
+    .btn-google-signin svg {
+      position: relative;
+      z-index: 1;
+    }
+    .btn-google-signin span {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Dark theme overrides for Google button */
+    [data-theme="dark"] .btn-google-signin {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.12);
+      color: #e8eaed;
+    }
+    [data-theme="dark"] .btn-google-signin:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(66, 133, 244, 0.5);
+      box-shadow: 0 4px 16px rgba(66, 133, 244, 0.15), 0 0 0 1px rgba(66, 133, 244, 0.2);
+    }
+
+    /* Google button loading state */
+    .btn-google-signin.loading {
+      pointer-events: none;
+      opacity: 0.75;
+    }
+    .btn-google-signin.loading span::after {
+      content: '...';
+      animation: googleBtnDots 1.2s infinite;
+    }
+    @keyframes googleBtnDots {
+      0%, 20% { content: '.'; }
+      40% { content: '..'; }
+      60%, 100% { content: '...'; }
+    }
   </style>
 
   <!-- Bootstrap 5.3 -->
@@ -710,7 +786,9 @@
   <div id="loading-screen">
     <div class="loading-content">
       <div class="loading-logo" style="margin-bottom: 1.5rem; text-align: center; display: flex; flex-direction: column; align-items: center;">
-        <img src="../../../samkaslogo.jpeg" alt="SamKass Logo" style="width: 120px; height: 120px; border-radius: 50%; box-shadow: 0 0 25px var(--green-glow); margin-bottom: 16px; object-fit: contain; background: #000000; border: 2px solid var(--border-default); padding: 4px;">
+        <div style="width: 120px; height: 120px; border-radius: 50%; box-shadow: 0 0 25px var(--green-glow); margin-bottom: 16px; background: linear-gradient(135deg, #10b981, #059669); border: 2px solid var(--border-default); display: flex; align-items: center; justify-content: center; color: white; font-size: 3.5rem;">
+          <i class="fa-solid fa-chart-line"></i>
+        </div>
         <h1 class="auth-logo-title" style="margin-bottom: 0;">SamKass</h1>
       </div>
       <div class="loading-spinner"></div>
@@ -723,7 +801,9 @@
     <div class="auth-container">
       <!-- Logo -->
       <div class="auth-logo" style="text-align: center; display: flex; flex-direction: column; align-items: center; margin-bottom: 1rem;">
-        <img src="../../../samkaslogo.jpeg" alt="SamKass Logo" style="width: 110px; height: 110px; border-radius: 50%; box-shadow: 0 0 25px var(--green-glow); margin-bottom: 16px; object-fit: contain; background: #000000; border: 2px solid var(--border-default); padding: 4px;">
+        <div style="width: 110px; height: 110px; border-radius: 50%; box-shadow: 0 0 25px var(--green-glow); margin-bottom: 16px; background: linear-gradient(135deg, #10b981, #059669); border: 2px solid var(--border-default); display: flex; align-items: center; justify-content: center; color: white; font-size: 3rem;">
+          <i class="fa-solid fa-chart-line"></i>
+        </div>
         <h1 class="auth-logo-title" style="margin-bottom: 4px;">SamKass</h1>
         <p class="auth-logo-sub">Finance Manager</p>
       </div>
@@ -733,12 +813,20 @@
         <h2 class="auth-card-title" data-i18n="welcomeBack">Welcome Back</h2>
         <p class="auth-card-sub" data-i18n="signInToAccount">Sign in to your account</p>
 
-        <!-- Google Login Button -->
-        <div class="mb-3 d-flex justify-content-center">
-          <div id="g_id_onload" data-client_id="ta-auto_prompt="false">
+        <!-- Google Sign-In Button (Login) -->
+        <div class="mb-3 d-flex flex-column align-items-center w-100">
+          <div id="g_id_onload" 
+               data-client_id="131285004489-qn7lmad609k2kh7k8jt8380uhneg0nr8.apps.googleusercontent.com"
+               data-callback="handleGoogleLogin"
+               data-auto_prompt="false">
           </div>
-          <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline"
-            data-text="continue_with" data-size="large" data-logo_alignment="left" data-width="100%">
+          <div class="g_id_signin w-100" 
+               data-type="standard" 
+               data-shape="rectangular" 
+               data-theme="outline"
+               data-text="continue_with" 
+               data-size="large" 
+               data-logo_alignment="left">
           </div>
         </div>
 
@@ -782,6 +870,21 @@
       <div id="register-form-wrapper" class="kf-card auth-card" style="display:none;">
         <h2 class="auth-card-title" data-i18n="createAccount">Create Account</h2>
         <p class="auth-card-sub" data-i18n="startManagingLoans">Start managing your loans</p>
+
+        <!-- Google Sign-In Button (Register) -->
+        <div class="mb-3 d-flex flex-column align-items-center w-100">
+          <div class="g_id_signin w-100" 
+               data-type="standard" 
+               data-shape="rectangular" 
+               data-theme="outline"
+               data-text="continue_with" 
+               data-size="large" 
+               data-logo_alignment="left">
+          </div>
+        </div>
+
+        <div class="divider-text mb-3"><span data-i18n="orUseEmail">or use email</span></div>
+
         <form id="register-form" novalidate>
           <div class="mb-3">
             <label class="form-label" for="reg-name" data-i18n="fullName">Full Name</label>
@@ -892,7 +995,9 @@
   <div id="pin-lock-screen" style="display:none;">
     <div class="auth-container" style="align-items:center">
       <div class="auth-logo" style="text-align: center; display: flex; flex-direction: column; align-items: center; margin-bottom: 1.5rem;">
-        <img src="../../../samkaslogo.jpeg" alt="SamKass Logo" style="width: 110px; height: 110px; border-radius: 50%; box-shadow: 0 0 25px var(--green-glow); margin-bottom: 16px; object-fit: contain; background: #000000; border: 2px solid var(--border-default); padding: 4px;">
+        <div style="width: 110px; height: 110px; border-radius: 50%; box-shadow: 0 0 25px var(--green-glow); margin-bottom: 16px; background: linear-gradient(135deg, #10b981, #059669); border: 2px solid var(--border-default); display: flex; align-items: center; justify-content: center; color: white; font-size: 3rem;">
+          <i class="fa-solid fa-chart-line"></i>
+        </div>
         <h1 class="auth-logo-title">SamKass</h1>
       </div>
 
@@ -944,7 +1049,9 @@
     <!-- Top Header -->
     <header id="top-header">
       <div class="header-left" style="display: flex; align-items: center; gap: 10px;">
-        <img src="../../../samkaslogo.jpeg" alt="Logo" style="width: 42px; height: 42px; border-radius: 50%; box-shadow: 0 0 10px var(--green-glow); object-fit: contain; background: #000000; border: 1px solid var(--border-default); padding: 2px;">
+        <div style="width: 42px; height: 42px; border-radius: 50%; box-shadow: 0 0 10px var(--green-glow); background: linear-gradient(135deg, #10b981, #059669); border: 1px solid var(--border-default); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem;">
+          <i class="fa-solid fa-chart-line"></i>
+        </div>
         <span class="header-title" style="font-size: 1.25rem;">SamKass</span>
       </div>
       <div class="header-right">

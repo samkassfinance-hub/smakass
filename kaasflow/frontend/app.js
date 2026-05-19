@@ -300,39 +300,188 @@ function translateDOM() {
 }
 
 // ── AUTH ──────────────────────────────────────────────────────
+
+// ── LOCAL AUTH HELPERS (offline fallback) ─────────────────────
+const LOCAL_USERS_KEY = 'kf_local_users';
+
+function getLocalUsers() {
+  try { return JSON.parse(localStorage.getItem(LOCAL_USERS_KEY)) || []; } catch { return []; }
+}
+
+function saveLocalUsers(users) {
+  localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(users));
+}
+
+// Simple hash for local-only password storage (not meant for production security,
+// but sufficient for an offline-first localStorage app)
+async function simpleHash(str) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(str);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function localRegister(payload) {
+  const { email, password, financier_name, business_name } = payload;
+  if (!email || !password) return { success: false, error: 'Email and password required' };
+
+  const users = getLocalUsers();
+  if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
+    return { success: false, error: 'Email already registered' };
+  }
+
+  const pwHash = await simpleHash(password);
+  const newUser = {
+    id: Date.now(),
+    email,
+    passwordHash: pwHash,
+    financierName: financier_name || '',
+    businessName: business_name || '',
+    createdAt: new Date().toISOString()
+  };
+  users.push(newUser);
+  saveLocalUsers(users);
+
+  return {
+    success: true,
+    token: 'local-session-' + Date.now(),
+    user: {
+      email: newUser.email,
+      name: newUser.financierName,
+      financierName: newUser.financierName,
+      businessName: newUser.businessName
+    }
+  };
+}
+
+async function localLogin(payload) {
+  const { email, password } = payload;
+  if (!email || !password) return { success: false, error: 'Email and password required' };
+
+  const users = getLocalUsers();
+  const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+  if (!user) return { success: false, error: 'No account found with this email. Please register first.' };
+
+  const pwHash = await simpleHash(password);
+  if (pwHash !== user.passwordHash) return { success: false, error: 'Invalid password' };
+
+  return {
+    success: true,
+    token: 'local-session-' + Date.now(),
+    user: {
+      email: user.email,
+      name: user.financierName,
+      financierName: user.financierName,
+      businessName: user.businessName
+    }
+  };
+}
+
 async function apiAuth(endpoint, payload) {
   try {
-    const API_BASE = 'http://localhost:5000';
-    const url = endpoint === 'google' ? `${API_BASE}/auth/google` : `${API_BASE}/auth/${endpoint}`;
+    const url = `${API_BASE}/${endpoint}`;
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    return await res.json();
+    const data = await res.json();
+    // If backend registration/login succeeds, also save locally for future offline use
+    if (data.success && (endpoint === 'register' || endpoint === 'login')) {
+      const users = getLocalUsers();
+      const exists = users.find(u => u.email.toLowerCase() === payload.email.toLowerCase());
+      if (!exists) {
+        const pwHash = await simpleHash(payload.password);
+        users.push({
+          id: Date.now(),
+          email: payload.email,
+          passwordHash: pwHash,
+          financierName: payload.financier_name || data.user?.name || '',
+          businessName: payload.business_name || '',
+          createdAt: new Date().toISOString()
+        });
+        saveLocalUsers(users);
+      }
+    }
+    return data;
   } catch (e) {
-    // Backend offline — allow offline mode
+    // Backend offline — use local authentication fallback
+    if (endpoint === 'register') {
+      return await localRegister(payload);
+    } else if (endpoint === 'login') {
+      return await localLogin(payload);
+    }
     return { success: false, offline: true, message: 'Backend offline. Using offline mode.' };
   }
 }
 
+// Google Sign-In is initialized via HTML (g_id_onload) and handled by handleGoogleLogin below
+
 // Google Login Callback
 window.handleGoogleLogin = async function(response) {
+  // Remove loading state from buttons
+  const btns = document.querySelectorAll('.btn-google-signin');
+  btns.forEach(b => b.classList.remove('loading'));
+
+  // Decode the JWT credential to extract user info
+  let googleUser = {};
+  try {
+    const payload = JSON.parse(atob(response.credential.split('.')[1]));
+    googleUser = {
+      email: payload.email,
+      name: payload.name || payload.email.split('@')[0],
+      picture: payload.picture || '',
+      sub: payload.sub
+    };
+  } catch (e) {
+    googleUser = { email: 'google-user@gmail.com', name: 'Google User' };
+  }
+
+  // Try backend first
   const res = await apiAuth('google', { token: response.credential });
+
   if (res.success) {
-    Store.saveSession({ token: 'google-session', user: res.user });
+    Store.saveSession({ token: res.token || 'google-session', user: res.user });
+    const s = Store.settings();
+    if (res.user?.name && !s.financierName) { s.financierName = res.user.name; Store.saveSettings(s); }
     state.session = getSession();
     generateSampleData();
-    // Check if PIN already set
-    if (hasPin()) {
-      showPinLock();
-    } else {
-      showPinSetup();
+    if (hasPin()) { showPinLock(); } else { showPinSetup(); }
+  } else if (res.offline) {
+    // Backend offline — create local session from Google credential
+    const user = {
+      email: googleUser.email,
+      name: googleUser.name,
+      financierName: googleUser.name,
+      picture: googleUser.picture
+    };
+    Store.saveSession({ token: 'google-session-' + Date.now(), user });
+    // Save to local users list for consistency
+    const users = getLocalUsers();
+    if (!users.find(u => u.email.toLowerCase() === googleUser.email.toLowerCase())) {
+      users.push({
+        id: Date.now(),
+        email: googleUser.email,
+        passwordHash: '', // Google users don't have passwords
+        financierName: googleUser.name,
+        businessName: '',
+        googleAuth: true,
+        createdAt: new Date().toISOString()
+      });
+      saveLocalUsers(users);
     }
+    const s = Store.settings();
+    if (!s.financierName) { s.financierName = googleUser.name; Store.saveSettings(s); }
+    state.session = getSession();
+    generateSampleData();
+    if (hasPin()) { showPinLock(); } else { showPinSetup(); }
   } else {
     const errEl = $('#login-error');
-    errEl.textContent = res.error || 'Google login failed';
-    errEl.classList.remove('d-none');
+    if (errEl) {
+      errEl.textContent = res.error || 'Google login failed';
+      errEl.classList.remove('d-none');
+    }
   }
 };
 
@@ -1614,11 +1763,15 @@ function renderSettings(container) {
       </div>
 
     <div class="kf-card pro-card" data-ocid="settings.recycle_bin_card">
-      <div class="section-title d-flex justify-content-between align-items-center" id="toggle-recycle-bin" style="cursor:pointer">
-        <span><i class="fa-solid fa-trash-can-arrow-up me-2"></i>Recycle Bin</span>
-        <i class="fa-solid fa-chevron-down" id="recycle-bin-chevron"></i>
+      <div class="section-title"><i class="fa-solid fa-trash-can-arrow-up"></i> Recycle Bin</div>
+      <div class="settings-row pro-row">
+        <div>
+          <div class="settings-row-label">Deleted Data Management</div>
+          <div class="settings-row-sub text-muted-kf">${Store.recycleBin().length} items available to restore</div>
+        </div>
+        <button class="btn-kf-outline pro-btn-outline" style="min-height:36px;font-size:.875rem; min-width:100px;" id="btn-open-recycle-bin">Open Bin</button>
       </div>
-      <div id="settings-recycle-bin-list" class="d-none mt-3"></div>
+      <div id="settings-recycle-bin-list" class="d-none mt-3" style="border-top:1px dashed var(--color-border-muted); padding-top:15px"></div>
     </div>
 
       <div class="kf-card pro-card" data-ocid="settings.data_card">
@@ -1664,11 +1817,10 @@ function renderSettings(container) {
   translateDOM();
 
   // Toggle Recycle Bin visibility
-  $('#toggle-recycle-bin').addEventListener('click', () => {
+  $('#btn-open-recycle-bin').addEventListener('click', (e) => {
     const list = $('#settings-recycle-bin-list');
-    const chevron = $('#recycle-bin-chevron');
     const isHidden = list.classList.toggle('d-none');
-    chevron.className = isHidden ? 'fa-solid fa-chevron-down' : 'fa-solid fa-chevron-up';
+    e.target.textContent = isHidden ? 'Open Bin' : 'Close Bin';
     if (!isHidden) renderRecycleBin();
   });
 
@@ -2637,6 +2789,12 @@ function bindGlobal() {
     const res = await apiAuth('login', { email, password });
     if (res.success) {
       Store.saveSession({ token: res.token || ('session-' + Date.now()), user: res.user });
+      // Also save financierName into settings if available
+      if (res.user) {
+        const s = Store.settings();
+        if (res.user.financierName && !s.financierName) { s.financierName = res.user.financierName; Store.saveSettings(s); }
+        if (res.user.businessName && !s.businessName) { s.businessName = res.user.businessName; Store.saveSettings(s); }
+      }
       state.session = getSession();
       if (window.KFSync) await KFSync.restore();
       if (hasPin()) { showPinLock(); } else { showPinSetup(); }
@@ -2658,7 +2816,12 @@ function bindGlobal() {
     if (!password || password.length < 6) { errEl.textContent = 'Password must be at least 6 characters'; errEl.classList.remove('d-none'); return; }
     const res = await apiAuth('register', { email, password, financier_name: name, business_name: business });
     if (res.success) {
-      Store.saveSession({ token: 'session-' + Date.now(), user: res.user });
+      Store.saveSession({ token: res.token || ('session-' + Date.now()), user: res.user });
+      // Save user info into settings
+      const s = Store.settings();
+      if (name) s.financierName = name;
+      if (business) s.businessName = business;
+      Store.saveSettings(s);
       state.session = getSession();
       generateSampleData();
       showPinSetup(); // New users always set PIN
