@@ -41,6 +41,35 @@ def init_pro_auth_db():
 init_pro_auth_db()
 
 def send_email(to_email, subject, body):
+    resend_api_key = os.environ.get('RESEND_API_KEY')
+    
+    # Try sending with Resend first if API key is present
+    if resend_api_key:
+        url = "https://api.resend.com/emails"
+        headers = {
+            "Authorization": f"Bearer {resend_api_key}",
+            "Content-Type": "application/json"
+        }
+        # Use verified from email if defined, otherwise fall back to Resend's default sandbox domain
+        from_email = os.environ.get('RESEND_FROM_EMAIL', 'KaasFlow <onboarding@resend.dev>')
+        payload = {
+            "from": from_email,
+            "to": [to_email],
+            "subject": subject,
+            "html": body
+        }
+        try:
+            import requests
+            r = requests.post(url, json=payload, headers=headers, timeout=10)
+            if r.status_code in [200, 201]:
+                print(f"Email sent successfully via Resend to {to_email}")
+                return True
+            else:
+                print(f"Resend API error ({r.status_code}): {r.text}")
+        except Exception as e:
+            print(f"Failed to send email via Resend: {e}")
+
+    # Fallback to SMTP
     smtp_host = os.environ.get('SMTP_HOST')
     smtp_port = int(os.environ.get('SMTP_PORT', 587))
     smtp_user = os.environ.get('SMTP_USER')
@@ -66,6 +95,35 @@ def send_email(to_email, subject, body):
         print(f"Email error: {e}")
         return False
 
+def send_welcome_email(email, name):
+    name_str = name if name else "Valued Member"
+    subject = "Welcome to KaasFlow! 🎉"
+    body = f"""
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff; color: #1e293b;">
+        <div style="text-align: center; margin-bottom: 24px;">
+            <h1 style="color: #10b981; margin: 0; font-size: 28px;">Welcome to KaasFlow! 🚀</h1>
+            <p style="color: #64748b; font-size: 16px; margin-top: 8px;">Your Finance & Loan Management Workspace is Ready</p>
+        </div>
+        <p>Hello <strong>{name_str}</strong>,</p>
+        <p>Thank you for registering at KaasFlow! We're excited to help you manage your ledgers, client profiles, interest tracking, and payments seamlessly.</p>
+        <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981;">
+            <h3 style="margin-top: 0; color: #0f172a;">Getting Started Tips:</h3>
+            <ul style="padding-left: 20px; margin-bottom: 0;">
+                <li>Add your first client under the <strong>Clients</strong> tab.</li>
+                <li>Create a loan ledger to track payments and interest automatically.</li>
+                <li>Go to <strong>Settings</strong> to customize your app preferences.</li>
+            </ul>
+        </div>
+        <p>If you ever need help or have any suggestions, feel free to reach out to us!</p>
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
+        <p style="font-size: 14px; color: #64748b; text-align: center; margin-bottom: 0;">
+            This is an automated welcome email. Welcome aboard!<br>
+            <strong>— The KaasFlow Team</strong>
+        </p>
+    </div>
+    """
+    return send_email(email, subject, body)
+
 @auth_bp.route('/google', methods=['POST'])
 def google_auth():
     token = request.json.get('token')
@@ -89,6 +147,10 @@ def google_auth():
                      (email, google_id, name, picture))
         conn.commit()
         user = conn.execute('SELECT * FROM pro_users WHERE email = ?', (email,)).fetchone()
+        try:
+            send_welcome_email(email, name)
+        except Exception as e:
+            print(f"Error sending welcome email to new Google user: {e}")
     elif not user['google_id']:
         conn.execute('UPDATE pro_users SET google_id = ?, full_name = ?, profile_pic = ? WHERE email = ?',
                      (google_id, name, picture, email))
@@ -123,6 +185,11 @@ def register():
     user = conn.execute('SELECT * FROM pro_users WHERE email = ?', (email,)).fetchone()
     conn.close()
     
+    try:
+        send_welcome_email(email, name)
+    except Exception as e:
+        print(f"Error sending welcome email to newly registered email user: {e}")
+        
     return create_auth_response(user)
 
 @auth_bp.route('/login', methods=['POST'])
@@ -161,9 +228,27 @@ def magic_link_request():
     base_url = request.host_url.rstrip('/')
     magic_link = f"{base_url}/auth/magic-link/verify?token={token}"
     
-    body = f"<h2>Login to KaasFlow</h2><p>Click the link below to sign in:</p><a href='{magic_link}'>Continue to App</a>"
-    if send_email(email, "Your KaasFlow Magic Link", body):
-        return jsonify({'message': 'Magic link sent to your email'})
+    subject = "Reset your KaasFlow Password 🔒"
+    body = f"""
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff; color: #1e293b;">
+        <div style="text-align: center; margin-bottom: 24px;">
+            <h1 style="color: #10b981; margin: 0; font-size: 28px;">Password Reset Request</h1>
+            <p style="color: #64748b; font-size: 16px; margin-top: 8px;">Retrieve access to your KaasFlow Account</p>
+        </div>
+        <p>Hello,</p>
+        <p>We received a request to log in and reset the password for your KaasFlow account. Click the button below to sign in automatically and secure your account:</p>
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{magic_link}" style="background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 8px; display: inline-block; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);">Reset Password & Sign In</a>
+        </div>
+        <p style="font-size: 14px; color: #64748b;">This link will expire in 15 minutes. If you did not request this, you can safely ignore this email.</p>
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
+        <p style="font-size: 14px; color: #64748b; text-align: center; margin-bottom: 0;">
+            <strong>— The KaasFlow Team</strong>
+        </p>
+    </div>
+    """
+    if send_email(email, subject, body):
+        return jsonify({'message': 'Password reset link sent to your email'})
     else:
         # For development, return the link in the response if email fails
         return jsonify({
