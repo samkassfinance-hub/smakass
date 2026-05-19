@@ -96,6 +96,18 @@
         const { error } = await db.from('kf_settings').upsert({ user_id: userId, data: payload.settings });
         if (error) errors.push('Settings Table Error: ' + error.message);
       }
+      
+      // Also upsert user profile to kf_users so Google sign-ins appear in the database
+      const session = JSON.parse(localStorage.getItem('kf_session') || '{}');
+      if (session.user) {
+        const { error } = await db.from('kf_users').upsert({
+          id: userId,
+          email: session.user.email,
+          financier_name: payload.settings.financierName || session.user.name || '',
+          business_name: payload.settings.businessName || ''
+        });
+        if (error) errors.push('Users Table Error: ' + error.message);
+      }
 
       if (errors.length === 0) {
         localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
