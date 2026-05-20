@@ -53,6 +53,27 @@ app.register_blueprint(auth_bp, url_prefix='/auth', name='auth_prefix')
 def health_check():
     return {'status': 'ok'}, 200
 
+@app.route('/api/debug-env', methods=['GET'])
+def debug_env():
+    import os
+    resend_key = os.environ.get("RESEND_API_KEY")
+    resend_key_masked = f"{resend_key[:6]}...{resend_key[-4:]}" if resend_key and len(resend_key) > 10 else ("Set" if resend_key else "Not Set")
+    
+    supabase_key = os.environ.get("SUPABASE_SERVICE_KEY") or os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+    supabase_key_masked = f"{supabase_key[:6]}...{supabase_key[-4:]}" if supabase_key and len(supabase_key) > 10 else ("Set" if supabase_key else "Not Set")
+
+    return jsonify({
+        "VERCEL": os.environ.get("VERCEL"),
+        "FRONTEND_URL": os.environ.get("FRONTEND_URL"),
+        "RESEND_API_KEY": resend_key_masked,
+        "RESEND_FROM_EMAIL": os.environ.get("RESEND_FROM_EMAIL"),
+        "SUPABASE_URL": os.environ.get("SUPABASE_URL"),
+        "SUPABASE_SERVICE_ROLE_KEY": supabase_key_masked,
+        "GOOGLE_CLIENT_ID": os.environ.get("GOOGLE_CLIENT_ID"),
+        "supabase_client_initialized": supabase is not None
+    })
+
+
 
 # ── Cloud Sync Routes ────────────────────────────────────────
 
