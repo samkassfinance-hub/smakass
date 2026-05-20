@@ -260,10 +260,11 @@ def magic_link_request():
     </div>
     """
     if send_email(email, subject, body):
-        return jsonify({'message': 'Password reset link sent to your email'})
+        return jsonify({'success': True, 'message': 'Password reset link sent to your email'})
     else:
         # For development, return the link in the response if email fails
         return jsonify({
+            'success': False,
             'message': 'Email service not configured. For development, here is your link:',
             'link': magic_link
         })

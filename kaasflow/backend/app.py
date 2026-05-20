@@ -33,7 +33,12 @@ SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY") or os.environ.get("SUPABAS
 
 supabase: Client = None
 if SUPABASE_URL and SUPABASE_KEY:
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        print("Supabase client initialized successfully.")
+    except Exception as e:
+        print(f"Warning: Failed to initialize Supabase client: {e}")
+        supabase = None
 app.register_blueprint(auth_bp, url_prefix='/api')
 
 @app.route('/health', methods=['GET'])
