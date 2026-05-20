@@ -1,5 +1,9 @@
 // KaasFlow Auth Logic
 
+const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? 'http://127.0.0.1:5000/api'
+    : '/api';
+
 document.addEventListener('DOMContentLoaded', () => {
     const tabPassword = document.getElementById('tab-password');
     const tabMagic = document.getElementById('tab-magic');
@@ -52,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const rememberMe = document.getElementById('remember-me').checked;
 
         try {
-            const response = await fetch('/auth/login', {
+            const response = await fetch(`${API_BASE}/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password, remember_me: rememberMe })
@@ -62,6 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (response.ok) {
                 showSuccess('Login successful! Redirecting...');
+                localStorage.setItem('kf_session', JSON.stringify({ token: data.token, user: data.user }));
                 setTimeout(() => {
                     window.location.href = '/'; // Redirect to main app
                 }, 1000);
@@ -81,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const email = document.getElementById('magic-email').value;
 
         try {
-            const response = await fetch('/auth/magic-link/request', {
+            const response = await fetch(`${API_BASE}/magic-link/request`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email })
@@ -110,7 +115,7 @@ async function handleCredentialResponse(response) {
     const successBox = document.getElementById('success-box');
 
     try {
-        const res = await fetch('/auth/google', {
+        const res = await fetch(`${API_BASE}/google`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token: response.credential })
@@ -121,6 +126,7 @@ async function handleCredentialResponse(response) {
         if (res.ok) {
             successBox.textContent = 'Google login successful! Redirecting...';
             successBox.style.display = 'block';
+            localStorage.setItem('kf_session', JSON.stringify({ token: data.token, user: data.user }));
             setTimeout(() => {
                 window.location.href = '/'; // Redirect to main app
             }, 1000);

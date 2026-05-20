@@ -1,4 +1,6 @@
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api'; // Backend API URL
+const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? 'http://127.0.0.1:5000/api'
+    : '/api'; // Backend API URL
 
 async function apiCall(endpoint, method = 'GET', body = null) {
     const headers = {

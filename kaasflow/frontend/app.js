@@ -7,7 +7,9 @@
 'use strict';
 
 // ── CONFIG ──────────────────────────────────────────────────
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? 'http://127.0.0.1:5000/api'
+  : '/api';
 const LS = {
   session:  'kf_session',
   settings: 'kf_settings',
@@ -512,6 +514,16 @@ function logout() {
 
 // ── INIT ──────────────────────────────────────────────────────
 function init() {
+  // Check if token and email are in query parameters (from magic link redirect)
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has('token')) {
+    const token = urlParams.get('token');
+    const email = urlParams.get('email') || '';
+    Store.saveSession({ token: token, user: { email: email, name: email.split('@')[0] } });
+    // Clean query parameters from URL
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+
   const settings = Store.settings();
   applyTheme(settings.theme || 'light');
   applyLang(settings.lang || 'en');

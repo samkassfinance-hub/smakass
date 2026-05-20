@@ -14,7 +14,19 @@ from .rate_limiter import check_rate_limit, record_failed_attempt, clear_attempt
 
 auth_bp = Blueprint('pro_auth', __name__)
 
-DATABASE_PATH = os.path.join(os.path.dirname(__file__), '..', 'users.db')
+is_vercel = os.environ.get("VERCEL") == "1"
+if is_vercel:
+    DATABASE_PATH = "/tmp/users.db"
+    # Copy starting users.db to /tmp if it doesn't exist
+    original_db = os.path.join(os.path.dirname(__file__), '..', 'users.db')
+    if not os.path.exists(DATABASE_PATH) and os.path.exists(original_db):
+        import shutil
+        try:
+            shutil.copy2(original_db, DATABASE_PATH)
+        except Exception as e:
+            print(f"Failed to copy users.db to /tmp: {e}")
+else:
+    DATABASE_PATH = os.path.join(os.path.dirname(__file__), '..', 'users.db')
 
 def get_db_connection():
     conn = sqlite3.connect(DATABASE_PATH)
@@ -274,12 +286,15 @@ def magic_link_verify():
         user = conn.execute('SELECT * FROM pro_users WHERE email = ?', (email,)).fetchone()
     conn.close()
     
-    # For magic link, we redirect to the dashboard after setting cookies
-    response = make_response("Redirecting...", 302)
-    response.headers['Location'] = '/dashboard' # Or wherever the main app is
-    
     access_token = create_access_token({"sub": user['email'], "id": user['id']})
     refresh_token = create_refresh_token({"sub": user['email'], "id": user['id']})
+    
+    import urllib.parse
+    redirect_url = f"/?token={access_token}&email={urllib.parse.quote(user['email'])}"
+    
+    # For magic link, we redirect to the frontend root with cookies and token params
+    response = make_response("Redirecting...", 302)
+    response.headers['Location'] = redirect_url
     
     response.set_cookie('access_token', access_token, httponly=True, secure=True, samesite='Strict')
     response.set_cookie('refresh_token', refresh_token, httponly=True, secure=True, samesite='Strict')

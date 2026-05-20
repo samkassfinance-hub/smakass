@@ -1,7 +1,19 @@
 import sqlite3
 import os
 
-DATABASE_PATH = os.path.join(os.path.dirname(__file__), '..', 'users.db')
+is_vercel = os.environ.get("VERCEL") == "1"
+if is_vercel:
+    DATABASE_PATH = "/tmp/users.db"
+    # Copy starting users.db to /tmp if it doesn't exist
+    original_db = os.path.join(os.path.dirname(__file__), '..', 'users.db')
+    if not os.path.exists(DATABASE_PATH) and os.path.exists(original_db):
+        import shutil
+        try:
+            shutil.copy2(original_db, DATABASE_PATH)
+        except Exception as e:
+            print(f"Failed to copy users.db to /tmp: {e}")
+else:
+    DATABASE_PATH = os.path.join(os.path.dirname(__file__), '..', 'users.db')
 
 
 def get_db_connection():
