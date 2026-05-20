@@ -47,6 +47,7 @@ if SUPABASE_URL and SUPABASE_KEY:
         print(f"Warning: Failed to initialize Supabase client: {e}")
         supabase = None
 app.register_blueprint(auth_bp, url_prefix='/api')
+app.register_blueprint(auth_bp, url_prefix='/auth', name='auth_prefix')
 
 @app.route('/health', methods=['GET'])
 def health_check():
