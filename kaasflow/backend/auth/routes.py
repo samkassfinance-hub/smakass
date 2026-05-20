@@ -23,31 +23,42 @@ if is_vercel:
         import shutil
         try:
             shutil.copy2(original_db, DATABASE_PATH)
+            print("Successfully copied users.db to /tmp")
         except Exception as e:
             print(f"Failed to copy users.db to /tmp: {e}")
 else:
     DATABASE_PATH = os.path.join(os.path.dirname(__file__), '..', 'users.db')
 
 def get_db_connection():
+    db_dir = os.path.dirname(DATABASE_PATH)
+    if db_dir and not os.path.exists(db_dir):
+        try:
+            os.makedirs(db_dir, exist_ok=True)
+        except Exception as e:
+            print(f"Failed to create database directory {db_dir}: {e}")
     conn = sqlite3.connect(DATABASE_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
 def init_pro_auth_db():
-    conn = get_db_connection()
-    conn.execute('''
-        CREATE TABLE IF NOT EXISTS pro_users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email TEXT UNIQUE NOT NULL,
-            password_hash TEXT,
-            google_id TEXT UNIQUE,
-            full_name TEXT,
-            profile_pic TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    conn.commit()
-    conn.close()
+    try:
+        conn = get_db_connection()
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS pro_users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT UNIQUE NOT NULL,
+                password_hash TEXT,
+                google_id TEXT UNIQUE,
+                full_name TEXT,
+                profile_pic TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        conn.commit()
+        conn.close()
+        print("Database initialized successfully.")
+    except Exception as e:
+        print(f"Error initializing auth database: {e}")
 
 # Initialize the new table
 init_pro_auth_db()
