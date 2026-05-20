@@ -6,7 +6,7 @@ def verify_google_token(token: str):
     Verify the Google ID token using Google's tokeninfo endpoint.
     Returns the user information if the token is valid, else None.
     """
-    client_id = os.environ.get('GOOGLE_CLIENT_ID') or '131285004489-qn7lmad609k2kh7k8jt8380uhneg0nr8.apps.googleusercontent.com'
+    client_id = os.environ.get('GOOGLE_CLIENT_ID') or '1008709235007-vh9u2526ol0haffogibri3kno6rtjejl.apps.googleusercontent.com'
     try:
         # Verify the ID token via Google's API
         response = requests.get(
