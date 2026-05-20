@@ -10,7 +10,7 @@ import requests
 from functools import lru_cache
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")          # e.g. https://xxxx.supabase.co
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")  # Service Role Key (NOT anon key)
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")  # Service Role Key
 
 
 def _headers():

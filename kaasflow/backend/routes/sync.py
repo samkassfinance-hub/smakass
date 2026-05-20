@@ -74,7 +74,7 @@ def status():
     """Quick health-check: confirms Supabase is reachable."""
     import os
     url   = os.getenv("SUPABASE_URL", "")
-    ready = bool(url and os.getenv("SUPABASE_SERVICE_KEY", ""))
+    ready = bool(url and (os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_SERVICE_ROLE_KEY")))
     return jsonify({
         "supabase_configured": ready,
         "supabase_url":        url if ready else "(not set)",
