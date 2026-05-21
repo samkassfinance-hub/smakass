@@ -80,34 +80,9 @@
 
     let errors = [];
     try {
-      if (payload.clients.length > 0) {
-        const { error } = await db.from('kf_clients').upsert(payload.clients);
-        if (error) errors.push('Clients Table Error: ' + error.message);
-      }
-      if (payload.loans.length > 0) {
-        const { error } = await db.from('kf_loans').upsert(payload.loans);
-        if (error) errors.push('Loans Table Error: ' + error.message);
-      }
-      if (payload.payments.length > 0) {
-        const { error } = await db.from('kf_payments').upsert(payload.payments);
-        if (error) errors.push('Payments Table Error: ' + error.message);
-      }
-      if (Object.keys(payload.settings).length > 0) {
-        const { error } = await db.from('kf_settings').upsert({ user_id: userId, data: payload.settings });
-        if (error) errors.push('Settings Table Error: ' + error.message);
-      }
-      
-      // Also upsert user profile to kf_users so Google sign-ins appear in the database
-      const session = JSON.parse(localStorage.getItem('kf_session') || '{}');
-      if (session.user) {
-        const { error } = await db.from('kf_users').upsert({
-          id: userId,
-          email: session.user.email,
-          financier_name: payload.settings.financierName || session.user.name || '',
-          business_name: payload.settings.businessName || ''
-        });
-        if (error) errors.push('Users Table Error: ' + error.message);
-      }
+      // Store all data inside kf_settings to bypass missing tables in Supabase
+      const { error } = await db.from('kf_settings').upsert({ user_id: userId, data: payload });
+      if (error) errors.push('Sync Error: ' + error.message);
 
       if (errors.length === 0) {
         localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
@@ -135,38 +110,38 @@
     const userId = _getUserId();
 
     try {
-      const [resClients, resLoans, resPayments, resSettings] = await Promise.all([
-        db.from('kf_clients').select('*').eq('user_id', userId),
-        db.from('kf_loans').select('*').eq('user_id', userId),
-        db.from('kf_payments').select('*').eq('user_id', userId),
-        db.from('kf_settings').select('*').eq('user_id', userId).maybeSingle()
-      ]);
+      const resSettings = await db.from('kf_settings').select('*').eq('user_id', userId).maybeSingle();
 
-      if (resClients.error || resLoans.error || resPayments.error) {
+      if (resSettings.error) {
         _toast('❌ Restore failed: Check Supabase configuration', 'error');
-        console.error('Supabase Restore Error:', resClients.error || resLoans.error || resPayments.error);
+        console.error('Supabase Restore Error:', resSettings.error);
         return null;
       }
 
-      // Map lowercase Supabase columns back to camelCase for the frontend
-      const clients = (resClients.data || []).map(x => ({
+      const cloudData = resSettings.data ? resSettings.data.data : {};
+      
+      // Map lowercase columns (from old format) back to camelCase for the frontend, or use them directly if new format
+      const rawClients = cloudData.clients || [];
+      const clients = rawClients.map(x => ({
         id: x.id, name: x.name, phone: x.phone, address: x.address,
         idNum: x.idnum || x.idNum, occupation: x.occupation, createdAt: x.createdat || x.createdAt
       }));
 
-      const loans = (resLoans.data || []).map(x => ({
+      const rawLoans = cloudData.loans || [];
+      const loans = rawLoans.map(x => ({
         id: x.id, clientId: x.clientid || x.clientId, principal: x.principal,
         interestRate: x.interestrate || x.interestRate, interestType: x.interesttype || x.interestType,
         duration: x.duration, type: x.type, startDate: x.startdate || x.startDate, status: x.status,
         createdAt: x.createdat || x.createdAt
       }));
 
-      const payments = (resPayments.data || []).map(x => ({
+      const rawPayments = cloudData.payments || [];
+      const payments = rawPayments.map(x => ({
         id: x.id, loanId: x.loanid || x.loanId, amount: x.amount, date: x.date, note: x.note,
         createdAt: x.createdat || x.createdAt
       }));
 
-      const settings = resSettings.data ? resSettings.data.data : {};
+      const settings = cloudData.settings || {};
 
       // Merge strategy: cloud records override local by id
       const merge = (localKey, cloudArr, idKey = 'id') => {
