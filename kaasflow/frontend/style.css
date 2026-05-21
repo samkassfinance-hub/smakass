@@ -2228,17 +2228,21 @@ h1, h2, h3, h4, h5, h6 {
   transform: translateX(-50%);
 }
 
-/* Floating Mini Popup Cards (Step 1) */
+/* Floating Mini Popup Cards (Step 1) - Redesigned to rotate/cycle in place */
 .floating-cards-container {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  margin: 1rem 0;
-  align-items: center;
-  width: 100%;
+  position: relative;
+  height: 52px;
+  margin: 0.5rem auto 1.25rem;
+  width: 90%;
+  display: block;
 }
 
 .floating-popup-card {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
   background: #ffffff;
   border-radius: 12px;
   padding: 0.75rem 1rem;
@@ -2247,20 +2251,21 @@ h1, h2, h3, h4, h5, h6 {
   gap: 0.75rem;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);
   border: 1px solid rgba(16, 185, 129, 0.08);
-  width: 90%;
-  animation: float-card 4s infinite ease-in-out alternate;
+  width: 100%;
+  animation: rotate-popup-card 9s infinite ease-in-out;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  opacity: 0;
+  visibility: hidden;
 }
 
 .floating-popup-card:nth-child(1) {
   animation-delay: 0s;
 }
 .floating-popup-card:nth-child(2) {
-  animation-delay: 1.2s;
-  width: 95%;
+  animation-delay: -3s;
 }
 .floating-popup-card:nth-child(3) {
-  animation-delay: 2.4s;
+  animation-delay: -6s;
 }
 
 .floating-popup-card:hover {
@@ -2286,9 +2291,22 @@ h1, h2, h3, h4, h5, h6 {
   color: #334155;
 }
 
-@keyframes float-card {
-  0% { transform: translateY(0); }
-  100% { transform: translateY(-6px); }
+@keyframes rotate-popup-card {
+  0%, 100% {
+    opacity: 0;
+    transform: translateY(15px) scale(0.95);
+    visibility: hidden;
+  }
+  3%, 30% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    visibility: visible;
+  }
+  33%, 97% {
+    opacity: 0;
+    transform: translateY(-15px) scale(0.95);
+    visibility: hidden;
+  }
 }
 
 /* Bottom Sheet Styling */
@@ -2541,4 +2559,61 @@ h1, h2, h3, h4, h5, h6 {
   0% { transform: scale(1) rotate(0deg); box-shadow: 0 0 15px rgba(16, 185, 129, 0.3); }
   50% { transform: scale(1.1) rotate(180deg); box-shadow: 0 0 25px rgba(16, 185, 129, 0.6); }
   100% { transform: scale(1) rotate(360deg); box-shadow: 0 0 15px rgba(16, 185, 129, 0.3); }
+}
+
+/* Onboarding Responsiveness & Layout Fixes (resolves pushed down options) */
+@media (max-height: 740px), (max-width: 480px) {
+  #auth-screen {
+    padding: 0.75rem 0.5rem !important;
+  }
+  
+  .auth-slide {
+    gap: 0.75rem !important;
+  }
+  
+  /* Compact logo in Slide 1 */
+  .auth-logo {
+    margin-top: 0.25rem !important;
+  }
+  .auth-logo div[style*="width: 110px"] {
+    width: 80px !important;
+    height: 80px !important;
+    font-size: 2.2rem !important;
+    margin: 0 auto 8px !important;
+  }
+  .auth-logo-title {
+    font-size: 1.5rem !important;
+    margin-bottom: 2px !important;
+  }
+  .auth-logo-sub {
+    font-size: 0.8rem !important;
+    margin-bottom: 0.25rem !important;
+  }
+  
+  /* Compact cards container */
+  .floating-cards-container {
+    height: 48px !important;
+    margin: 0.25rem auto 0.75rem !important;
+  }
+  .floating-popup-card {
+    padding: 0.5rem 0.75rem !important;
+  }
+  
+  /* Compact bottom sheet */
+  .onboarding-bottom-sheet {
+    padding: 1.25rem 1.25rem !important;
+    border-radius: 20px !important;
+    gap: 0.75rem !important;
+  }
+  .bottom-sheet-title {
+    font-size: 1.1rem !important;
+  }
+  .bottom-sheet-sub {
+    font-size: 0.8rem !important;
+    margin-bottom: 0.25rem !important;
+  }
+  .btn-try-another {
+    padding: 0.6rem 1.25rem !important;
+    font-size: 0.85rem !important;
+  }
 }
