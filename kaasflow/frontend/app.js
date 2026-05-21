@@ -466,6 +466,7 @@ window.handleGoogleLogin = async function(response) {
     Store.saveSession({ token: res.token || 'google-session', user: res.user });
     const s = Store.settings();
     if (res.user?.name && !s.financierName) { s.financierName = res.user.name; Store.saveSettings(s); }
+    if (res.user?.appPin) { s.appPin = res.user.appPin; Store.saveSettings(s); }
     state.session = getSession();
     generateSampleData();
     if (hasPin()) { showPinLock(); } else { showPinSetup(); }
@@ -2855,6 +2856,7 @@ function bindGlobal() {
         const s = Store.settings();
         if (res.user.financierName && !s.financierName) { s.financierName = res.user.financierName; Store.saveSettings(s); }
         if (res.user.businessName && !s.businessName) { s.businessName = res.user.businessName; Store.saveSettings(s); }
+        if (res.user.appPin) { s.appPin = res.user.appPin; Store.saveSettings(s); }
       }
       state.session = getSession();
       if (window.KFSync) await KFSync.restore();
@@ -2882,6 +2884,7 @@ function bindGlobal() {
       const s = Store.settings();
       if (name) s.financierName = name;
       if (business) s.businessName = business;
+      if (res.user?.appPin) { s.appPin = res.user.appPin; }
       Store.saveSettings(s);
       state.session = getSession();
       generateSampleData();
@@ -2996,6 +2999,13 @@ function bindGlobal() {
     const s = Store.settings();
     s.appPin = pin;
     Store.saveSettings(s);
+    
+    // Sync to backend
+    const sessionUser = getSession()?.user;
+    if (sessionUser && sessionUser.email) {
+      apiAuth('set-pin', { email: sessionUser.email, pin: pin }).catch(e => console.error(e));
+    }
+    
     // Show success animation
     inputs.forEach(i => i.classList.add('success'));
     showToast('🔒 Security PIN set successfully!', 'success');
@@ -3158,6 +3168,11 @@ function bindGlobal() {
     const s = Store.settings();
     s.appPin = newPin;
     Store.saveSettings(s);
+    
+    // Sync to backend
+    if (resetPinEmail) {
+      apiAuth('set-pin', { email: resetPinEmail, pin: newPin }).catch(e => console.error(e));
+    }
     
     // Close modal
     const modalEl = document.getElementById('forgotPinModal');

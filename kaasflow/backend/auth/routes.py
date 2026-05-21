@@ -51,9 +51,15 @@ def init_pro_auth_db():
                 google_id TEXT UNIQUE,
                 full_name TEXT,
                 profile_pic TEXT,
+                app_pin TEXT,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        # Add column for existing database instances safely
+        try:
+            conn.execute('ALTER TABLE pro_users ADD COLUMN app_pin TEXT')
+        except Exception:
+            pass # Column already exists
         conn.commit()
         conn.close()
         print("Database initialized successfully.")
@@ -354,14 +360,20 @@ def create_auth_response(user, access_expiry=None):
     access_token = create_access_token({"sub": user['email'], "id": user_uuid}, expires_delta=access_expiry)
     refresh_token = create_refresh_token({"sub": user['email'], "id": user_uuid})
     
+    response_user = {
+        'email': user['email'],
+        'name': user['full_name'],
+        'picture': user['profile_pic']
+    }
+    
+    # Check if user has an app_pin key in the row and add it
+    if 'app_pin' in user.keys() and user['app_pin']:
+        response_user['appPin'] = user['app_pin']
+    
     response = jsonify({
         'success': True,
         'token': access_token,
-        'user': {
-            'email': user['email'],
-            'name': user['full_name'],
-            'picture': user['profile_pic']
-        }
+        'user': response_user
     })
     
     # Set cookies
@@ -453,3 +465,21 @@ def verify_forgot_pin_otp():
     # Success, clear the OTP
     del pin_reset_otps[email]
     return jsonify({'success': True, 'message': 'OTP verified successfully'})
+
+@auth_bp.route('/set-pin', methods=['POST'])
+def set_pin():
+    data = request.json
+    email = data.get('email')
+    pin = data.get('pin')
+    if not email or not pin:
+        return jsonify({'error': 'Email and pin required'}), 400
+        
+    try:
+        conn = get_db_connection()
+        conn.execute('UPDATE pro_users SET app_pin = ? WHERE email = ?', (pin, email))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"Error saving pin: {e}")
+        return jsonify({'error': 'Failed to save PIN'}), 500
