@@ -2,8 +2,16 @@
 const RazorpayPayment = {
   keyId: '', // Set from backend or config
   
-  init(keyId) {
-    this.keyId = keyId;
+  async init() {
+    try {
+      const response = await fetch('/api/payment/key');
+      const data = await response.json();
+      if (data.key) {
+        this.keyId = data.key;
+      }
+    } catch (e) {
+      console.error('Failed to initialize Razorpay key:', e);
+    }
   },
 
   async createOrder(amount, planType) {
@@ -84,9 +92,9 @@ const RazorpayPayment = {
   // Plan-specific payment methods
   async payForPlan(planType, options = {}) {
     const plans = {
-      'monthly': { amount: 500, name: 'Monthly Plan' },
-      'quarterly': { amount: 1200, name: 'Quarterly Plan' },
-      'yearly': { amount: 4000, name: 'Yearly Plan' }
+      'monthly': { amount: 199, name: 'Monthly Plan' },
+      'quarterly': { amount: 589, name: 'Quarterly Plan' },
+      'yearly': { amount: 2370, name: 'Yearly Plan' }
     };
     
     const plan = plans[planType];

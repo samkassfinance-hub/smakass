@@ -10,6 +10,10 @@
       "use": "@vercel/static"
     }
   ],
+  "env": {
+    "RAZORPAY_KEY_ID": "rzp_test_Ss4QgIIv1E224X",
+    "RAZORPAY_KEY_SECRET": "Ln8cM37O5Ez8ICHxUj7i2YCV"
+  },
   "routes": [
     {
       "src": "/auth/(.*)",

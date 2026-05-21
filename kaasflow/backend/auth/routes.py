@@ -369,3 +369,87 @@ def create_auth_response(user, access_expiry=None):
     response.set_cookie('refresh_token', refresh_token, httponly=True, secure=True, samesite='Strict')
     
     return response
+
+# ── FORGOT SECURITY PIN FLOW ────────────────────────────────────────
+
+# In-memory store for PIN reset OTPs (email -> {'otp': '123456', 'expires_at': datetime})
+pin_reset_otps = {}
+
+@auth_bp.route('/forgot-pin/send-otp', methods=['POST'])
+def send_forgot_pin_otp():
+    email = request.json.get('email')
+    if not email:
+        return jsonify({'error': 'Email required'}), 400
+        
+    # Generate 6-digit OTP
+    import random, datetime
+    otp = str(random.randint(100000, 999999))
+    
+    # Store OTP with 10-minute expiration
+    pin_reset_otps[email] = {
+        'otp': otp,
+        'expires_at': datetime.datetime.now() + datetime.timedelta(minutes=10)
+    }
+    
+    subject = "Reset your KaasFlow Security PIN 🔒"
+    body = f"""
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff; color: #1e293b;">
+        <div style="text-align: center; margin-bottom: 24px;">
+            <h1 style="color: #10b981; margin: 0; font-size: 28px;">Security PIN Reset</h1>
+            <p style="color: #64748b; font-size: 16px; margin-top: 8px;">Your verification code</p>
+        </div>
+        <p>Hello,</p>
+        <p>We received a request to reset the Security PIN for your KaasFlow account. Use the OTP below to proceed with the reset:</p>
+        <div style="text-align: center; margin: 30px 0;">
+            <div style="background-color: #f1f5f9; border: 2px dashed #cbd5e1; color: #334155; padding: 15px; font-size: 32px; font-weight: bold; letter-spacing: 5px; border-radius: 8px; display: inline-block;">
+                {otp}
+            </div>
+        </div>
+        <p style="font-size: 14px; color: #64748b;">This OTP will expire in 10 minutes. If you did not request this, you can safely ignore this email.</p>
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
+        <p style="font-size: 14px; color: #64748b; text-align: center; margin-bottom: 0;">
+            <strong>— The KaasFlow Team</strong>
+        </p>
+    </div>
+    """
+    
+    if send_email(email, subject, body):
+        return jsonify({'success': True, 'message': 'OTP sent to your email'})
+    else:
+        is_local = any(local in request.host_url for local in ['localhost', '127.0.0.1', '5500'])
+        if is_local:
+            return jsonify({
+                'success': True,
+                'message': 'Email service not configured. For development, here is your OTP:',
+                'otp': otp
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to send OTP email. Please try again later.'
+            }), 500
+
+@auth_bp.route('/forgot-pin/verify-otp', methods=['POST'])
+def verify_forgot_pin_otp():
+    email = request.json.get('email')
+    user_otp = request.json.get('otp')
+    
+    if not email or not user_otp:
+        return jsonify({'error': 'Email and OTP required'}), 400
+        
+    stored_data = pin_reset_otps.get(email)
+    
+    import datetime
+    if not stored_data:
+        return jsonify({'error': 'No OTP request found for this email'}), 404
+        
+    if datetime.datetime.now() > stored_data['expires_at']:
+        del pin_reset_otps[email]
+        return jsonify({'error': 'OTP has expired'}), 400
+        
+    if stored_data['otp'] != str(user_otp).strip():
+        return jsonify({'error': 'Invalid OTP'}), 400
+        
+    # Success, clear the OTP
+    del pin_reset_otps[email]
+    return jsonify({'success': True, 'message': 'OTP verified successfully'})

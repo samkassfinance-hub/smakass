@@ -25,10 +25,20 @@ const LS = {
 };
 const FREE_CLIENT_LIMIT = 20;
 
-// ── SLOT PURCHASE STATE ──────────────────────────────────────
-let extraSlots = 5;
-let pendingExtraSlots = 0;
+// ── PLAN UPGRADE STATE ──────────────────────────────────────
+const PLAN_PRICES = {
+  monthly: 199,
+  quarterly: 589,
+  yearly: 2370
+};
+const PLAN_NAMES = {
+  monthly: 'Monthly Plan',
+  quarterly: 'Quarterly Plan',
+  yearly: 'Yearly Plan'
+};
+let pendingPlanType = null;
 let pendingPaymentAmount = 0;
+
 
 // ── TRANSLATIONS ─────────────────────────────────────────────
 const T = {
@@ -252,13 +262,9 @@ const Store = {
   settings: () => Store.getObj('settings'),
   session: () => Store.getObj('session'),
   saveClients: v => {
-    const s = Store.getObj('settings');
-    const plan = s.plan || 'free';
-    // [NEW] Client slot limit logic
-    const limit = FREE_CLIENT_LIMIT + (s.extraClients || 0);
-    if (plan === 'free' && v.length > limit) {
+    if (!isPlanActive() && v.length > 20) {
       const existing = Store.get('clients') || [];
-      if (v.length > existing.length && existing.length >= limit) {
+      if (v.length > existing.length && existing.length >= 20) {
         return; // Absolute firewall: do not allow saving more than the limit on free tier
       }
     }
@@ -692,6 +698,7 @@ function showApp() {
   $('#pin-lock-screen').style.display = 'none';
   $('#main-app').style.display = '';
   updatePlanBanner();
+  checkAccessControl();
   navigateTo(state.page || 'dashboard');
   // Fire today's payment notifications when app becomes visible
   fireTodayNotifications();
@@ -699,6 +706,7 @@ function showApp() {
 
 // ── NAVIGATION ────────────────────────────────────────────────
 function navigateTo(page) {
+  checkAccessControl();
   state.page = page;
   $$('.nav-tab').forEach(t => {
     t.classList.toggle('active', t.dataset.page === page);
@@ -729,60 +737,110 @@ function getPlan() {
   return s.plan || 'free';
 }
 
-function getPlanExpiry() {
+function getPlanExpiryTime() {
   const s = Store.settings();
-  return s.planExpiry || null;
+  if (!s.paymentDate || !s.plan || s.plan === 'free') return 0;
+  
+  const paymentTime = new Date(s.paymentDate).getTime();
+  let durationMs = 0;
+  if (s.plan === 'monthly') {
+    durationMs = 30 * 24 * 60 * 60 * 1000;
+  } else if (s.plan === 'quarterly') {
+    durationMs = 90 * 24 * 60 * 60 * 1000;
+  } else if (s.plan === 'yearly') {
+    durationMs = 365 * 24 * 60 * 60 * 1000;
+  }
+  return paymentTime + durationMs;
+}
+
+function getPlanExpiry() {
+  const expiryTime = getPlanExpiryTime();
+  if (expiryTime === 0) return null;
+  return new Date(expiryTime).toISOString().split('T')[0];
 }
 
 function isPlanActive() {
   const plan = getPlan();
-  if (plan === 'free') return true;
-  const exp = getPlanExpiry();
-  if (!exp) return false;
-  return new Date(exp) > new Date();
+  if (plan === 'free') return false;
+  const expiryTime = getPlanExpiryTime();
+  return Date.now() < expiryTime;
 }
 
 function canAddClient() {
-  const plan = getPlan();
-  if (plan !== 'free' && isPlanActive()) return true;
-  const s = Store.settings();
-  const limit = FREE_CLIENT_LIMIT + (s.extraClients || 0);
-  return Store.clients().length < limit;
+  if (isPlanActive()) return true;
+  return Store.clients().length < 20;
 }
 
 // Checks if the user is allowed to add secondary data like Loans
 function canUsePremiumFeatures() {
-  const plan = getPlan();
-  if (plan !== 'free' && isPlanActive()) return true;
-  const s = Store.settings();
-  const limit = FREE_CLIENT_LIMIT + (s.extraClients || 0);
-  return Store.clients().length <= limit;
+  if (isPlanActive()) return true;
+  return Store.clients().length <= 20;
 }
+
+function showBlockingPopup() {
+  const modalEl = document.getElementById('blockingUpgradeModal');
+  if (!modalEl) return;
+  let modalInstance = bootstrap.Modal.getInstance(modalEl);
+  if (!modalInstance) {
+    modalInstance = new bootstrap.Modal(modalEl, {
+      backdrop: 'static',
+      keyboard: false
+    });
+  }
+  modalInstance.show();
+}
+
+function hideBlockingPopup() {
+  const modalEl = document.getElementById('blockingUpgradeModal');
+  if (!modalEl) return;
+  const modalInstance = bootstrap.Modal.getInstance(modalEl);
+  if (modalInstance) {
+    modalInstance.hide();
+  }
+}
+
+function checkAccessControl() {
+  if (!isLoggedIn()) return;
+  const clientCount = Store.clients().length;
+  if (clientCount > 20 && !isPlanActive()) {
+    showBlockingPopup();
+  } else {
+    hideBlockingPopup();
+  }
+}
+
 
 function updatePlanBanner() {
   const banner = $('#plan-banner');
   if (!banner) return;
   const plan = getPlan();
-  const s = Store.settings();
-  const limit = FREE_CLIENT_LIMIT + (s.extraClients || 0);
+  
   if (plan === 'free') { 
-    if (Store.clients().length >= limit) {
+    const clientCount = Store.clients().length;
+    if (clientCount >= 20) {
       banner.classList.remove('d-none');
-      $('#plan-banner-text').textContent = `Free trial limit reached (${limit} clients). Please upgrade to add more.`;
+      $('#plan-banner-text').innerHTML = `<i class="fa-solid fa-crown text-warning me-2"></i>Free tier limit reached (${clientCount}/20 clients). Please upgrade to add more.`;
     } else {
       banner.classList.add('d-none');
     }
     return; 
   }
-  const exp = getPlanExpiry();
-  if (!exp) { banner.classList.add('d-none'); return; }
-  const daysLeft = daysDiff(exp, today());
-  if (daysLeft <= 30 && daysLeft > 0) {
+  
+  const expiryTime = getPlanExpiryTime();
+  if (expiryTime === 0) {
+    banner.classList.add('d-none');
+    return;
+  }
+  
+  const msLeft = expiryTime - Date.now();
+  const daysLeft = Math.ceil(msLeft / (24 * 60 * 60 * 1000));
+  
+  if (daysLeft > 0 && daysLeft <= 30) {
     banner.classList.remove('d-none');
-    $('#plan-banner-text').textContent = `Your ${plan} plan expires in ${daysLeft} day(s).`;
+    $('#plan-banner-text').innerHTML = `<i class="fa-solid fa-clock text-warning me-2"></i>Your ${plan} plan expires in ${daysLeft} day(s).`;
   } else if (daysLeft <= 0) {
     banner.classList.remove('d-none');
-    $('#plan-banner-text').textContent = `Your plan has expired. Please renew.`;
+    $('#plan-banner-text').innerHTML = `<i class="fa-solid fa-circle-exclamation text-danger me-2"></i>Your plan has expired. Please renew.`;
   } else {
     banner.classList.add('d-none');
   }
@@ -790,32 +848,7 @@ function updatePlanBanner() {
 
 window.KF = window.KF || {};
 window.KF.upgradePro = function(planType) {
-  const settings = Store.settings();
-  const expDate = new Date();
-  
-  // Accurately calculate the exact date based on calendar months
-  if (planType === 'monthly') {
-    expDate.setMonth(expDate.getMonth() + 1);
-  } else if (planType === 'quarterly') {
-    expDate.setMonth(expDate.getMonth() + 3);
-  } else if (planType === 'yearly') {
-    expDate.setFullYear(expDate.getFullYear() + 1);
-  } else {
-    expDate.setFullYear(expDate.getFullYear() + 10); // Pay As You Go / Lifetime
-  }
-  
-  settings.plan = planType;
-  settings.planExpiry = expDate.toISOString().split('T')[0];
-  Store.saveSettings(settings);
-  
-  const modal = bootstrap.Modal.getInstance($('#upgradeModal'));
-  if (modal) modal.hide();
-  
-  updatePlanBanner();
-  showToast(`Upgraded to ${planType.charAt(0).toUpperCase() + planType.slice(1)} plan!`, 'success');
-  
-  // Immediately refresh the current page to unlock the 'Add' buttons
-  navigateTo(state.page);
+  initiatePlanPayment(planType);
 };
 
 // ── SAMPLE DATA ───────────────────────────────────────────────
@@ -1805,13 +1838,6 @@ function renderSettings(container) {
         </div>
       </div>
 
-      <div class="kf-card pro-card" data-ocid="settings.security_card">
-        <div class="section-title"><i class="fa-solid fa-shield"></i>Security</div>
-        <div class="settings-row pro-row">
-          <div class="settings-row-label"><i class="fa-solid fa-key"></i><span data-i18n="changePin">${t('changePin')}</span></div>
-          <button class="btn-kf-outline pro-btn-outline" style="min-height:36px;font-size:.875rem" id="btn-change-pin" data-ocid="settings.change_pin_button">Change</button>
-        </div>
-      </div>
 
     <div class="kf-card pro-card" data-ocid="settings.recycle_bin_card">
       <div class="section-title"><i class="fa-solid fa-trash-can-arrow-up"></i> Recycle Bin</div>
@@ -1940,7 +1966,6 @@ function renderSettings(container) {
   });
 
   $('#btn-settings-export-pdf')?.addEventListener('click', () => exportAllDataAsPDF());
-  $('#btn-change-pin').addEventListener('click', () => showChangePinFlow());
   $('#btn-clear-data').addEventListener('click', () => {
     state.deleteCallback = () => {
       requirePinToProceed('Clear Data', () => {
@@ -1987,21 +2012,6 @@ function renderSettings(container) {
     if (titleEl) titleEl.textContent = 'Confirm Deletion';
     new bootstrap.Modal($('#confirmDeleteModal')).show();
   });
-}
-
-// ── CHANGE PIN FLOW ───────────────────────────────────────────
-function showChangePinFlow() {
-  const s = Store.settings();
-  const currentPin = s.appPin;
-  if (!currentPin) { showToast('No PIN set yet', 'error'); return; }
-  const oldPin = prompt('Enter current 4-digit PIN:');
-  if (!oldPin) return;
-  if (oldPin !== currentPin) { showToast('Incorrect current PIN', 'error'); return; }
-  const newPin = prompt('Enter new 4-digit PIN:');
-  if (!newPin || !/^\d{4}$/.test(newPin)) { showToast('PIN must be exactly 4 digits', 'error'); return; }
-  s.appPin = newPin;
-  Store.saveSettings(s);
-  showToast('🔒 PIN changed successfully!', 'success');
 }
 
 // ── PIN AUTHENTICATION HELPER ─────────────────────────────────
@@ -2896,34 +2906,6 @@ function bindGlobal() {
     if (slider) slider.classList.remove('slide-to-step-2');
   });
 
-  // Alternative options
-  $('#btn-opt-phone')?.addEventListener('click', () => {
-    showFormSection('#phone-login-section');
-    updateAuthHeader('Phone Sign In', 'Use your registered phone number and PIN to access your account.');
-  });
-
-  $('#btn-opt-otp')?.addEventListener('click', () => {
-    showFormSection('#otp-login-section');
-    updateAuthHeader('One-Time Passcode', 'Verify your phone number with a secure SMS passcode.');
-    // Reset OTP input state
-    const verifyGroup = $('#otp-verify-input-group');
-    const phoneGroup = $('#otp-phone-input-group');
-    if (verifyGroup) verifyGroup.classList.add('d-none');
-    if (phoneGroup) phoneGroup.classList.remove('d-none');
-    const phoneInput = $('#otp-phone-number');
-    if (phoneInput) { phoneInput.disabled = false; phoneInput.value = ''; }
-    const codeInput = $('#otp-verification-code');
-    if (codeInput) codeInput.value = '';
-    const submitBtn = $('#btn-otp-submit');
-    if (submitBtn) { submitBtn.textContent = 'Send OTP'; submitBtn.disabled = false; }
-    const errEl = $('#otp-login-error');
-    if (errEl) errEl.classList.add('d-none');
-    if (window.otpResendInterval) {
-      clearInterval(window.otpResendInterval);
-      window.otpResendInterval = null;
-    }
-  });
-
   // Back to email buttons
   $$('.btn-back-to-email').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -2955,187 +2937,7 @@ function bindGlobal() {
     updateAuthHeader('Log in or sign up', 'Manage loans, collections and customer payments smarter with SamKass.');
   });
 
-  // Mock Phone/PIN Submit Handler
-  $('#phone-login-form')?.addEventListener('submit', async e => {
-    e.preventDefault();
-    const phone = $('#phone-login-number').value.trim();
-    const pin = $('#phone-login-pin').value.trim();
-    const errEl = $('#phone-login-error');
-    errEl.classList.add('d-none');
-    if (!phone || phone.length !== 10 || !/^\d{10}$/.test(phone)) {
-      errEl.textContent = 'Enter a valid 10-digit phone number';
-      errEl.classList.remove('d-none');
-      return;
-    }
-    if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
-      errEl.textContent = 'Enter your 4-digit PIN';
-      errEl.classList.remove('d-none');
-      return;
-    }
 
-    // Success! Show spinning loader and login
-    showFormSection('#logo-spinner-wrapper');
-    const msgEl = $('#spinner-message');
-    if (msgEl) msgEl.textContent = 'Connecting to SamKass...';
-
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    Store.saveSession({
-      token: 'mock-phone-session-' + Date.now(),
-      user: {
-        email: phone + '@samkass.site',
-        financierName: 'Phone User (' + phone.slice(-4) + ')',
-        businessName: 'SamKass Demo Co.'
-      }
-    });
-    const s = Store.settings();
-    s.financierName = 'Phone User (' + phone.slice(-4) + ')';
-    s.businessName = 'SamKass Demo Co.';
-    Store.saveSettings(s);
-    state.session = getSession();
-    if (window.KFSync) await KFSync.restore();
-    if (hasPin()) {
-      showPinLock();
-    } else {
-      showPinSetup();
-    }
-  });
-
-  // Mock Phone/OTP Submit Handler
-  $('#otp-phone-form')?.addEventListener('submit', async e => {
-    e.preventDefault();
-    const phone = $('#otp-phone-number').value.trim();
-    const errEl = $('#otp-login-error');
-    errEl.classList.add('d-none');
-
-    const verifyGroup = $('#otp-verify-input-group');
-    const isVerifying = verifyGroup && !verifyGroup.classList.contains('d-none');
-
-    if (!phone || phone.length !== 10 || !/^\d{10}$/.test(phone)) {
-      errEl.textContent = 'Enter a valid 10-digit phone number';
-      errEl.classList.remove('d-none');
-      return;
-    }
-
-    if (!isVerifying) {
-      // Step 1: Send OTP
-      const submitBtn = $('#btn-otp-submit');
-      submitBtn.textContent = 'Sending OTP...';
-      submitBtn.disabled = true;
-
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Show verification code field
-      verifyGroup.classList.remove('d-none');
-      const phoneInput = $('#otp-phone-number');
-      if (phoneInput) phoneInput.disabled = true;
-
-      // Setup 59s timer
-      let timeLeft = 59;
-      const timerEl = $('#otp-timer');
-      const resendBtn = $('#btn-resend-otp');
-      if (timerEl) {
-        timerEl.classList.remove('d-none');
-        timerEl.textContent = `Resend in ${timeLeft}s`;
-      }
-      if (resendBtn) resendBtn.classList.add('d-none');
-
-      if (window.otpResendInterval) clearInterval(window.otpResendInterval);
-      window.otpResendInterval = setInterval(() => {
-        timeLeft--;
-        if (timeLeft <= 0) {
-          clearInterval(window.otpResendInterval);
-          window.otpResendInterval = null;
-          if (timerEl) timerEl.classList.add('d-none');
-          if (resendBtn) resendBtn.classList.remove('d-none');
-        } else {
-          if (timerEl) timerEl.textContent = `Resend in ${timeLeft}s`;
-        }
-      }, 1000);
-
-      submitBtn.textContent = 'Verify & Login';
-      submitBtn.disabled = false;
-
-      // Auto-fill mock OTP for easier manual check
-      const codeInput = $('#otp-verification-code');
-      if (codeInput) codeInput.value = '123456';
-    } else {
-      // Step 2: Verify OTP code
-      const code = $('#otp-verification-code').value.trim();
-      if (!code || code.length !== 6 || !/^\d{6}$/.test(code)) {
-        errEl.textContent = 'Enter the 6-digit verification code';
-        errEl.classList.remove('d-none');
-        return;
-      }
-
-      // Success! Show loading spinner and login
-      showFormSection('#logo-spinner-wrapper');
-      const msgEl = $('#spinner-message');
-      if (msgEl) msgEl.textContent = 'Verifying security code...';
-
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      if (window.otpResendInterval) {
-        clearInterval(window.otpResendInterval);
-        window.otpResendInterval = null;
-      }
-
-      Store.saveSession({
-        token: 'mock-otp-session-' + Date.now(),
-        user: {
-          email: phone + '@samkass.site',
-          financierName: 'OTP User (' + phone.slice(-4) + ')',
-          businessName: 'SamKass Demo Co.'
-        }
-      });
-      const s = Store.settings();
-      s.financierName = 'OTP User (' + phone.slice(-4) + ')';
-      s.businessName = 'SamKass Demo Co.';
-      Store.saveSettings(s);
-      state.session = getSession();
-      if (window.KFSync) await KFSync.restore();
-      if (hasPin()) {
-        showPinLock();
-      } else {
-        showPinSetup();
-      }
-    }
-  });
-
-  // Handle resend OTP click
-  $('#btn-resend-otp')?.addEventListener('click', async () => {
-    const errEl = $('#otp-login-error');
-    errEl.classList.add('d-none');
-    const resendBtn = $('#btn-resend-otp');
-    resendBtn.classList.add('d-none');
-    const timerEl = $('#otp-timer');
-    if (timerEl) {
-      timerEl.classList.remove('d-none');
-      timerEl.textContent = 'Sending...';
-    }
-
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    let timeLeft = 59;
-    if (timerEl) timerEl.textContent = `Resend in ${timeLeft}s`;
-
-    if (window.otpResendInterval) clearInterval(window.otpResendInterval);
-    window.otpResendInterval = setInterval(() => {
-      timeLeft--;
-      if (timeLeft <= 0) {
-        clearInterval(window.otpResendInterval);
-        window.otpResendInterval = null;
-        if (timerEl) timerEl.classList.add('d-none');
-        if (resendBtn) resendBtn.classList.remove('d-none');
-      } else {
-        if (timerEl) timerEl.textContent = `Resend in ${timeLeft}s`;
-      }
-    }, 1000);
-
-    // Re-fill mock OTP
-    const codeInput = $('#otp-verification-code');
-    if (codeInput) codeInput.value = '123456';
-  });
 
   $('#forgot-password-form')?.addEventListener('submit', async e => {
     e.preventDefault();
@@ -3232,6 +3034,139 @@ function bindGlobal() {
     Store.saveSettings(s);
     state.session = null;
     showAuth();
+  });
+
+  // Forgot Security PIN Flow
+  let resetPinEmail = '';
+
+  $('#btn-forgot-pin')?.addEventListener('click', () => {
+    resetPinEmail = Store.session()?.user?.email || '';
+    if(!resetPinEmail) {
+      showToast('Cannot identify user email. Please switch account and login again.', 'error');
+      return;
+    }
+    $('#forgot-pin-email').value = resetPinEmail;
+    
+    // Reset steps
+    $('#forgot-pin-step-1').style.display = 'block';
+    $('#forgot-pin-step-2').style.display = 'none';
+    $('#forgot-pin-step-3').style.display = 'none';
+    
+    // Clear inputs
+    $$('.reset-otp-input').forEach(i => i.value = '');
+    $$('.reset-new-pin-input').forEach(i => i.value = '');
+
+    new bootstrap.Modal(document.getElementById('forgotPinModal')).show();
+  });
+
+  // Handle OTP inputs typing
+  $$('.reset-otp-input').forEach(input => {
+    input.addEventListener('input', (e) => {
+      if (e.target.value.length > 1) e.target.value = e.target.value.slice(0, 1);
+      if (e.target.value && e.target.dataset.idx < 5) {
+        $$('.reset-otp-input')[parseInt(e.target.dataset.idx) + 1].focus();
+      }
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !e.target.value && e.target.dataset.idx > 0) {
+        $$('.reset-otp-input')[parseInt(e.target.dataset.idx) - 1].focus();
+      }
+      if (e.key === 'Enter') {
+        const otpStr = $$('.reset-otp-input').map(i => i.value).join('');
+        if(otpStr.length === 6) $('#btn-verify-pin-otp')?.click();
+      }
+    });
+  });
+
+  // Handle New PIN inputs typing
+  $$('.reset-new-pin-input').forEach(input => {
+    input.addEventListener('input', (e) => {
+      if (e.target.value.length > 1) e.target.value = e.target.value.slice(0, 1);
+      if (e.target.value && e.target.dataset.idx < 3) {
+        $$('.reset-new-pin-input')[parseInt(e.target.dataset.idx) + 1].focus();
+      }
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !e.target.value && e.target.dataset.idx > 0) {
+        $$('.reset-new-pin-input')[parseInt(e.target.dataset.idx) - 1].focus();
+      }
+      if (e.key === 'Enter') {
+        const pinStr = $$('.reset-new-pin-input').map(i => i.value).join('');
+        if(pinStr.length === 4) $('#btn-save-new-pin')?.click();
+      }
+    });
+  });
+
+  // Step 1: Send OTP
+  $('#btn-send-pin-otp')?.addEventListener('click', async () => {
+    const btn = $('#btn-send-pin-otp');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Sending...';
+    try {
+      const res = await apiAuth('forgot-pin/send-otp', { email: resetPinEmail });
+      if (res && res.success) {
+        showToast('OTP sent successfully to your email.', 'success');
+        $('#forgot-pin-step-1').style.display = 'none';
+        $('#forgot-pin-step-2').style.display = 'block';
+        setTimeout(() => $$('.reset-otp-input')[0]?.focus(), 100);
+      } else {
+        showToast(res.error || 'Failed to send OTP', 'error');
+      }
+    } catch (err) {
+      showToast('Error sending OTP', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Send OTP <i class="fa-solid fa-paper-plane ms-1"></i>';
+    }
+  });
+
+  // Step 2: Verify OTP
+  $('#btn-verify-pin-otp')?.addEventListener('click', async () => {
+    const otp = $$('.reset-otp-input').map(i => i.value).join('');
+    if (otp.length !== 6) {
+      showToast('Please enter the 6-digit OTP', 'error');
+      return;
+    }
+    const btn = $('#btn-verify-pin-otp');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Verifying...';
+    try {
+      const res = await apiAuth('forgot-pin/verify-otp', { email: resetPinEmail, otp: otp });
+      if (res && res.success) {
+        showToast('OTP verified successfully', 'success');
+        $('#forgot-pin-step-2').style.display = 'none';
+        $('#forgot-pin-step-3').style.display = 'block';
+        setTimeout(() => $$('.reset-new-pin-input')[0]?.focus(), 100);
+      } else {
+        showToast(res.error || 'Invalid OTP', 'error');
+      }
+    } catch (err) {
+      showToast('Error verifying OTP', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Verify OTP <i class="fa-solid fa-check ms-1"></i>';
+    }
+  });
+
+  // Step 3: Save New PIN
+  $('#btn-save-new-pin')?.addEventListener('click', () => {
+    const newPin = $$('.reset-new-pin-input').map(i => i.value).join('');
+    if (newPin.length !== 4) {
+      showToast('Please enter a 4-digit PIN', 'error');
+      return;
+    }
+    const s = Store.settings();
+    s.appPin = newPin;
+    Store.saveSettings(s);
+    
+    // Close modal
+    const modalEl = document.getElementById('forgotPinModal');
+    bootstrap.Modal.getInstance(modalEl)?.hide();
+    
+    showToast('🔒 PIN reset successfully!', 'success');
+    
+    // Automatically log them in since they verified OTP
+    setTimeout(() => showApp(), 500);
   });
 
   // Password visibility toggle
@@ -3450,10 +3385,9 @@ function bindGlobal() {
     });
   });
 
-  // Reset slot stepper when upgrade modal opens
-  document.querySelector('#upgradeModal')?.addEventListener('show.bs.modal', () => {
-    extraSlots = 5;
-    updateSlotUI();
+  document.querySelector('#modal-qr')?.addEventListener('hidden.bs.modal', () => {
+    // If QR modal is dismissed and plan isn't active, show the blocker again
+    checkAccessControl();
   });
 
   // Plan banner upgrade button
@@ -3525,133 +3459,53 @@ function setupPinInputBehavior(containerSel) {
 }
 
 // ── SLOT PURCHASE SYSTEM ─────────────────────────────────────
-function updateSlotUI() {
-  const blocks = extraSlots / 5;
-  const totalPrice = blocks * 99;
-  const settings = Store.settings();
-  const currentExtra = settings.extraClients || 0;
-  const newLimit = 20 + currentExtra + extraSlots;
-
-  // Update stepper display
-  const countDisplay = document.getElementById('slot-count-display');
-  if (countDisplay) countDisplay.textContent = extraSlots;
-
-  // Update summary box
-  const extraEl = document.getElementById('slot-extra-clients');
-  if (extraEl) extraEl.textContent = extraSlots;
-
-  const blocksEl = document.getElementById('slot-blocks');
-  if (blocksEl) blocksEl.textContent = blocks;
-
-  const priceEl = document.getElementById('slot-price');
-  if (priceEl) priceEl.textContent = '₹' + totalPrice;
-
-  const limitEl = document.getElementById('slot-new-limit');
-  if (limitEl) limitEl.textContent = newLimit + ' clients';
-
-  // Update pay button
-  const payBtn = document.getElementById('slot-pay-btn');
-  if (payBtn) payBtn.textContent = 'Pay ₹' + totalPrice + ' via UPI →';
-
-  // Disable minus button if at minimum
-  const minusBtn = document.getElementById('slot-minus-btn');
-  if (minusBtn) {
-    minusBtn.disabled = extraSlots <= 5;
-    minusBtn.style.opacity = extraSlots <= 5 ? '0.4' : '1';
-  }
-}
-
-function openQRPayment(extraCount) {
-  const blocks = extraCount / 5;
-  const totalPrice = blocks * 99;
-
-  // Show correct amount in QR modal
-  const qrPriceEl = document.getElementById('qr-price-text');
-  if (qrPriceEl) qrPriceEl.textContent = '₹' + totalPrice;
-
-  const qrDescEl = document.getElementById('qr-desc-text');
-  if (qrDescEl) qrDescEl.textContent = extraCount + ' client slots • ' + blocks + ' block(s) × ₹99';
-
-  // Store pending purchase
-  pendingExtraSlots = extraCount;
-  pendingPaymentAmount = totalPrice;
-
-  // Generate a simple placeholder QR (data URI with UPI info)
-  const qrImg = document.getElementById('qr-img');
-  if (qrImg) {
-    // Use a placeholder QR code SVG as data URI
-    qrImg.src = 'data:image/svg+xml,' + encodeURIComponent(
-      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180"><rect width="180" height="180" fill="%23f8f9fa"/>' +
-      '<text x="90" y="80" text-anchor="middle" font-size="14" font-family="sans-serif" fill="%23333">UPI QR Code</text>' +
-      '<text x="90" y="105" text-anchor="middle" font-size="12" font-family="sans-serif" fill="%23666">₹' + totalPrice + '</text>' +
-      '<text x="90" y="130" text-anchor="middle" font-size="10" font-family="sans-serif" fill="%23999">kaasflow@upi</text></svg>'
-    );
-  }
-
-  // Clear previous txn ID
-  const txnInput = document.getElementById('upi-txn-id');
-  if (txnInput) txnInput.value = '';
-
-  // Close upgrade modal and open QR modal
-  const upgradeModalEl = document.getElementById('upgradeModal');
-  if (upgradeModalEl) {
-    const upgradeInstance = bootstrap.Modal.getInstance(upgradeModalEl);
-    if (upgradeInstance) upgradeInstance.hide();
-  }
-
-  // Small delay to let the first modal close cleanly
-  setTimeout(() => {
-    const qrModal = new bootstrap.Modal(document.getElementById('modal-qr'));
-    qrModal.show();
-  }, 300);
-}
-
-function confirmPayment() {
-  const txnInput = document.getElementById('upi-txn-id');
-  const txnId = txnInput ? txnInput.value.trim() : '';
-
-  if (!txnId || txnId.length < 6) {
-    showToast('Enter valid UPI Transaction ID (min 6 chars)', 'error');
-    return;
-  }
-
-  const settings = Store.settings();
-
-  // Add the slots
-  const currentExtra = settings.extraClients || 0;
-  settings.extraClients = currentExtra + pendingExtraSlots;
-
-  // Save payment record
-  if (!settings.slotPayments) {
-    settings.slotPayments = [];
-  }
-  settings.slotPayments.push({
-    date: today(),
-    extraClients: pendingExtraSlots,
-    blocks: pendingExtraSlots / 5,
-    amount: pendingPaymentAmount,
-    txnId: txnId
+// ── SUBSCRIPTION PAYMENT SYSTEM ──────────────────────────────
+function initiatePlanPayment(planType) {
+  // Close upgrade modals immediately to show the loader
+  ['upgradeModal', 'blockingUpgradeModal'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      const instance = bootstrap.Modal.getInstance(el);
+      if (instance) instance.hide();
+    }
   });
 
-  Store.saveSettings(settings);
+  showToast('Initiating secure payment...', 'info');
 
-  const newLimit = 20 + settings.extraClients;
+  // Trigger Razorpay
+  RazorpayPayment.payForPlan(planType, {
+    onSuccess: (response) => {
+      const settings = Store.settings();
+      
+      // Save new plan and payment date
+      settings.plan = planType;
+      settings.paymentDate = new Date().toISOString();
 
-  // Close QR modal
-  const qrModalEl = document.getElementById('modal-qr');
-  if (qrModalEl) {
-    const qrInstance = bootstrap.Modal.getInstance(qrModalEl);
-    if (qrInstance) qrInstance.hide();
-  }
+      // Save payment record
+      if (!settings.planPayments) {
+        settings.planPayments = [];
+      }
+      settings.planPayments.push({
+        date: settings.paymentDate.split('T')[0],
+        plan: planType,
+        amount: PLAN_PRICES[planType],
+        txnId: response.razorpay_payment_id || 'RZP-' + Date.now()
+      });
 
-  showToast('✅ ' + pendingExtraSlots + ' slots added! New limit: ' + newLimit + ' clients', 'success');
+      Store.saveSettings(settings);
 
-  pendingExtraSlots = 0;
-  pendingPaymentAmount = 0;
+      showToast('✅ Payment confirmed! ' + PLAN_NAMES[planType] + ' activated.', 'success');
 
-  // Refresh page to reflect changes
-  updatePlanBanner();
-  navigateTo(state.page);
+      // Refresh checks
+      checkAccessControl();
+      updatePlanBanner();
+      navigateTo(state.page || 'dashboard');
+    },
+    onError: (err) => {
+      console.error(err);
+      showToast('Payment failed or was cancelled.', 'error');
+    }
+  });
 }
 
 // ── MODAL TOGGLES FOR SETTINGS INFO ───────────────────────────
@@ -3667,6 +3521,10 @@ window.closeContactOnOverlay = function(e) {
 
 // ── BOOT ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  if (typeof RazorpayPayment !== 'undefined') {
+    RazorpayPayment.init();
+  }
+  
   // Brief loading screen delay for smooth UX
   setTimeout(() => init(), 400); // Keep the UX delay
 });

@@ -28,6 +28,7 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
 
 # Import and register auth routes
 from auth.routes import auth_bp
+from razorpay_integration import payment_routes
 
 import os
 from supabase import create_client, Client
@@ -48,6 +49,9 @@ if SUPABASE_URL and SUPABASE_KEY:
         supabase = None
 app.register_blueprint(auth_bp, url_prefix='/api')
 app.register_blueprint(auth_bp, url_prefix='/auth', name='auth_prefix')
+
+# Register payment routes
+payment_routes(app)
 
 @app.route('/health', methods=['GET'])
 def health_check():

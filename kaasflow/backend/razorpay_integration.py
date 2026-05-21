@@ -44,6 +44,13 @@ def payment_routes(app):
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)}), 400
     
+    @app.route('/api/payment/key', methods=['GET'])
+    def get_payment_key():
+        key = os.getenv('RAZORPAY_KEY_ID')
+        if not key:
+            return jsonify({'error': 'Razorpay key not configured'}), 500
+        return jsonify({'key': key})
+
     @app.route('/api/payment/verify', methods=['POST'])
     def verify_payment_signature():
         data = request.json
