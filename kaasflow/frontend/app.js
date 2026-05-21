@@ -468,6 +468,11 @@ window.handleGoogleLogin = async function(response) {
     if (res.user?.name && !s.financierName) { s.financierName = res.user.name; Store.saveSettings(s); }
     if (res.user?.appPin) { s.appPin = res.user.appPin; Store.saveSettings(s); }
     state.session = getSession();
+    
+    // Crucial: Restore from cloud BEFORE generating sample data
+    // so we don't generate dummy data for an existing user logging into a new device
+    if (window.KFSync) await KFSync.restore();
+    
     generateSampleData();
     if (hasPin()) { showPinLock(); } else { showPinSetup(); }
   } else if (res.offline) {
@@ -693,14 +698,24 @@ function showPinLock() {
   if (errEl) errEl.classList.add('d-none');
 }
 
-function showApp() {
+async function showApp() {
   $('#loading-screen').style.display = 'none';
   $('#auth-screen').style.display = 'none';
   $('#pin-lock-screen').style.display = 'none';
   $('#main-app').style.display = '';
   updatePlanBanner();
   checkAccessControl();
+  
+  // Render immediately with local data for zero-delay UX
   navigateTo(state.page || 'dashboard');
+  
+  // Seamlessly sync with cloud in the background and soft-refresh if needed
+  if (window.KFSync) {
+    KFSync.restore().then(() => {
+      navigateTo(state.page || 'dashboard');
+    });
+  }
+  
   // Fire today's payment notifications when app becomes visible
   fireTodayNotifications();
 }
