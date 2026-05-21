@@ -3,8 +3,13 @@ from flask import jsonify, request, session
 import os
 from plan_manager import PlanManager
 
-# Initialize Razorpay client
-razorpay_client = razorpay.Client(auth=(os.getenv('RAZORPAY_KEY_ID'), os.getenv('RAZORPAY_KEY_SECRET')))
+def get_razorpay_client():
+    """Dynamically get the razorpay client to avoid cold-start import errors"""
+    key_id = os.getenv('RAZORPAY_KEY_ID')
+    key_secret = os.getenv('RAZORPAY_KEY_SECRET')
+    if not key_id or not key_secret:
+        raise Exception("Razorpay API keys are missing in the environment.")
+    return razorpay.Client(auth=(key_id, key_secret))
 
 def create_order(amount, currency='INR', receipt=None, plan_type=None):
     """Create a Razorpay order"""
@@ -15,12 +20,12 @@ def create_order(amount, currency='INR', receipt=None, plan_type=None):
         'payment_capture': 1,
         'notes': {'plan_type': plan_type} if plan_type else {}
     }
-    return razorpay_client.order.create(data=data)
+    return get_razorpay_client().order.create(data=data)
 
 def verify_payment(razorpay_order_id, razorpay_payment_id, razorpay_signature):
     """Verify payment signature"""
     try:
-        razorpay_client.utility.verify_payment_signature({
+        get_razorpay_client().utility.verify_payment_signature({
             'razorpay_order_id': razorpay_order_id,
             'razorpay_payment_id': razorpay_payment_id,
             'razorpay_signature': razorpay_signature
