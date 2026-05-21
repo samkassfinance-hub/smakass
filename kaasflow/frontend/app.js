@@ -67,6 +67,10 @@ const T = {
     exportExcel: 'Export Excel', exportCSV: 'Export CSV',
     clientWiseSummary: 'Client-wise Summary',
     loadingWorkspace: 'Loading your workspace…',
+    welcomeToSamKass: 'Welcome to SamKass',
+    chooseSignInMethod: 'Choose your sign-in method',
+    continueWithEmail: 'Continue with Email',
+    backToOptions: 'Back to options',
     welcomeBack: 'Welcome Back',
     signInToAccount: 'Sign in to your account',
     orUseEmail: 'or use email',
@@ -140,6 +144,10 @@ const T = {
     exportExcel: 'Excel ஏற்றுமதி', exportCSV: 'CSV ஏற்றுமதி',
     clientWiseSummary: 'வாடிக்கையாளர் சுருக்கம்',
     loadingWorkspace: 'உங்கள் பணியிடம் ஏற்றப்படுகிறது…',
+    welcomeToSamKass: 'சாம்காஸ்-க்கு வரவேற்கிறோம்',
+    chooseSignInMethod: 'உள்நுழைவு முறையைத் தேர்ந்தெடுக்கவும்',
+    continueWithEmail: 'மின்னஞ்சல் மூலம் தொடரவும்',
+    backToOptions: 'விருப்பங்களுக்குத் திரும்புக',
     welcomeBack: 'மீண்டும் வருக',
     signInToAccount: 'உங்கள் கணக்கில் உள்நுழைக',
     orUseEmail: 'அல்லது மின்னஞ்சலை பயன்படுத்தவும்',
@@ -595,17 +603,39 @@ function handleNotifMarkPending(loanId) {
 }
 
 
-// ── SCREENS ───────────────────────────────────────────────────
+function showFormSection(selector) {
+  const sections = $$('#auth-slide-2 .auth-form-section');
+  sections.forEach(s => {
+    s.classList.remove('active');
+    s.style.display = 'none';
+  });
+  const target = $(selector);
+  if (target) {
+    target.classList.add('active');
+    target.style.display = 'block';
+  }
+}
+
+function updateAuthHeader(title, subtitle) {
+  const tEl = $('#step-2-title');
+  const sEl = $('#step-2-subtitle');
+  if (tEl) tEl.textContent = title;
+  if (sEl) sEl.textContent = subtitle;
+}
+
 function showAuth() {
   $('#loading-screen').style.display = 'none';
   $('#auth-screen').style.display = '';
   $('#pin-lock-screen').style.display = 'none';
   $('#main-app').style.display = 'none';
-  // Show login form, hide PIN setup and register
-  $('#login-form-wrapper').style.display = '';
-  $('#register-form-wrapper').style.display = 'none';
-  $('#pin-setup-wrapper').style.display = 'none';
-  if ($('#forgot-password-wrapper')) $('#forgot-password-wrapper').style.display = 'none';
+  
+  // Slide back to Step 1 (Welcome Screen)
+  const slider = $('#auth-slider-container');
+  if (slider) slider.classList.remove('slide-to-step-2');
+  
+  // Show default email login section in Step 2
+  showFormSection('#login-form-wrapper');
+  updateAuthHeader('Log in or sign up', 'Manage loans, collections and customer payments smarter with SamKass.');
 }
 
 function showPinSetup() {
@@ -613,11 +643,15 @@ function showPinSetup() {
   $('#auth-screen').style.display = '';
   $('#pin-lock-screen').style.display = 'none';
   $('#main-app').style.display = 'none';
-  // Hide login/register, show PIN setup
-  $('#login-form-wrapper').style.display = 'none';
-  $('#register-form-wrapper').style.display = 'none';
-  $('#pin-setup-wrapper').style.display = '';
-  if ($('#forgot-password-wrapper')) $('#forgot-password-wrapper').style.display = 'none';
+  
+  // Slide to Step 2
+  const slider = $('#auth-slider-container');
+  if (slider) slider.classList.add('slide-to-step-2');
+  
+  // Show PIN Setup form section
+  showFormSection('#pin-setup-wrapper');
+  updateAuthHeader('Set Security PIN', 'Create a 4-digit PIN to protect your app');
+  
   // Clear & focus first digit
   const inputs = $$('#pin-setup-inputs .pin-digit-input');
   inputs.forEach(i => { i.value = ''; i.classList.remove('shake', 'success'); });
@@ -2847,29 +2881,260 @@ function bindGlobal() {
     }
   });
 
-  $('#show-register').addEventListener('click', () => {
-    $('#login-form-wrapper').style.display = 'none';
-    $('#register-form-wrapper').style.display = '';
-    $('#pin-setup-wrapper').style.display = 'none';
-  });
-  $('#show-login').addEventListener('click', () => {
-    $('#register-form-wrapper').style.display = 'none';
-    $('#login-form-wrapper').style.display = '';
-    $('#pin-setup-wrapper').style.display = 'none';
+  // --- ONBOARDING SLIDER TRANSITIONS & ALTERNATIVE AUTH METHODS ---
+  // Try another way (Welcome slide -> Slide 2)
+  $('#btn-try-another')?.addEventListener('click', () => {
+    const slider = $('#auth-slider-container');
+    if (slider) slider.classList.add('slide-to-step-2');
+    showFormSection('#login-form-wrapper');
+    updateAuthHeader('Log in or sign up', 'Manage loans, collections and customer payments smarter with SamKass.');
   });
 
-  // Forgot Password / Magic Link
+  // Back button (Slide 2 -> Slide 1)
+  $('#btn-back-to-step-1')?.addEventListener('click', () => {
+    const slider = $('#auth-slider-container');
+    if (slider) slider.classList.remove('slide-to-step-2');
+  });
+
+  // Alternative options
+  $('#btn-opt-phone')?.addEventListener('click', () => {
+    showFormSection('#phone-login-section');
+    updateAuthHeader('Phone Sign In', 'Use your registered phone number and PIN to access your account.');
+  });
+
+  $('#btn-opt-otp')?.addEventListener('click', () => {
+    showFormSection('#otp-login-section');
+    updateAuthHeader('One-Time Passcode', 'Verify your phone number with a secure SMS passcode.');
+    // Reset OTP input state
+    const verifyGroup = $('#otp-verify-input-group');
+    const phoneGroup = $('#otp-phone-input-group');
+    if (verifyGroup) verifyGroup.classList.add('d-none');
+    if (phoneGroup) phoneGroup.classList.remove('d-none');
+    const phoneInput = $('#otp-phone-number');
+    if (phoneInput) { phoneInput.disabled = false; phoneInput.value = ''; }
+    const codeInput = $('#otp-verification-code');
+    if (codeInput) codeInput.value = '';
+    const submitBtn = $('#btn-otp-submit');
+    if (submitBtn) { submitBtn.textContent = 'Send OTP'; submitBtn.disabled = false; }
+    const errEl = $('#otp-login-error');
+    if (errEl) errEl.classList.add('d-none');
+    if (window.otpResendInterval) {
+      clearInterval(window.otpResendInterval);
+      window.otpResendInterval = null;
+    }
+  });
+
+  // Back to email buttons
+  $$('.btn-back-to-email').forEach(btn => {
+    btn.addEventListener('click', () => {
+      showFormSection('#login-form-wrapper');
+      updateAuthHeader('Log in or sign up', 'Manage loans, collections and customer payments smarter with SamKass.');
+    });
+  });
+
+  // Toggle between forms (Register/Login)
+  $('#show-register')?.addEventListener('click', () => {
+    showFormSection('#register-form-wrapper');
+    updateAuthHeader('Create account', 'Get started with SamKass to simplify your book keeping.');
+  });
+
+  $('#show-login')?.addEventListener('click', () => {
+    showFormSection('#login-form-wrapper');
+    updateAuthHeader('Log in or sign up', 'Manage loans, collections and customer payments smarter with SamKass.');
+  });
+
+  // Forgot password
   $('#show-forgot-password')?.addEventListener('click', (e) => {
     e.preventDefault();
-    $('#login-form-wrapper').style.display = 'none';
-    $('#register-form-wrapper').style.display = 'none';
-    $('#forgot-password-wrapper').style.display = '';
-    $('#pin-setup-wrapper').style.display = 'none';
+    showFormSection('#forgot-password-wrapper');
+    updateAuthHeader('Reset password', 'We will email you a secure magic link to access your account.');
   });
 
   $('#show-login-from-forgot')?.addEventListener('click', () => {
-    $('#forgot-password-wrapper').style.display = 'none';
-    $('#login-form-wrapper').style.display = '';
+    showFormSection('#login-form-wrapper');
+    updateAuthHeader('Log in or sign up', 'Manage loans, collections and customer payments smarter with SamKass.');
+  });
+
+  // Mock Phone/PIN Submit Handler
+  $('#phone-login-form')?.addEventListener('submit', async e => {
+    e.preventDefault();
+    const phone = $('#phone-login-number').value.trim();
+    const pin = $('#phone-login-pin').value.trim();
+    const errEl = $('#phone-login-error');
+    errEl.classList.add('d-none');
+    if (!phone || phone.length !== 10 || !/^\d{10}$/.test(phone)) {
+      errEl.textContent = 'Enter a valid 10-digit phone number';
+      errEl.classList.remove('d-none');
+      return;
+    }
+    if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+      errEl.textContent = 'Enter your 4-digit PIN';
+      errEl.classList.remove('d-none');
+      return;
+    }
+
+    // Success! Show spinning loader and login
+    showFormSection('#logo-spinner-wrapper');
+    const msgEl = $('#spinner-message');
+    if (msgEl) msgEl.textContent = 'Connecting to SamKass...';
+
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    Store.saveSession({
+      token: 'mock-phone-session-' + Date.now(),
+      user: {
+        email: phone + '@samkass.site',
+        financierName: 'Phone User (' + phone.slice(-4) + ')',
+        businessName: 'SamKass Demo Co.'
+      }
+    });
+    const s = Store.settings();
+    s.financierName = 'Phone User (' + phone.slice(-4) + ')';
+    s.businessName = 'SamKass Demo Co.';
+    Store.saveSettings(s);
+    state.session = getSession();
+    if (window.KFSync) await KFSync.restore();
+    if (hasPin()) {
+      showPinLock();
+    } else {
+      showPinSetup();
+    }
+  });
+
+  // Mock Phone/OTP Submit Handler
+  $('#otp-phone-form')?.addEventListener('submit', async e => {
+    e.preventDefault();
+    const phone = $('#otp-phone-number').value.trim();
+    const errEl = $('#otp-login-error');
+    errEl.classList.add('d-none');
+
+    const verifyGroup = $('#otp-verify-input-group');
+    const isVerifying = verifyGroup && !verifyGroup.classList.contains('d-none');
+
+    if (!phone || phone.length !== 10 || !/^\d{10}$/.test(phone)) {
+      errEl.textContent = 'Enter a valid 10-digit phone number';
+      errEl.classList.remove('d-none');
+      return;
+    }
+
+    if (!isVerifying) {
+      // Step 1: Send OTP
+      const submitBtn = $('#btn-otp-submit');
+      submitBtn.textContent = 'Sending OTP...';
+      submitBtn.disabled = true;
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Show verification code field
+      verifyGroup.classList.remove('d-none');
+      const phoneInput = $('#otp-phone-number');
+      if (phoneInput) phoneInput.disabled = true;
+
+      // Setup 59s timer
+      let timeLeft = 59;
+      const timerEl = $('#otp-timer');
+      const resendBtn = $('#btn-resend-otp');
+      if (timerEl) {
+        timerEl.classList.remove('d-none');
+        timerEl.textContent = `Resend in ${timeLeft}s`;
+      }
+      if (resendBtn) resendBtn.classList.add('d-none');
+
+      if (window.otpResendInterval) clearInterval(window.otpResendInterval);
+      window.otpResendInterval = setInterval(() => {
+        timeLeft--;
+        if (timeLeft <= 0) {
+          clearInterval(window.otpResendInterval);
+          window.otpResendInterval = null;
+          if (timerEl) timerEl.classList.add('d-none');
+          if (resendBtn) resendBtn.classList.remove('d-none');
+        } else {
+          if (timerEl) timerEl.textContent = `Resend in ${timeLeft}s`;
+        }
+      }, 1000);
+
+      submitBtn.textContent = 'Verify & Login';
+      submitBtn.disabled = false;
+
+      // Auto-fill mock OTP for easier manual check
+      const codeInput = $('#otp-verification-code');
+      if (codeInput) codeInput.value = '123456';
+    } else {
+      // Step 2: Verify OTP code
+      const code = $('#otp-verification-code').value.trim();
+      if (!code || code.length !== 6 || !/^\d{6}$/.test(code)) {
+        errEl.textContent = 'Enter the 6-digit verification code';
+        errEl.classList.remove('d-none');
+        return;
+      }
+
+      // Success! Show loading spinner and login
+      showFormSection('#logo-spinner-wrapper');
+      const msgEl = $('#spinner-message');
+      if (msgEl) msgEl.textContent = 'Verifying security code...';
+
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      if (window.otpResendInterval) {
+        clearInterval(window.otpResendInterval);
+        window.otpResendInterval = null;
+      }
+
+      Store.saveSession({
+        token: 'mock-otp-session-' + Date.now(),
+        user: {
+          email: phone + '@samkass.site',
+          financierName: 'OTP User (' + phone.slice(-4) + ')',
+          businessName: 'SamKass Demo Co.'
+        }
+      });
+      const s = Store.settings();
+      s.financierName = 'OTP User (' + phone.slice(-4) + ')';
+      s.businessName = 'SamKass Demo Co.';
+      Store.saveSettings(s);
+      state.session = getSession();
+      if (window.KFSync) await KFSync.restore();
+      if (hasPin()) {
+        showPinLock();
+      } else {
+        showPinSetup();
+      }
+    }
+  });
+
+  // Handle resend OTP click
+  $('#btn-resend-otp')?.addEventListener('click', async () => {
+    const errEl = $('#otp-login-error');
+    errEl.classList.add('d-none');
+    const resendBtn = $('#btn-resend-otp');
+    resendBtn.classList.add('d-none');
+    const timerEl = $('#otp-timer');
+    if (timerEl) {
+      timerEl.classList.remove('d-none');
+      timerEl.textContent = 'Sending...';
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    let timeLeft = 59;
+    if (timerEl) timerEl.textContent = `Resend in ${timeLeft}s`;
+
+    if (window.otpResendInterval) clearInterval(window.otpResendInterval);
+    window.otpResendInterval = setInterval(() => {
+      timeLeft--;
+      if (timeLeft <= 0) {
+        clearInterval(window.otpResendInterval);
+        window.otpResendInterval = null;
+        if (timerEl) timerEl.classList.add('d-none');
+        if (resendBtn) resendBtn.classList.remove('d-none');
+      } else {
+        if (timerEl) timerEl.textContent = `Resend in ${timeLeft}s`;
+      }
+    }, 1000);
+
+    // Re-fill mock OTP
+    const codeInput = $('#otp-verification-code');
+    if (codeInput) codeInput.value = '123456';
   });
 
   $('#forgot-password-form')?.addEventListener('submit', async e => {

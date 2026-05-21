@@ -797,197 +797,343 @@
   </div>
 
   <!-- ===== AUTH SCREEN ===== -->
+  <!-- ===== AUTH SCREEN ===== -->
   <div id="auth-screen" style="display:none;">
+    <!-- Ambient Background Layer -->
+    <div class="auth-ambient-bg">
+      <div class="ambient-glow ambient-glow-1"></div>
+      <div class="ambient-glow ambient-glow-2"></div>
+      
+      <!-- Floating Particles -->
+      <div class="floating-particle particle-rupee-1">₹</div>
+      <div class="floating-particle particle-rupee-2">₹</div>
+      <div class="floating-particle particle-rupee-3">₹</div>
+      <div class="floating-particle particle-circle-1"></div>
+      <div class="floating-particle particle-circle-2"></div>
+      
+      <!-- Tiny Animated Graph Lines -->
+      <div class="floating-particle particle-graph">
+        <svg width="60" height="40" viewBox="0 0 60 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2 38L12 28L25 32L42 12L58 2" stroke="rgba(16, 185, 129, 0.25)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M58 2H46M58 2V14" stroke="rgba(16, 185, 129, 0.25)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+
     <div class="auth-container">
-      <!-- Logo -->
-      <div class="auth-logo" style="text-align: center; display: flex; flex-direction: column; align-items: center; margin-bottom: 1rem;">
-        <div style="width: 110px; height: 110px; border-radius: 50%; box-shadow: 0 0 25px var(--green-glow); margin-bottom: 16px; background: linear-gradient(135deg, #10b981, #059669); border: 2px solid var(--border-default); display: flex; align-items: center; justify-content: center; color: white; font-size: 3rem;">
-          <i class="fa-solid fa-chart-line"></i>
+      <div class="auth-slider" id="auth-slider-container">
+        
+        <!-- STEP 1 — FIRST TIME WELCOME SCREEN -->
+        <div class="auth-slide" id="auth-slide-1">
+          <!-- Logo -->
+          <div class="auth-logo">
+            <div style="width: 110px; height: 110px; border-radius: 50%; box-shadow: 0 0 25px var(--green-glow); margin: 0 auto 16px; background: linear-gradient(135deg, #10b981, #059669); border: 2px solid var(--border-default); display: flex; align-items: center; justify-content: center; color: white; font-size: 3rem;">
+              <i class="fa-solid fa-chart-line"></i>
+            </div>
+            <h1 class="auth-logo-title">SamKass</h1>
+            <p class="auth-logo-sub">Finance Manager</p>
+          </div>
+
+          <!-- Animated Finance Popup Cards -->
+          <div class="floating-cards-container">
+            <div class="floating-popup-card">
+              <div class="floating-card-icon"><i class="fa-solid fa-paper-plane"></i></div>
+              <div class="floating-card-text">EMI reminder sent</div>
+            </div>
+            <div class="floating-popup-card">
+              <div class="floating-card-icon"><i class="fa-solid fa-circle-check"></i></div>
+              <div class="floating-card-text">Daily collection updated</div>
+            </div>
+            <div class="floating-popup-card">
+              <div class="floating-card-icon"><i class="fa-solid fa-shield-halved"></i></div>
+              <div class="floating-card-text">Proper data storage</div>
+            </div>
+          </div>
+
+          <!-- Bottom Sheet Container -->
+          <div class="onboarding-bottom-sheet">
+            <h2 class="bottom-sheet-title" data-i18n="welcomeToSamKass">Welcome to SamKass</h2>
+            <p class="bottom-sheet-sub" data-i18n="chooseSignInMethod">Choose your sign-in method</p>
+            
+            <!-- Google Sign-in Wrapper -->
+            <div class="mb-2 d-flex flex-column align-items-center w-100">
+              <div id="g_id_onload" 
+                   data-client_id="1008709235007-vh9u2526ol0haffogibri3kno6rtjejl.apps.googleusercontent.com"
+                   data-callback="handleGoogleLogin"
+                   data-auto_prompt="false">
+              </div>
+              <div class="g_id_signin w-100" 
+                   data-type="standard" 
+                   data-shape="pill" 
+                   data-theme="outline"
+                   data-text="continue_with" 
+                   data-size="large" 
+                   data-logo_alignment="left">
+              </div>
+            </div>
+
+            <!-- Try Another Way Button -->
+            <button type="button" class="btn-try-another w-100" id="btn-try-another">
+              Try another way <i class="fa-solid fa-chevron-right ms-1"></i>
+            </button>
+          </div>
         </div>
-        <h1 class="auth-logo-title" style="margin-bottom: 4px;">SamKass</h1>
-        <p class="auth-logo-sub">Finance Manager</p>
+        
+        <!-- STEP 2 — LOGIN / SIGNUP SCREEN -->
+        <div class="auth-slide" id="auth-slide-2">
+          <!-- Back button and centered small logo -->
+          <div class="d-flex align-items-center justify-content-between w-100 mb-2">
+            <button type="button" class="btn-onboarding-back" id="btn-back-to-step-1">
+              <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-right: 38px;">
+              <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #059669); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.9rem; box-shadow: 0 0 10px rgba(16,185,129,0.3);">
+                <i class="fa-solid fa-chart-line"></i>
+              </div>
+              <span style="font-weight: 800; font-size: 1.15rem; color: #059669; margin: 0;">SamKass</span>
+            </div>
+            <div></div> <!-- Spacer -->
+          </div>
+
+          <!-- Title and Subtitle -->
+          <div style="text-align: center; margin-bottom: 0.5rem;">
+            <h2 class="auth-card-title" id="step-2-title">Log in or sign up</h2>
+            <p class="auth-card-sub" id="step-2-subtitle">Manage loans, collections and customer payments smarter with SamKass.</p>
+          </div>
+
+          <!-- Email Login Form Section -->
+          <div id="login-form-wrapper" class="kf-card auth-card auth-form-section active" style="padding: 1.5rem 1.25rem;">
+            <form id="login-form" novalidate>
+              <div class="mb-3">
+                <label class="form-label" for="login-email" data-i18n="emailAddress">Email Address</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
+                  <input type="email" id="login-email" class="form-control" placeholder="name@company.com"
+                    data-ocid="auth.email_input" />
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label" for="login-password" data-i18n="password">Password</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
+                  <input type="password" id="login-password" class="form-control" placeholder="Enter password"
+                    data-ocid="auth.password_input" />
+                  <button type="button" class="input-group-text btn-toggle-pw" data-target="login-password"><i
+                      class="fa-solid fa-eye"></i></button>
+                </div>
+                <div class="text-end mt-1">
+                  <a href="#" id="show-forgot-password" class="text-decoration-none" style="font-size: 0.85rem; color: #059669; font-weight: 600;">Forgot Password?</a>
+                </div>
+              </div>
+              <div id="login-error" class="alert alert-danger d-none" role="alert" data-ocid="auth.error_state" style="font-size: 0.825rem; padding: 0.5rem 0.75rem;"></div>
+              
+              <button type="submit" class="btn-kf-primary-gradient w-100 mb-3" data-ocid="auth.submit_button">
+                <i class="fa-solid fa-right-to-bracket me-2"></i>Login
+              </button>
+            </form>
+
+            <!-- Alternatives Divider -->
+            <div class="divider-text mb-3"><span>or continue with</span></div>
+
+            <!-- Alternative Auth Buttons -->
+            <div class="auth-choices-grid">
+              <!-- Google Button duplication target -->
+              <div class="g_id_signin w-100" 
+                   data-type="standard" 
+                   data-shape="pill" 
+                   data-theme="outline"
+                   data-text="continue_with" 
+                   data-size="large" 
+                   data-logo_alignment="left">
+              </div>
+              <button type="button" class="btn-alternative-auth" id="btn-opt-phone">
+                <i class="fa-solid fa-phone"></i> Continue with Phone
+              </button>
+              <button type="button" class="btn-alternative-auth" id="btn-opt-otp">
+                <i class="fa-solid fa-shield-halved"></i> Continue with OTP
+              </button>
+            </div>
+
+            <div class="auth-switch mt-3">
+              <span data-i18n="noAccount">Don't have an account?</span>
+              <button type="button" class="btn-link" id="show-register" data-ocid="auth.register_link"
+                data-i18n="register" style="font-weight: 700; color: #059669;">Register</button>
+            </div>
+          </div>
+
+          <!-- Register Form Section -->
+          <div id="register-form-wrapper" class="kf-card auth-card auth-form-section" style="display:none; padding: 1.5rem 1.25rem;">
+            <form id="register-form" novalidate>
+              <div class="mb-3">
+                <label class="form-label" for="reg-name" data-i18n="fullName">Full Name</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fa-solid fa-user"></i></span>
+                  <input type="text" id="reg-name" class="form-control" placeholder="Your Name"
+                    data-ocid="auth.name_input" />
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label" for="reg-email" data-i18n="emailAddress">Email Address</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
+                  <input type="email" id="reg-email" class="form-control" placeholder="name@company.com"
+                    data-ocid="auth.reg_email_input" />
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label" for="reg-password" data-i18n="password">Password</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
+                  <input type="password" id="reg-password" class="form-control" placeholder="Min 6 characters"
+                    data-ocid="auth.reg_password_input" />
+                  <button type="button" class="input-group-text btn-toggle-pw" data-target="reg-password"><i
+                      class="fa-solid fa-eye"></i></button>
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label" for="reg-business" data-i18n="businessNameInput">Business / Firm Name</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fa-solid fa-building"></i></span>
+                  <input type="text" id="reg-business" class="form-control" placeholder="My Finance Co."
+                    data-ocid="auth.business_input" />
+                </div>
+              </div>
+              <div id="register-error" class="alert alert-danger d-none" role="alert" data-ocid="auth.reg_error_state" style="font-size: 0.825rem; padding: 0.5rem 0.75rem;"></div>
+              
+              <button type="submit" class="btn-kf-primary-gradient w-100" data-ocid="auth.reg_submit_button">
+                <i class="fa-solid fa-user-plus me-2"></i>Create Account
+              </button>
+            </form>
+
+            <div class="auth-switch mt-3">
+              <span data-i18n="haveAccount">Already have an account?</span>
+              <button type="button" class="btn-link" id="show-login" data-ocid="auth.login_link"
+                data-i18n="login" style="font-weight: 700; color: #059669;">Login</button>
+            </div>
+          </div>
+
+          <!-- Phone Login Form Section (Mock/Cohesive) -->
+          <div id="phone-login-section" class="kf-card auth-card auth-form-section" style="padding: 1.5rem 1.25rem;">
+            <form id="phone-login-form">
+              <div class="mb-3">
+                <label class="form-label" for="phone-login-number">Phone Number</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fa-solid fa-phone"></i></span>
+                  <input type="tel" id="phone-login-number" class="form-control" placeholder="9876543210" maxlength="10" />
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label" for="phone-login-pin">4-Digit Security PIN</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fa-solid fa-key"></i></span>
+                  <input type="password" id="phone-login-pin" class="form-control" placeholder="••••" maxlength="4" inputmode="numeric" pattern="[0-9]*" />
+                </div>
+              </div>
+              <div id="phone-login-error" class="alert alert-danger d-none" role="alert" style="font-size: 0.825rem; padding: 0.5rem 0.75rem;"></div>
+              
+              <button type="submit" class="btn-kf-primary-gradient w-100 mb-3" id="btn-phone-login-submit">
+                <i class="fa-solid fa-circle-check me-2"></i>Continue
+              </button>
+            </form>
+            <button type="button" class="btn btn-link btn-back-to-email w-100 text-center text-decoration-none" style="color: #64748b; font-size: 0.85rem; font-weight: 600;">
+              Use email login instead
+            </button>
+          </div>
+
+          <!-- OTP Login Form Section (Mock/Cohesive) -->
+          <div id="otp-login-section" class="kf-card auth-card auth-form-section" style="padding: 1.5rem 1.25rem;">
+            <form id="otp-phone-form">
+              <div class="mb-3" id="otp-phone-input-group">
+                <label class="form-label" for="otp-phone-number">Phone Number</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fa-solid fa-phone"></i></span>
+                  <input type="tel" id="otp-phone-number" class="form-control" placeholder="9876543210" maxlength="10" />
+                </div>
+              </div>
+              
+              <!-- Hidden verification input group -->
+              <div class="mb-3 d-none" id="otp-verify-input-group">
+                <label class="form-label" for="otp-verification-code">6-Digit Verification Code</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fa-solid fa-shield-halved"></i></span>
+                  <input type="text" id="otp-verification-code" class="form-control" placeholder="123456" maxlength="6" inputmode="numeric" pattern="[0-9]*" />
+                </div>
+                <div class="text-end mt-1">
+                  <span id="otp-timer" class="text-muted" style="font-size: 0.8rem;">Resend in 59s</span>
+                  <button type="button" id="btn-resend-otp" class="btn btn-link d-none p-0 text-decoration-none" style="font-size: 0.8rem; color: #059669; font-weight: 600;">Resend OTP</button>
+                </div>
+              </div>
+              
+              <div id="otp-login-error" class="alert alert-danger d-none" role="alert" style="font-size: 0.825rem; padding: 0.5rem 0.75rem;"></div>
+              
+              <button type="submit" class="btn-kf-primary-gradient w-100 mb-3" id="btn-otp-submit">
+                Send OTP
+              </button>
+            </form>
+            <button type="button" class="btn btn-link btn-back-to-email w-100 text-center text-decoration-none" style="color: #64748b; font-size: 0.85rem; font-weight: 600;">
+              Use email login instead
+            </button>
+          </div>
+
+          <!-- Forgot Password Form Section -->
+          <div id="forgot-password-wrapper" class="kf-card auth-card auth-form-section" style="display:none; padding: 1.5rem 1.25rem;">
+            <form id="forgot-password-form" novalidate>
+              <div class="mb-3">
+                <label class="form-label" for="forgot-email">Email Address <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
+                  <input type="email" id="forgot-email" class="form-control" placeholder="name@company.com" />
+                </div>
+              </div>
+              <div id="forgot-error" class="alert alert-danger d-none" role="alert" style="font-size: 0.825rem; padding: 0.5rem 0.75rem;"></div>
+              <div id="forgot-success" class="alert alert-success d-none" role="alert" style="font-size: 0.825rem; padding: 0.5rem 0.75rem;"></div>
+              <button type="submit" class="btn-kf-primary-gradient w-100" id="forgot-submit-btn">
+                <i class="fa-solid fa-paper-plane me-2"></i>Send Magic Link
+              </button>
+            </form>
+            <div class="auth-switch mt-3">
+              <span>Remember your password?</span>
+              <button type="button" class="btn-link" id="show-login-from-forgot" style="font-weight: 700; color: #059669;">Back to Login</button>
+            </div>
+          </div>
+
+          <!-- Loading Spinner Wrapper (SamKass rotating logo animation) -->
+          <div id="logo-spinner-wrapper" class="kf-card auth-card auth-form-section" style="display:none; text-align:center;">
+            <div class="logo-spinner-container">
+              <div class="logo-spinner-circle">
+                <i class="fa-solid fa-chart-line"></i>
+              </div>
+              <p style="color: #64748b; font-weight: 600; font-size: 0.95rem;" id="spinner-message">Connecting to SamKass...</p>
+            </div>
+          </div>
+
+          <!-- ===== STEP 2: SET PIN (after first signup/login) ===== -->
+          <div id="pin-setup-wrapper" class="kf-card auth-card auth-form-section" style="display:none; padding: 1.5rem 1.25rem;">
+            <div style="text-align:center;margin-bottom:1rem">
+              <div style="width:56px;height:56px;background:linear-gradient(135deg, #10b981, #059669);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:1.5rem;color:#ffffff;margin-bottom:.5rem">
+                <i class="fa-solid fa-shield-halved"></i>
+              </div>
+              <h2 class="auth-card-title" style="margin-bottom:.25rem" data-i18n="setSecurityPin">Set Security PIN</h2>
+              <p class="auth-card-sub" style="margin-bottom:0" data-i18n="createPinDesc">Create a 4-digit PIN to protect your app</p>
+            </div>
+            <div id="pin-setup-inputs" style="display:flex;justify-content:center;gap:.75rem;margin-bottom:1.25rem">
+              <input type="password" maxlength="1" class="pin-digit-input" data-pin-idx="0" inputmode="numeric" pattern="[0-9]" autocomplete="off" />
+              <input type="password" maxlength="1" class="pin-digit-input" data-pin-idx="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" />
+              <input type="password" maxlength="1" class="pin-digit-input" data-pin-idx="2" inputmode="numeric" pattern="[0-9]" autocomplete="off" />
+              <input type="password" maxlength="1" class="pin-digit-input" data-pin-idx="3" inputmode="numeric" pattern="[0-9]" autocomplete="off" />
+            </div>
+            <div id="pin-setup-error" class="alert alert-danger d-none" role="alert" style="font-size: 0.825rem; padding: 0.5rem 0.75rem;"></div>
+            <button type="button" class="btn-kf-primary-gradient w-100" id="btn-confirm-pin" data-ocid="auth.confirm_pin_button">
+              <i class="fa-solid fa-lock me-2"></i><span data-i18n="setPinContinue">Set PIN &amp; Continue</span>
+            </button>
+            <p style="font-size:.75rem;color:#64748b;text-align:center;margin-top:.75rem;margin-bottom:0">
+              <i class="fa-solid fa-info-circle me-1"></i><span data-i18n="pinInfoText">You'll use this PIN every time you open the app</span>
+            </p>
+          </div>
+
+        </div>
+
       </div>
-
-      <!-- Login Form -->
-      <div id="login-form-wrapper" class="kf-card auth-card">
-        <h2 class="auth-card-title" data-i18n="welcomeBack">Welcome Back</h2>
-        <p class="auth-card-sub" data-i18n="signInToAccount">Sign in to your account</p>
-
-        <!-- Google Sign-In Button (Login) -->
-        <div class="mb-3 d-flex flex-column align-items-center w-100">
-          <div id="g_id_onload" 
-               data-client_id="1008709235007-vh9u2526ol0haffogibri3kno6rtjejl.apps.googleusercontent.com"
-               data-callback="handleGoogleLogin"
-               data-auto_prompt="false">
-          </div>
-          <div class="g_id_signin w-100" 
-               data-type="standard" 
-               data-shape="rectangular" 
-               data-theme="outline"
-               data-text="continue_with" 
-               data-size="large" 
-               data-logo_alignment="left">
-          </div>
-        </div>
-
-        <div class="divider-text mb-3"><span data-i18n="orUseEmail">or use email</span></div>
-
-        <form id="login-form" novalidate>
-          <div class="mb-3">
-            <label class="form-label" for="login-email" data-i18n="emailAddress">Email Address</label>
-            <div class="input-group">
-              <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
-              <input type="email" id="login-email" class="form-control" placeholder="name@company.com"
-                data-ocid="auth.email_input" />
-            </div>
-          </div>
-          <div class="mb-3">
-            <label class="form-label" for="login-password" data-i18n="password">Password</label>
-            <div class="input-group">
-              <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
-              <input type="password" id="login-password" class="form-control" placeholder="Enter password"
-                data-ocid="auth.password_input" />
-              <button type="button" class="input-group-text btn-toggle-pw" data-target="login-password"><i
-                  class="fa-solid fa-eye"></i></button>
-            </div>
-            <div class="text-end mt-1">
-              <a href="#" id="show-forgot-password" class="text-decoration-none" style="font-size: 0.85rem; color: var(--color-primary);">Forgot Password?</a>
-            </div>
-          </div>
-          <div id="login-error" class="alert alert-danger d-none" role="alert" data-ocid="auth.error_state"></div>
-          <button type="submit" class="btn-kf-primary w-100" data-ocid="auth.submit_button">
-            <i class="fa-solid fa-right-to-bracket me-2"></i>Login
-          </button>
-        </form>
-        <div class="auth-switch">
-          <span data-i18n="noAccount">Don't have an account?</span>
-          <button type="button" class="btn-link" id="show-register" data-ocid="auth.register_link"
-            data-i18n="register">Register</button>
-        </div>
-      </div>
-
-      <!-- Register Form -->
-      <div id="register-form-wrapper" class="kf-card auth-card" style="display:none;">
-        <h2 class="auth-card-title" data-i18n="createAccount">Create Account</h2>
-        <p class="auth-card-sub" data-i18n="startManagingLoans">Start managing your loans</p>
-
-        <!-- Google Sign-In Button (Register) -->
-        <div class="mb-3 d-flex flex-column align-items-center w-100">
-          <div class="g_id_signin w-100" 
-               data-type="standard" 
-               data-shape="rectangular" 
-               data-theme="outline"
-               data-text="continue_with" 
-               data-size="large" 
-               data-logo_alignment="left">
-          </div>
-        </div>
-
-        <div class="divider-text mb-3"><span data-i18n="orUseEmail">or use email</span></div>
-
-        <form id="register-form" novalidate>
-          <div class="mb-3">
-            <label class="form-label" for="reg-name" data-i18n="fullName">Full Name</label>
-            <div class="input-group">
-              <span class="input-group-text"><i class="fa-solid fa-user"></i></span>
-              <input type="text" id="reg-name" class="form-control" placeholder="Your Name"
-                data-ocid="auth.name_input" />
-            </div>
-          </div>
-          <div class="mb-3">
-            <label class="form-label" for="reg-email" data-i18n="emailAddress">Email Address</label>
-            <div class="input-group">
-              <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
-              <input type="email" id="reg-email" class="form-control" placeholder="name@company.com"
-                data-ocid="auth.reg_email_input" />
-            </div>
-          </div>
-          <div class="mb-3">
-            <label class="form-label" for="reg-password" data-i18n="password">Password</label>
-            <div class="input-group">
-              <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
-              <input type="password" id="reg-password" class="form-control" placeholder="Min 6 characters"
-                data-ocid="auth.reg_password_input" />
-              <button type="button" class="input-group-text btn-toggle-pw" data-target="reg-password"><i
-                  class="fa-solid fa-eye"></i></button>
-            </div>
-          </div>
-          <div class="mb-3">
-            <label class="form-label" for="reg-business" data-i18n="businessNameInput">Business / Firm Name</label>
-            <div class="input-group">
-              <span class="input-group-text"><i class="fa-solid fa-building"></i></span>
-              <input type="text" id="reg-business" class="form-control" placeholder="My Finance Co."
-                data-ocid="auth.business_input" />
-            </div>
-          </div>
-          <div id="register-error" class="alert alert-danger d-none" role="alert" data-ocid="auth.reg_error_state">
-          </div>
-          <button type="submit" class="btn-kf-primary w-100" data-ocid="auth.reg_submit_button">
-            <i class="fa-solid fa-user-plus me-2"></i>Create Account
-          </button>
-        </form>
-        <div class="auth-switch">
-          <span data-i18n="haveAccount">Already have an account?</span>
-          <button type="button" class="btn-link" id="show-login" data-ocid="auth.login_link"
-            data-i18n="login">Login</button>
-        </div>
-      </div>
-
-      <!-- Forgot Password Form -->
-      <div id="forgot-password-wrapper" class="kf-card auth-card" style="display:none;">
-        <h2 class="auth-card-title">Reset Password</h2>
-        <p class="auth-card-sub">Enter your email to receive a secure login link</p>
-        <form id="forgot-password-form" novalidate>
-          <div class="mb-3">
-            <label class="form-label" for="forgot-email">Email Address <span class="text-danger">*</span></label>
-            <div class="input-group">
-              <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
-              <input type="email" id="forgot-email" class="form-control kf-input" placeholder="name@company.com" />
-            </div>
-          </div>
-          <div id="forgot-error" class="alert alert-danger d-none" role="alert" style="font-size:0.875rem"></div>
-          <div id="forgot-success" class="alert alert-success d-none" role="alert" style="font-size:0.875rem"></div>
-          <button type="submit" class="btn-kf-primary w-100" id="forgot-submit-btn">
-            <i class="fa-solid fa-paper-plane me-2"></i>Send Magic Link
-          </button>
-        </form>
-        <div class="auth-switch mt-3">
-          <span>Remember your password?</span>
-          <button type="button" class="btn-link" id="show-login-from-forgot">Back to Login</button>
-        </div>
-      </div>
-
-      <!-- ===== STEP 2: SET PIN (after first signup/login) ===== -->
-      <div id="pin-setup-wrapper" class="kf-card auth-card" style="display:none;">
-        <div style="text-align:center;margin-bottom:1rem">
-          <div
-            style="width:56px;height:56px;background:var(--gradient-green);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:1.5rem;color:#ffffff;margin-bottom:.5rem">
-            <i class="fa-solid fa-shield-halved"></i>
-          </div>
-          <h2 class="auth-card-title" style="margin-bottom:.25rem" data-i18n="setSecurityPin">Set Security PIN</h2>
-          <p class="auth-card-sub" style="margin-bottom:0" data-i18n="createPinDesc">Create a 4-digit PIN to protect
-            your app</p>
-        </div>
-        <div id="pin-setup-inputs" style="display:flex;justify-content:center;gap:.75rem;margin-bottom:1.25rem">
-          <input type="password" maxlength="1" class="pin-digit-input" data-pin-idx="0" inputmode="numeric"
-            pattern="[0-9]" autocomplete="off" />
-          <input type="password" maxlength="1" class="pin-digit-input" data-pin-idx="1" inputmode="numeric"
-            pattern="[0-9]" autocomplete="off" />
-          <input type="password" maxlength="1" class="pin-digit-input" data-pin-idx="2" inputmode="numeric"
-            pattern="[0-9]" autocomplete="off" />
-          <input type="password" maxlength="1" class="pin-digit-input" data-pin-idx="3" inputmode="numeric"
-            pattern="[0-9]" autocomplete="off" />
-        </div>
-        <div id="pin-setup-error" class="alert alert-danger d-none" role="alert"></div>
-        <button type="button" class="btn-kf-primary w-100" id="btn-confirm-pin" data-ocid="auth.confirm_pin_button">
-          <i class="fa-solid fa-lock me-2"></i><span data-i18n="setPinContinue">Set PIN &amp; Continue</span>
-        </button>
-        <p style="font-size:.75rem;color:var(--color-text-muted);text-align:center;margin-top:.75rem;margin-bottom:0">
-          <i class="fa-solid fa-info-circle me-1"></i><span data-i18n="pinInfoText">You'll use this PIN every time you
-            open the app</span>
-        </p>
-      </div>
-
     </div>
   </div>
 
