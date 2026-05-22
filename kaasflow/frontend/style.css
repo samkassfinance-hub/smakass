@@ -2206,7 +2206,6 @@ h1, h2, h3, h4, h5, h6 {
   100% { transform: translateY(0) rotate(0deg); }
 }
 
-/* Slider System for Auth Screen */
 .auth-container {
   z-index: 5;
   overflow: hidden;
@@ -2219,6 +2218,16 @@ h1, h2, h3, h4, h5, h6 {
   margin: auto 0;
   display: flex;
   flex-direction: column;
+  animation: auth-entrance 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+  transform: translateY(40px) scale(0.97);
+}
+
+@keyframes auth-entrance {
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .auth-slider {

@@ -469,11 +469,9 @@ window.handleGoogleLogin = async function(response) {
     if (res.user?.appPin) { s.appPin = res.user.appPin; Store.saveSettings(s); }
     state.session = getSession();
     
-    // Crucial: Restore from cloud BEFORE generating sample data
-    // so we don't generate dummy data for an existing user logging into a new device
+    // Crucial: Restore from cloud BEFORE checking PIN
+    // so we don't overwrite data for an existing user logging into a new device
     if (window.KFSync) await KFSync.restore();
-    
-    generateSampleData();
     if (hasPin()) { showPinLock(); } else { showPinSetup(); }
   } else if (res.offline) {
     // Backend offline — create local session from Google credential
@@ -501,7 +499,6 @@ window.handleGoogleLogin = async function(response) {
     const s = Store.settings();
     if (!s.financierName) { s.financierName = googleUser.name; Store.saveSettings(s); }
     state.session = getSession();
-    generateSampleData();
     if (hasPin()) { showPinLock(); } else { showPinSetup(); }
   } else {
     const errEl = $('#login-error');
@@ -533,6 +530,11 @@ function getPin() {
 
 function logout() {
   localStorage.removeItem(LS.session);
+  localStorage.removeItem(LS.clients);
+  localStorage.removeItem(LS.loans);
+  localStorage.removeItem(LS.payments);
+  localStorage.removeItem(LS.settings);
+  localStorage.removeItem(LS.recycleBin);
   state.session = null;
   showAuth();
 }
@@ -1870,7 +1872,6 @@ function renderSettings(container) {
       <div class="kf-card pro-card" data-ocid="settings.data_card">
         <div class="section-title"><i class="fa-solid fa-database"></i>Data Management</div>
         <button class="btn-kf-outline pro-btn-outline w-100 mb-3" id="btn-settings-export-pdf" data-ocid="settings.export_pdf_button"><i class="fa-solid fa-file-pdf me-1"></i>Export Data (PDF)</button>
-        <button class="btn-kf-outline pro-btn-outline w-100 mb-3" id="btn-load-dummy-data"><i class="fa-solid fa-users me-1"></i>Load 18 Dummy Clients</button>
         <button class="btn-kf-danger pro-btn-danger w-100" id="btn-clear-data" data-ocid="settings.clear_data_button"><i class="fa-solid fa-trash me-1"></i><span data-i18n="clearData">${t('clearData')}</span></button>
       </div>
 
@@ -1963,23 +1964,6 @@ function renderSettings(container) {
 
   $('#btn-upgrade').addEventListener('click', () => bootstrap.Modal.getOrCreateInstance($('#upgradeModal')).show());
   $('#banner-upgrade-btn') && $('#banner-upgrade-btn').addEventListener('click', () => bootstrap.Modal.getOrCreateInstance($('#upgradeModal')).show());
-
-  $('#btn-load-dummy-data')?.addEventListener('click', () => {
-    state.deleteCallback = () => {
-      localStorage.removeItem(LS.clients);
-      localStorage.removeItem(LS.loans);
-      localStorage.removeItem(LS.payments);
-      localStorage.removeItem(LS.recycleBin);
-      generateSampleData();
-      showToast('18 Dummy clients loaded into memory!', 'success');
-      navigateTo('dashboard');
-    };
-    $('#confirm-delete-msg').textContent = 'This will replace your current memory with 18 dummy clients, loans, and collections. Continue?';
-    $('#confirm-delete-btn').textContent = 'Load Data';
-    const titleEl = $('#confirmDeleteModal .modal-title');
-    if (titleEl) titleEl.textContent = 'Confirm Action';
-    new bootstrap.Modal($('#confirmDeleteModal')).show();
-  });
 
   $('#btn-settings-export-pdf')?.addEventListener('click', () => exportAllDataAsPDF());
   $('#btn-clear-data').addEventListener('click', () => {
@@ -2902,7 +2886,7 @@ function bindGlobal() {
       if (res.user?.appPin) { s.appPin = res.user.appPin; }
       Store.saveSettings(s);
       state.session = getSession();
-      generateSampleData();
+      // Data generation removed
       showPinSetup(); // New users always set PIN
     } else {
       errEl.textContent = res.error || res.message || 'Registration failed'; errEl.classList.remove('d-none');

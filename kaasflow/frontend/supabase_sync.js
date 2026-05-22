@@ -117,6 +117,7 @@
       const resSettings = await db.from('kf_settings').select('*').eq('user_id', userId).maybeSingle();
 
       if (resSettings.error) {
+        window._kfRestoring = false;
         _toast('❌ Restore failed: Check Supabase configuration', 'error');
         console.error('Supabase Restore Error:', resSettings.error);
         return null;
