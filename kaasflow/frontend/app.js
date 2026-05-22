@@ -2745,11 +2745,14 @@ window.syncToGoogleSheet = async function(action, payload) {
   if (!s.googleSheetUrl) return; // Not configured
 
   try {
+    const formData = new URLSearchParams();
+    formData.append('data', JSON.stringify({ action, payload }));
+
     fetch(s.googleSheetUrl, {
       method: 'POST',
       mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action, payload })
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formData
     });
     console.log('Google Sheet sync initiated for', action);
   } catch (e) {
