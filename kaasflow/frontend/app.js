@@ -2002,19 +2002,35 @@ function renderSettings(container) {
 
   $('#btn-connect-google-sheet')?.addEventListener('click', () => {
     const s = Store.settings();
-    const html = `
-      <div class="p-3">
-        <h4 class="mb-3">Connect Google Sheet</h4>
-        <p class="text-muted-kf">Paste your Google Apps Script Web App URL to automatically sync new clients and loans to your Google Sheet.</p>
-        <div class="mb-3">
-          <label class="form-label">Web App URL (API Key)</label>
-          <input type="text" class="form-control kf-input pro-input" id="google-sheet-url" placeholder="https://script.google.com/macros/s/..." value="${s.googleSheetUrl || ''}">
+    let modalEl = document.getElementById('gsheetModal');
+    if (!modalEl) {
+      modalEl = document.createElement('div');
+      modalEl.className = 'modal fade';
+      modalEl.id = 'gsheetModal';
+      modalEl.tabIndex = '-1';
+      document.body.appendChild(modalEl);
+    }
+    
+    modalEl.innerHTML = `
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content kf-card pro-card" style="border:none;">
+          <div class="p-4">
+            <h4 class="mb-3">Connect Google Sheet</h4>
+            <p class="text-muted-kf">Paste your Google Apps Script Web App URL to automatically sync new clients and loans to your Google Sheet.</p>
+            <div class="mb-4">
+              <label class="form-label fw-bold">Web App URL (API Key)</label>
+              <input type="text" class="form-control kf-input pro-input" id="google-sheet-url" placeholder="https://script.google.com/macros/s/..." value="${s.googleSheetUrl || ''}">
+            </div>
+            <div class="d-flex gap-2 justify-content-end">
+              <button class="btn-kf-outline px-4" data-bs-dismiss="modal">Cancel</button>
+              <button class="btn-kf-primary px-4" id="save-gsheet-btn">Save Configuration</button>
+            </div>
+          </div>
         </div>
-        <button class="btn-kf-primary w-100" id="save-gsheet-btn">Save Configuration</button>
       </div>
     `;
-    const m = new bootstrap.Modal(document.getElementById('genericModal'));
-    document.getElementById('genericModal').querySelector('.modal-content').innerHTML = html;
+    
+    const m = new bootstrap.Modal(modalEl);
     m.show();
 
     document.getElementById('save-gsheet-btn').addEventListener('click', () => {
