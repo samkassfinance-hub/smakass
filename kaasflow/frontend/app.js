@@ -1828,7 +1828,12 @@ function renderProfile(container) {
 
 function renderSettings(container) {
   const plan = getPlan();
-  const planExpiry = getPlanExpiry();
+  const planExpiry = getPlanExpiryTime();
+  
+  const settings = Store.settings();
+  const session = getSession();
+  const financierName = settings.financierName || session?.user?.financierName || 'Your Name';
+  const avatarChar = financierName !== 'Your Name' ? financierName.charAt(0).toUpperCase() : 'U';
 
   // PRO Aesthetic Settings Page
   container.innerHTML = `
