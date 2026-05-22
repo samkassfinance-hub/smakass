@@ -2273,6 +2273,7 @@ h1, h2, h3, h4, h5, h6 {
   margin: 0.5rem auto 1.25rem;
   width: 90%;
   display: block;
+  perspective: 1000px;
 }
 
 .floating-popup-card {
