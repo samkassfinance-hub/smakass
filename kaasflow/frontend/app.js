@@ -1835,6 +1835,21 @@ function renderSettings(container) {
     <div class="page-section" data-ocid="settings.page">
       <div class="page-title"><i class="fa-solid fa-gear"></i><span data-i18n="settings">${t('settings')}</span></div>
 
+      <div class="kf-card pro-card mb-3" style="cursor:pointer;" id="btn-goto-profile" data-ocid="settings.goto_profile">
+        <div class="d-flex align-items-center justify-content-between">
+          <div class="d-flex align-items-center gap-3">
+            <div class="pro-avatar" style="width:50px; height:50px; font-size:1.2rem;">
+              <span>${avatarChar}</span>
+            </div>
+            <div>
+              <h5 class="mb-0">${financierName}</h5>
+              <small class="text-muted-kf">View & Edit Profile</small>
+            </div>
+          </div>
+          <i class="fa-solid fa-chevron-right text-muted-kf"></i>
+        </div>
+      </div>
+
       <div class="kf-card pro-plan-card" data-ocid="settings.plan_card">
         <div class="plan-glass-layer"></div>
         <div class="plan-content">
@@ -1972,7 +1987,11 @@ function renderSettings(container) {
     });
   });
 
-  $('#btn-upgrade').addEventListener('click', () => bootstrap.Modal.getOrCreateInstance($('#upgradeModal')).show());
+  container.querySelector('#btn-goto-profile')?.addEventListener('click', () => {
+    navigateTo('profile');
+  });
+
+  $('#btn-upgrade')?.addEventListener('click', () => bootstrap.Modal.getOrCreateInstance($('#upgradeModal')).show());
   $('#banner-upgrade-btn') && $('#banner-upgrade-btn').addEventListener('click', () => bootstrap.Modal.getOrCreateInstance($('#upgradeModal')).show());
 
   $('#btn-settings-export-pdf')?.addEventListener('click', () => exportAllDataAsPDF());
