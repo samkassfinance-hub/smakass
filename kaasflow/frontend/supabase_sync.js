@@ -14,16 +14,14 @@
   'use strict';
 
   // ─── Supabase Connection ──────────────────────────────────────
-  const SUPABASE_URL = 'https://eahyuwpejwbqzzolajzr.supabase.co';
-  
-  // PASTE YOUR "service_role" SECRET KEY HERE (Keep the quotes around it):
-  const SUPABASE_SECRET_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhaHl1d3BlandicXp6b2xhanpyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTA5MjI0NCwiZXhwIjoyMDk0NjY4MjQ0fQ.Mm4eOTioL1FpasqsqJPBeNdRP_BBW0_50ucBsf5Uoxs';
+  const SUPABASE_URL = 'https://gtuollgkfiaczgwcplbx.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhaHl1d3BlandicXp6b2xhanpyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwOTIyNDQsImV4cCI6MjA5NDY2ODI0NH0.S98_O8nYZoiVj9-xq153R8VorNhehy8m46FoYIjUzvY';
 
   let supabaseInstance = null;
   function getSupabase() {
     if (supabaseInstance) return supabaseInstance;
     if (window.supabase) {
-      supabaseInstance = window.supabase.createClient(SUPABASE_URL, SUPABASE_SECRET_KEY);
+      supabaseInstance = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     }
     return supabaseInstance;
   }

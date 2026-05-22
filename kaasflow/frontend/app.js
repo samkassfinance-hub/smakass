@@ -643,6 +643,12 @@ function showAuth() {
   $('#pin-lock-screen').style.display = 'none';
   $('#main-app').style.display = 'none';
   
+  const aiText = document.getElementById('ai-typing-text');
+  if (aiText && !aiText.dataset.typingStarted) {
+    aiText.dataset.typingStarted = 'true';
+    typeAIOrbText();
+  }
+  
   // Slide back to Step 1 (Welcome Screen)
   const slider = $('#auth-slider-container');
   if (slider) slider.classList.remove('slide-to-step-2');
@@ -829,39 +835,7 @@ function checkAccessControl() {
 
 
 function updatePlanBanner() {
-  const banner = $('#plan-banner');
-  if (!banner) return;
-  const plan = getPlan();
-  
-  if (plan === 'free') { 
-    const clientCount = Store.clients().length;
-    if (clientCount >= 20) {
-      banner.classList.remove('d-none');
-      $('#plan-banner-text').innerHTML = `<i class="fa-solid fa-crown text-warning me-2"></i>Free tier limit reached (${clientCount}/20 clients). Please upgrade to add more.`;
-    } else {
-      banner.classList.add('d-none');
-    }
-    return; 
-  }
-  
-  const expiryTime = getPlanExpiryTime();
-  if (expiryTime === 0) {
-    banner.classList.add('d-none');
-    return;
-  }
-  
-  const msLeft = expiryTime - Date.now();
-  const daysLeft = Math.ceil(msLeft / (24 * 60 * 60 * 1000));
-  
-  if (daysLeft > 0 && daysLeft <= 30) {
-    banner.classList.remove('d-none');
-    $('#plan-banner-text').innerHTML = `<i class="fa-solid fa-clock text-warning me-2"></i>Your ${plan} plan expires in ${daysLeft} day(s).`;
-  } else if (daysLeft <= 0) {
-    banner.classList.remove('d-none');
-    $('#plan-banner-text').innerHTML = `<i class="fa-solid fa-circle-exclamation text-danger me-2"></i>Your plan has expired. Please renew.`;
-  } else {
-    banner.classList.add('d-none');
-  }
+  // Banner removed per user request. Hard-block modal handles expiration entirely.
 }
 
 window.KF = window.KF || {};
@@ -2757,6 +2731,50 @@ function updateNotifBadge() {
     badge.classList.add('d-none');
   }
 }
+
+function typeAIOrbText() {
+  const textEl = document.getElementById('ai-typing-text');
+  if (!textEl) return;
+  const phrases = [
+    "Analyzing financial data...",
+    "Calculating EMI schedules...",
+    "Synchronizing secure records...",
+    "Welcome to SamKass Pro."
+  ];
+  let phraseIndex = 0;
+  let charIndex = 0;
+  let isDeleting = false;
+  
+  function type() {
+    if (!document.getElementById('ai-typing-text')) return;
+    const currentPhrase = phrases[phraseIndex];
+    if (isDeleting) {
+      textEl.innerText = currentPhrase.substring(0, charIndex - 1);
+      charIndex--;
+    } else {
+      textEl.innerText = currentPhrase.substring(0, charIndex + 1);
+      charIndex++;
+    }
+    
+    let typeSpeed = isDeleting ? 30 : 70;
+    
+    if (!isDeleting && charIndex === currentPhrase.length) {
+      typeSpeed = 2000;
+      isDeleting = true;
+    } else if (isDeleting && charIndex === 0) {
+      isDeleting = false;
+      phraseIndex = (phraseIndex + 1) % phrases.length;
+      typeSpeed = 500;
+    }
+    
+    setTimeout(type, typeSpeed);
+  }
+  
+  // Start typing
+  setTimeout(type, 1000);
+}
+
+
 
 function renderNotifDropdown() {
   const loans = Store.loans().filter(l => l.status === 'active');
