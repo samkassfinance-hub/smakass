@@ -749,6 +749,7 @@ function navigateTo(page) {
     loans:     renderLoans,
     collection: renderCollection,
     reports:   renderReports,
+    profile:   renderProfile,
     settings:  renderSettings,
   };
   if (pages[page]) pages[page](content);
@@ -1756,20 +1757,17 @@ function renderReports(container) {
 }
 
 // ── SETTINGS PAGE ─────────────────────────────────────────────
-function renderSettings(container) {
+function renderProfile(container) {
   const settings = Store.settings();
   const session = getSession();
-  const plan = getPlan();
-  const planExpiry = getPlanExpiry();
 
   const financierName = settings.financierName || session?.user?.financierName || 'Your Name';
   const businessName = settings.businessName || session?.user?.businessName || 'Business Name';
   const avatarChar = financierName !== 'Your Name' ? financierName.charAt(0).toUpperCase() : 'U';
 
-  // PRO Aesthetic Settings Page
   container.innerHTML = `
-    <div class="page-section" data-ocid="settings.page">
-      <div class="page-title"><i class="fa-solid fa-gear"></i><span data-i18n="settings">${t('settings')}</span></div>
+    <div class="page-section" data-ocid="profile.page">
+      <div class="page-title"><i class="fa-solid fa-user"></i><span data-i18n="profile">${t('profile')}</span></div>
 
       <!-- PRO Profile Header -->
       <div class="pro-profile-header mb-4 mt-2">
@@ -1783,7 +1781,7 @@ function renderSettings(container) {
         </div>
       </div>
 
-      <div class="kf-card pro-card" data-ocid="settings.profile_card">
+      <div class="kf-card pro-card" data-ocid="profile.edit_card">
         <div class="section-title"><i class="fa-solid fa-user-pen"></i>Edit Profile</div>
         <div class="mb-3">
           <label class="form-label" data-i18n="financierName">${t('financierName')}</label>
@@ -1795,6 +1793,47 @@ function renderSettings(container) {
         </div>
         <button class="btn-kf-primary pro-btn w-100 mt-2" id="btn-save-profile" data-ocid="settings.save_profile_button"><i class="fa-solid fa-floppy-disk me-2"></i>Save Profile</button>
       </div>
+    </div>
+  `;
+
+  // Attach Profile Events
+  const saveBtn = container.querySelector('#btn-save-profile');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', () => {
+      const n = container.querySelector('#settings-name').value.trim();
+      const b = container.querySelector('#settings-business').value.trim();
+      const s = Store.settings();
+      s.financierName = n;
+      s.businessName = b;
+      Store.saveSettings(s);
+      
+      const sess = getSession();
+      if (sess?.user) {
+        sess.user.financierName = n;
+        sess.user.businessName = b;
+        Store.saveSession(sess);
+      }
+      
+      showToast('Profile saved successfully', 'success');
+      
+      // Update header instantly
+      const headerName = document.querySelector('.header-profile .profile-name');
+      if (headerName) headerName.textContent = n || 'Profile';
+      
+      // Re-render profile view to reflect new avatar
+      renderProfile(container);
+    });
+  }
+}
+
+function renderSettings(container) {
+  const plan = getPlan();
+  const planExpiry = getPlanExpiry();
+
+  // PRO Aesthetic Settings Page
+  container.innerHTML = `
+    <div class="page-section" data-ocid="settings.page">
+      <div class="page-title"><i class="fa-solid fa-gear"></i><span data-i18n="settings">${t('settings')}</span></div>
 
       <div class="kf-card pro-plan-card" data-ocid="settings.plan_card">
         <div class="plan-glass-layer"></div>
@@ -1911,13 +1950,6 @@ function renderSettings(container) {
   });
 
   // Settings event handlers
-  $('#btn-save-profile').addEventListener('click', () => {
-    const s = Store.settings();
-    s.financierName = $('#settings-name').value.trim();
-    s.businessName = $('#settings-business').value.trim();
-    Store.saveSettings(s);
-    showToast('Profile saved!', 'success');
-  });
 
 
   $('#settings-dark-toggle').addEventListener('change', e => {
@@ -3021,10 +3053,13 @@ function bindGlobal() {
     s.appPin = pin;
     Store.saveSettings(s);
     
-    // Sync to backend
+    // Sync to backend (or Supabase directly)
     const sessionUser = getSession()?.user;
     if (sessionUser && sessionUser.email) {
       apiAuth('set-pin', { email: sessionUser.email, pin: pin }).catch(e => console.error(e));
+    }
+    if (window.KFSync) {
+      KFSync.backup(true);
     }
     
     // Show success animation
