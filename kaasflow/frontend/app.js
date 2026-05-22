@@ -3562,3 +3562,16 @@ document.addEventListener('DOMContentLoaded', () => {
   // Brief loading screen delay for smooth UX
   setTimeout(() => init(), 400); // Keep the UX delay
 });
+
+// Auto-Sync when returning to the app from the background (Cross-device real-time sync)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && window.KFSync && isLoggedIn()) {
+    KFSync.restore().then((res) => {
+      if (res && state.page) {
+        // Soft refresh the UI if data was pulled without interrupting the user
+        navigateTo(state.page);
+        updatePlanBanner();
+      }
+    });
+  }
+});
