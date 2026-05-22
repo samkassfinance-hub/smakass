@@ -2274,6 +2274,85 @@ h1, h2, h3, h4, h5, h6 {
   50% { opacity: 0; }
 }
 
+/* Dynamic Interest & EMI Popups */
+.floating-interest-container {
+  position: absolute;
+  top: 50px;
+  left: 0;
+  width: 100%;
+  height: 150px;
+  perspective: 1000px;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.interest-popup {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: max-content;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.2);
+  opacity: 0;
+  transform-style: preserve-3d;
+  animation: crazy-popup 6s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+}
+
+.interest-popup.card-1 {
+  top: 20px;
+  left: 10%;
+  animation-delay: 0.5s;
+}
+
+.interest-popup.card-2 {
+  top: 80px;
+  right: 10%;
+  animation-delay: 3.5s;
+}
+
+.interest-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+}
+
+.interest-text {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.interest-text span {
+  font-weight: 800;
+  margin-left: 4px;
+}
+
+@keyframes crazy-popup {
+  0% {
+    opacity: 0;
+    transform: translateY(40px) scale(0.5) rotateX(-60deg) rotateY(30deg);
+  }
+  15%, 40% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotateX(0deg) rotateY(0deg);
+  }
+  50%, 100% {
+    opacity: 0;
+    transform: translateY(-40px) scale(0.8) rotateX(45deg) rotateY(-20deg);
+  }
+}
+
 .particle-circle-1 {
   width: 12px;
   height: 12px;
