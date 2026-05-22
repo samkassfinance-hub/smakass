@@ -2019,7 +2019,8 @@ function renderSettings(container) {
             <p class="text-muted-kf">Paste your Google Apps Script Web App URL to automatically sync new clients and loans to your Google Sheet.</p>
             <div class="mb-4">
               <label class="form-label fw-bold">Web App URL (API Key)</label>
-              <input type="text" class="form-control kf-input pro-input" id="google-sheet-url" placeholder="https://script.google.com/macros/s/..." value="${s.googleSheetUrl || ''}">
+              <input type="text" class="form-control kf-input pro-input mb-3" id="google-sheet-url" placeholder="https://script.google.com/macros/s/..." value="${s.googleSheetUrl || ''}">
+              ${s.googleSheetUrl ? `<button class="btn-kf-outline w-100 mt-2" id="btn-sync-existing-gsheet"><i class="fa-solid fa-cloud-arrow-up me-2"></i>Sync All Existing Data Now</button>` : ''}
             </div>
             <div class="d-flex gap-2 justify-content-end">
               <button class="btn-kf-outline px-4" data-bs-dismiss="modal">Cancel</button>
@@ -2040,7 +2041,37 @@ function renderSettings(container) {
       Store.saveSettings(st);
       m.hide();
       showToast('Google Sheet connection saved!', 'success');
+      setTimeout(() => navigateTo('settings'), 300); // Reload settings to show sync button
     });
+
+    const syncExistingBtn = document.getElementById('btn-sync-existing-gsheet');
+    if (syncExistingBtn) {
+      syncExistingBtn.addEventListener('click', async () => {
+        syncExistingBtn.disabled = true;
+        syncExistingBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Syncing...';
+        const clients = Store.clients();
+        const loans = Store.loans();
+        let total = clients.length + loans.length;
+        let done = 0;
+        
+        for (const c of clients) {
+          if (window.syncToGoogleSheet) await window.syncToGoogleSheet('add_client', c);
+          done++;
+          syncExistingBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-2"></i>Syncing... (${done}/${total})`;
+          await new Promise(r => setTimeout(r, 600)); // Delay to avoid Apps Script rate limits
+        }
+        for (const l of loans) {
+          if (window.syncToGoogleSheet) await window.syncToGoogleSheet('add_loan', l);
+          done++;
+          syncExistingBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-2"></i>Syncing... (${done}/${total})`;
+          await new Promise(r => setTimeout(r, 600));
+        }
+        
+        syncExistingBtn.innerHTML = '<i class="fa-solid fa-check me-2"></i>Sync Complete!';
+        showToast('All existing data synced to Google Sheet!', 'success');
+        setTimeout(() => m.hide(), 1500);
+      });
+    }
   });
 
   $('#btn-settings-export-pdf')?.addEventListener('click', () => exportAllDataAsPDF());
