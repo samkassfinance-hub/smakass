@@ -499,6 +499,10 @@ window.handleGoogleLogin = async function(response) {
     const s = Store.settings();
     if (!s.financierName) { s.financierName = googleUser.name; Store.saveSettings(s); }
     state.session = getSession();
+    
+    // Crucial: Restore from cloud BEFORE checking PIN
+    if (window.KFSync) await KFSync.restore();
+    
     if (hasPin()) { showPinLock(); } else { showPinSetup(); }
   } else {
     const errEl = $('#login-error');

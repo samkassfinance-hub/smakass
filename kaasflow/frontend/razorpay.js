@@ -1,55 +1,68 @@
-// Razorpay Payment Integration
+// Razorpay Payment Integration (Frontend Only)
 const RazorpayPayment = {
-  keyId: '', // Set from backend or config
+  keyId: 'rzp_live_SsSGY7EWJN9CYZ', // Hardcoded Live Key per user request
   
   async init() {
-    try {
-      const response = await fetch('/api/payment/key');
-      const data = await response.json();
-      if (data.key) {
-        this.keyId = data.key;
-      }
-    } catch (e) {
-      console.error('Failed to initialize Razorpay key:', e);
-    }
+    // No backend to fetch from
   },
 
   async createOrder(amount, planType) {
-    const response = await fetch('/api/payment/create-order', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount, plan_type: planType })
-    });
-    return await response.json();
+    // Since we are frontend-only, we skip creating a formal Razorpay Order
+    // and just return the amount so the checkout can use it.
+    return { amount: amount, currency: 'INR', planType: planType };
   },
 
   async verifyPayment(paymentData) {
-    const response = await fetch('/api/payment/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(paymentData)
-    });
-    return await response.json();
+    // Frontend-only verification (trusting the successful callback)
+    const planMap = {
+      'monthly': 30,
+      '3months': 90,
+      'yearly': 365
+    };
+    
+    const days = planMap[paymentData.plan_type] || 30;
+    const now = new Date();
+    const expiry = new Date(now.getTime() + (days * 24 * 60 * 60 * 1000));
+    
+    // Save subscription locally
+    const subData = {
+      plan_type: paymentData.plan_type,
+      status: 'active',
+      valid_until: expiry.toISOString(),
+      updated_at: now.toISOString()
+    };
+    
+    const s = JSON.parse(localStorage.getItem('kf_settings') || '{}');
+    s.subscription = subData;
+    localStorage.setItem('kf_settings', JSON.stringify(s));
+    
+    // Sync to Supabase immediately so it's not lost
+    if (window.KFSync) {
+      await KFSync.backup(true);
+    }
+    
+    return { success: true, plan_activated: true, subscription: subData, message: "Payment successful" };
   },
 
   async checkSubscriptionStatus() {
-    const response = await fetch('/api/subscription/status');
-    return await response.json();
+    const s = JSON.parse(localStorage.getItem('kf_settings') || '{}');
+    if (s.subscription) {
+      return { success: true, subscription: s.subscription };
+    }
+    return { success: false };
   },
 
   openCheckout(orderData, options = {}) {
     const rzpOptions = {
       key: this.keyId,
-      amount: orderData.amount,
+      amount: orderData.amount, // Amount must be in paise (e.g. 50000 for ₹500)
       currency: orderData.currency,
-      order_id: orderData.id,
-      name: options.name || 'KaasFlow',
-      description: options.description || 'Payment',
+      name: options.name || 'SamKass Finance',
+      description: options.description || 'Pro Subscription',
       handler: async (response) => {
+        // Without order_id, response only has razorpay_payment_id
         const verification = await this.verifyPayment({
-          razorpay_order_id: response.razorpay_order_id,
           razorpay_payment_id: response.razorpay_payment_id,
-          razorpay_signature: response.razorpay_signature,
           plan_type: options.planType
         });
         

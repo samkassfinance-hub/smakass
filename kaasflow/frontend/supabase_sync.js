@@ -14,7 +14,7 @@
   'use strict';
 
   // ─── Supabase Connection ──────────────────────────────────────
-  const SUPABASE_URL = 'https://gtuollgkfiaczgwcplbx.supabase.co';
+  const SUPABASE_URL = 'https://eahyuwpejwbqzzolajzr.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhaHl1d3BlandicXp6b2xhanpyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwOTIyNDQsImV4cCI6MjA5NDY2ODI0NH0.S98_O8nYZoiVj9-xq153R8VorNhehy8m46FoYIjUzvY';
 
   let supabaseInstance = null;
