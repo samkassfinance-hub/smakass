@@ -1283,8 +1283,13 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: var(--transition);
-  font-size: 0.875rem;
+  font-size: 1.25rem;
   opacity: 1;
+}
+.kf-btn-close::after {
+  content: '\f00d'; /* FontAwesome x-mark */
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
 }
 
 .kf-btn-close:hover { background: var(--color-bg-secondary); color: var(--color-text); }
@@ -2276,8 +2281,8 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);
   border: 1px solid rgba(16, 185, 129, 0.08);
   width: 100%;
-  animation: rotate-stack 9s infinite ease-in-out;
-  transition: transform 0.25s ease, box-shadow 0.25s ease, opacity 0.25s ease;
+  animation: fast-popup 6s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
   opacity: 0;
   visibility: hidden;
 }
@@ -2286,10 +2291,10 @@ h1, h2, h3, h4, h5, h6 {
   animation-delay: 0s;
 }
 .floating-popup-card:nth-child(2) {
-  animation-delay: -3s;
+  animation-delay: -2s;
 }
 .floating-popup-card:nth-child(3) {
-  animation-delay: -6s;
+  animation-delay: -4s;
 }
 
 .floating-popup-card:hover {

@@ -3523,8 +3523,12 @@ function initiatePlanPayment(planType) {
       });
 
       Store.saveSettings(settings);
-
       showToast('✅ Payment confirmed! ' + PLAN_NAMES[planType] + ' activated.', 'success');
+      
+      // Explicit 30-day limit popup for the user
+      setTimeout(() => {
+        alert('🎉 Upgrade Successful!\n\nYou now have unlimited access and a 30-day limit before renewal. Enjoy KaasFlow Premium!');
+      }, 500);
 
       // Refresh checks
       checkAccessControl();

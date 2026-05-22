@@ -44,6 +44,7 @@
    * Returns { success, errors }
    */
   async function backup(silent = false) {
+    if (window._kfRestoring) return { success: false, errors: ['Restore in progress'] };
     const db = getSupabase();
     if (!db) return { success: false, errors: ['Supabase SDK not loaded from CDN'] };
 
@@ -105,8 +106,11 @@
    * Returns the pulled data object.
    */
   async function restore() {
+    window._kfRestoring = true;
+    if (window._kfSyncTimer) clearTimeout(window._kfSyncTimer);
+    
     const db = getSupabase();
-    if (!db) return null;
+    if (!db) { window._kfRestoring = false; return null; }
     const userId = _getUserId();
 
     try {
@@ -168,8 +172,10 @@
       // Track this login session automatically
       trackLogin();
 
+      window._kfRestoring = false;
       return { clients, loans, payments, settings };
     } catch (e) {
+      window._kfRestoring = false;
       _toast('❌ Restore failed — check connection', 'error');
       return null;
     }
