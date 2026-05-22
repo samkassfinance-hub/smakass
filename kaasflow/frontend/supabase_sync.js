@@ -79,7 +79,20 @@
 
     let errors = [];
     try {
-      // Store all data inside kf_settings to bypass missing tables in Supabase
+      // 1. Sync structured data to explicit tables so the user can see them in the Supabase Table Editor
+      if (payload.clients.length > 0) {
+        const { error: err1 } = await db.from('kf_clients').upsert(payload.clients);
+        if (err1) console.error('Failed to sync kf_clients to table:', err1);
+      }
+      if (payload.loans.length > 0) {
+        const { error: err2 } = await db.from('kf_loans').upsert(payload.loans);
+        if (err2) console.error('Failed to sync kf_loans to table:', err2);
+      }
+      
+      // Note: We skip kf_payments for explicit upsert because the table might not exist, 
+      // but the data is safely stored in kf_settings below.
+
+      // 2. Store ALL data inside kf_settings (as the master JSON backup)
       const { error } = await db.from('kf_settings').upsert({ user_id: userId, data: payload });
       if (error) errors.push('Sync Error: ' + error.message);
 
