@@ -2051,7 +2051,8 @@ function renderSettings(container) {
         syncExistingBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Syncing...';
         const clients = Store.clients();
         const loans = Store.loans();
-        let total = clients.length + loans.length;
+        const payments = Store.payments();
+        let total = clients.length + loans.length + payments.length;
         let done = 0;
         
         for (const c of clients) {
@@ -2062,6 +2063,12 @@ function renderSettings(container) {
         }
         for (const l of loans) {
           if (window.syncToGoogleSheet) await window.syncToGoogleSheet('add_loan', l);
+          done++;
+          syncExistingBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-2"></i>Syncing... (${done}/${total})`;
+          await new Promise(r => setTimeout(r, 600));
+        }
+        for (const p of payments) {
+          if (window.syncToGoogleSheet) await window.syncToGoogleSheet('add_payment', p);
           done++;
           syncExistingBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-2"></i>Syncing... (${done}/${total})`;
           await new Promise(r => setTimeout(r, 600));
@@ -2741,7 +2748,7 @@ window.syncToGoogleSheet = async function(action, payload) {
     fetch(s.googleSheetUrl, {
       method: 'POST',
       mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({ action, payload })
     });
     console.log('Google Sheet sync initiated for', action);
@@ -3532,6 +3539,7 @@ function bindGlobal() {
     const payment = { id: uid(), loanId, amount, date, note, createdAt: new Date().toISOString() };
     const payments = Store.payments();
     payments.push(payment);
+    if (window.syncToGoogleSheet) window.syncToGoogleSheet('add_payment', payment);
     Store.savePayments(payments);
     const loan = Store.loans().find(l => l.id === loanId);
     if (loan) {
