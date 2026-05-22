@@ -1909,6 +1909,7 @@ function renderSettings(container) {
       <div class="kf-card pro-card" data-ocid="settings.data_card">
         <div class="section-title"><i class="fa-solid fa-database"></i>Data Management</div>
         <button class="btn-kf-outline pro-btn-outline w-100 mb-3" id="btn-settings-export-pdf" data-ocid="settings.export_pdf_button"><i class="fa-solid fa-file-pdf me-1"></i>Export Data (PDF)</button>
+        <button class="btn-kf-outline pro-btn-outline w-100 mb-3" id="btn-connect-google-sheet"><i class="fa-brands fa-google me-1"></i>Connect with Google Sheet</button>
         <button class="btn-kf-danger pro-btn-danger w-100" id="btn-clear-data" data-ocid="settings.clear_data_button"><i class="fa-solid fa-trash me-1"></i><span data-i18n="clearData">${t('clearData')}</span></button>
       </div>
 
@@ -1998,6 +1999,33 @@ function renderSettings(container) {
 
   $('#btn-upgrade')?.addEventListener('click', () => bootstrap.Modal.getOrCreateInstance($('#upgradeModal')).show());
   $('#banner-upgrade-btn') && $('#banner-upgrade-btn').addEventListener('click', () => bootstrap.Modal.getOrCreateInstance($('#upgradeModal')).show());
+
+  $('#btn-connect-google-sheet')?.addEventListener('click', () => {
+    const s = Store.settings();
+    const html = `
+      <div class="p-3">
+        <h4 class="mb-3">Connect Google Sheet</h4>
+        <p class="text-muted-kf">Paste your Google Apps Script Web App URL to automatically sync new clients and loans to your Google Sheet.</p>
+        <div class="mb-3">
+          <label class="form-label">Web App URL (API Key)</label>
+          <input type="text" class="form-control kf-input pro-input" id="google-sheet-url" placeholder="https://script.google.com/macros/s/..." value="${s.googleSheetUrl || ''}">
+        </div>
+        <button class="btn-kf-primary w-100" id="save-gsheet-btn">Save Configuration</button>
+      </div>
+    `;
+    const m = new bootstrap.Modal(document.getElementById('genericModal'));
+    document.getElementById('genericModal').querySelector('.modal-content').innerHTML = html;
+    m.show();
+
+    document.getElementById('save-gsheet-btn').addEventListener('click', () => {
+      const url = document.getElementById('google-sheet-url').value.trim();
+      const st = Store.settings();
+      st.googleSheetUrl = url;
+      Store.saveSettings(st);
+      m.hide();
+      showToast('Google Sheet connection saved!', 'success');
+    });
+  });
 
   $('#btn-settings-export-pdf')?.addEventListener('click', () => exportAllDataAsPDF());
   $('#btn-clear-data').addEventListener('click', () => {
@@ -2656,6 +2684,24 @@ function confirmDelete(type, id) {
   };
   new bootstrap.Modal($('#confirmDeleteModal')).show();
 }
+
+// ── GOOGLE SHEETS SYNC ────────────────────────────────────
+window.syncToGoogleSheet = async function(action, payload) {
+  const s = Store.settings();
+  if (!s.googleSheetUrl) return; // Not configured
+
+  try {
+    fetch(s.googleSheetUrl, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, payload })
+    });
+    console.log('Google Sheet sync initiated for', action);
+  } catch (e) {
+    console.error('Failed to sync to Google Sheet', e);
+  }
+};
 
 // ── NOTIFICATIONS ───────────────────────────────────────────
 
@@ -3339,7 +3385,9 @@ function bindGlobal() {
         bootstrap.Modal.getOrCreateInstance($('#upgradeModal')).show();
         return;
       }
-      clients.push({ id: uid(), name, phone, address: $('#client-address').value.trim(), idNum: $('#client-id-num').value.trim(), occupation: $('#client-occupation').value.trim(), createdAt: today() });
+      const newClient = { id: uid(), name, phone, address: $('#client-address').value.trim(), idNum: $('#client-id-num').value.trim(), occupation: $('#client-occupation').value.trim(), createdAt: today() };
+      clients.push(newClient);
+      if (window.syncToGoogleSheet) window.syncToGoogleSheet('add_client', newClient);
     }
     Store.saveClients(clients);
     bootstrap.Modal.getInstance($('#clientModal'))?.hide();
@@ -3383,7 +3431,9 @@ function bindGlobal() {
         bootstrap.Modal.getOrCreateInstance($('#upgradeModal')).show();
         return;
       }
-      loans.push({ id: uid(), clientId, interestType, principal, interestRate, duration, type, startDate, status: 'active', createdAt: today() });
+      const newLoan = { id: uid(), clientId, interestType, principal, interestRate, duration, type, startDate, status: 'active', createdAt: today() };
+      loans.push(newLoan);
+      if (window.syncToGoogleSheet) window.syncToGoogleSheet('add_loan', newLoan);
     }
     Store.saveLoans(loans);
     bootstrap.Modal.getInstance($('#loanModal'))?.hide();
