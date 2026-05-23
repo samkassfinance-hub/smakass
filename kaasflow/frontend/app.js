@@ -2745,14 +2745,13 @@ window.syncToGoogleSheet = async function(action, payload) {
   if (!s.googleSheetUrl) return; // Not configured
 
   try {
-    const formData = new URLSearchParams();
-    formData.append('data', JSON.stringify({ action, payload }));
-
-    fetch(s.googleSheetUrl, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: formData
+    const dataStr = encodeURIComponent(JSON.stringify({ action, payload }));
+    const url = s.googleSheetUrl + (s.googleSheetUrl.includes('?') ? '&' : '?') + 'data=' + dataStr;
+    
+    // Using GET request which 100% bypasses CORS issues for Google Apps Script
+    fetch(url, {
+      method: 'GET',
+      mode: 'no-cors'
     });
     console.log('Google Sheet sync initiated for', action);
   } catch (e) {
