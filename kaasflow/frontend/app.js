@@ -3575,7 +3575,6 @@ function bindGlobal() {
       window.syncToGoogleSheet('add_payment', { ...payment, loanStats: stats, clientName: loan?.clientName });
     }
     Store.savePayments(payments);
-    const loan = Store.loans().find(l => l.id === loanId);
     if (loan) {
       const stats = calcLoanStats(loan);
       if (stats.remaining <= 0 || stats.progress >= 100) {
