@@ -2036,6 +2036,16 @@ function renderSettings(container) {
 
     document.getElementById('save-gsheet-btn').addEventListener('click', () => {
       const url = document.getElementById('google-sheet-url').value.trim();
+      
+      if (url && !url.startsWith('https://script.google.com/macros/s/')) {
+        showToast('Invalid URL! Must start with https://script.google.com/macros/s/', 'error');
+        return;
+      }
+      if (url && !url.endsWith('/exec')) {
+        showToast('Invalid URL! Must end with /exec (Did you copy the Web app URL?)', 'error');
+        return;
+      }
+
       const st = Store.settings();
       st.googleSheetUrl = url;
       Store.saveSettings(st);
