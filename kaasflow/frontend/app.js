@@ -2739,24 +2739,40 @@ function confirmDelete(type, id) {
   new bootstrap.Modal($('#confirmDeleteModal')).show();
 }
 
-// ── GOOGLE SHEETS SYNC ────────────────────────────────────
-window.syncToGoogleSheet = async function(action, payload) {
-  const s = Store.settings();
-  if (!s.googleSheetUrl) return; // Not configured
+// ── GOOGLE SHEETS SYNC (JSONP) ────────────────────────────────────
+window.syncToGoogleSheet = function(action, payload) {
+  return new Promise((resolve, reject) => {
+    const s = Store.settings();
+    if (!s.googleSheetUrl) return resolve(); // Not configured
 
-  try {
     const dataStr = encodeURIComponent(JSON.stringify({ action, payload }));
-    const url = s.googleSheetUrl + (s.googleSheetUrl.includes('?') ? '&' : '?') + 'data=' + dataStr;
+    const cbName = 'gsync_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
     
-    // Using GET request which 100% bypasses CORS issues for Google Apps Script
-    fetch(url, {
-      method: 'GET',
-      mode: 'no-cors'
-    });
-    console.log('Google Sheet sync initiated for', action);
-  } catch (e) {
-    console.error('Failed to sync to Google Sheet', e);
-  }
+    window[cbName] = function(response) {
+      if (response.status === 'error') {
+        showToast('Sheet Error: ' + response.message, 'error');
+        console.error('Google Sheet Sync Error:', response.message);
+      }
+      delete window[cbName];
+      document.getElementById(cbName)?.remove();
+      resolve(response);
+    };
+
+    const url = s.googleSheetUrl + (s.googleSheetUrl.includes('?') ? '&' : '?') + 'data=' + dataStr + '&callback=' + cbName;
+    
+    const script = document.createElement('script');
+    script.src = url;
+    script.id = cbName;
+    
+    script.onerror = function() {
+      showToast('Network error connecting to Google Sheet (Invalid URL?)', 'error');
+      delete window[cbName];
+      script.remove();
+      resolve({ status: 'error', message: 'Network error or invalid Web App URL' });
+    };
+    
+    document.body.appendChild(script);
+  });
 };
 
 // ── NOTIFICATIONS ───────────────────────────────────────────
