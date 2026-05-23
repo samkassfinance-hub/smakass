@@ -2020,7 +2020,7 @@ function renderSettings(container) {
             <div class="mb-4">
               <label class="form-label fw-bold">Web App URL (API Key)</label>
               <input type="text" class="form-control kf-input pro-input mb-3" id="google-sheet-url" placeholder="https://script.google.com/macros/s/..." value="${s.googleSheetUrl || ''}">
-              ${s.googleSheetUrl ? `<button class="btn-kf-outline w-100 mt-2" id="btn-sync-existing-gsheet"><i class="fa-solid fa-cloud-arrow-up me-2"></i>Sync All Existing Data Now</button>` : ''}
+              ${s.googleSheetUrl ? `<button class="btn-kf-outline w-100 mt-2 mb-2" id="btn-test-gsheet" style="border-color:#ffc107;color:#ffc107;"><i class="fa-solid fa-flask me-2"></i>Test Connection First</button><button class="btn-kf-outline w-100 mt-2" id="btn-sync-existing-gsheet"><i class="fa-solid fa-cloud-arrow-up me-2"></i>Sync All Existing Data Now</button>` : ''}
             </div>
             <div class="d-flex gap-2 justify-content-end">
               <button class="btn-kf-outline px-4" data-bs-dismiss="modal">Cancel</button>
@@ -2053,6 +2053,13 @@ function renderSettings(container) {
       showToast('Google Sheet connection saved!', 'success');
       setTimeout(() => navigateTo('settings'), 300); // Reload settings to show sync button
     });
+
+    const testBtn = document.getElementById('btn-test-gsheet');
+    if (testBtn) {
+      testBtn.addEventListener('click', () => {
+        window.testGoogleSheetConnection();
+      });
+    }
 
     const syncExistingBtn = document.getElementById('btn-sync-existing-gsheet');
     if (syncExistingBtn) {
@@ -2757,82 +2764,69 @@ function confirmDelete(type, id) {
   new bootstrap.Modal($('#confirmDeleteModal')).show();
 }
 
-// ── GOOGLE SHEETS SYNC (Individual Form Fields) ────────────────────────────────────
+// ── GOOGLE SHEETS SYNC (Simple Fetch GET) ────────────────────────────────────
 window.syncToGoogleSheet = function(action, payload) {
   return new Promise((resolve) => {
     const s = Store.settings();
     if (!s.googleSheetUrl) return resolve();
 
-    const frameName = 'gsync_frame_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+    // Build query parameters from the payload
+    const params = new URLSearchParams();
+    params.append('action', action);
 
-    // Create hidden iframe
-    const iframe = document.createElement('iframe');
-    iframe.name = frameName;
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
-
-    // Create hidden form
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = s.googleSheetUrl;
-    form.target = frameName;
-    form.style.display = 'none';
-
-    // Helper to add a hidden input field
-    function addField(name, value) {
-      const input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = name;
-      input.value = (value !== null && value !== undefined) ? String(value) : '';
-      form.appendChild(input);
-    }
-
-    // Always send the action type
-    addField('action', action);
-
-    // Send individual fields based on action type
     if (action === 'add_client') {
-      addField('id', payload.id);
-      addField('name', payload.name);
-      addField('phone', payload.phone);
-      addField('address', payload.address);
-      addField('occupation', payload.occupation);
-      addField('idNum', payload.idNum);
+      params.append('id', payload.id || '');
+      params.append('name', payload.name || '');
+      params.append('phone', payload.phone || '');
+      params.append('address', payload.address || '');
+      params.append('occupation', payload.occupation || '');
     } else if (action === 'add_loan') {
-      addField('id', payload.id);
-      addField('clientId', payload.clientId);
-      addField('clientName', payload.clientName);
-      addField('principal', payload.principal);
-      addField('interestRate', payload.interestRate);
-      addField('interestType', payload.interestType);
-      addField('duration', payload.duration);
-      addField('type', payload.type);
-      addField('startDate', payload.startDate);
-      addField('status', payload.status);
-      addField('emi', payload.loanStats?.emi);
-      addField('totalPaid', payload.loanStats?.totalPaid);
-      addField('remaining', payload.loanStats?.remaining);
+      params.append('id', payload.id || '');
+      params.append('clientId', payload.clientId || '');
+      params.append('clientName', payload.clientName || '');
+      params.append('principal', payload.principal || 0);
+      params.append('interestRate', payload.interestRate || 0);
+      params.append('interestType', payload.interestType || '');
+      params.append('duration', payload.duration || 0);
+      params.append('type', payload.type || '');
+      params.append('startDate', payload.startDate || '');
+      params.append('status', payload.status || '');
+      params.append('emi', payload.loanStats?.emi || 0);
+      params.append('totalPaid', payload.loanStats?.totalPaid || 0);
+      params.append('remaining', payload.loanStats?.remaining || 0);
     } else if (action === 'add_payment') {
-      addField('id', payload.id);
-      addField('loanId', payload.loanId);
-      addField('clientName', payload.clientName);
-      addField('amount', payload.amount);
-      addField('date', payload.date);
-      addField('note', payload.note);
-      addField('totalPaid', payload.loanStats?.totalPaid);
-      addField('loanRemaining', payload.loanStats?.remaining);
+      params.append('id', payload.id || '');
+      params.append('loanId', payload.loanId || '');
+      params.append('clientName', payload.clientName || '');
+      params.append('amount', payload.amount || 0);
+      params.append('date', payload.date || '');
+      params.append('note', payload.note || '');
+      params.append('totalPaid', payload.loanStats?.totalPaid || 0);
+      params.append('loanRemaining', payload.loanStats?.remaining || 0);
     }
 
-    document.body.appendChild(form);
-    form.submit();
+    const url = s.googleSheetUrl + '?' + params.toString();
 
-    // Clean up after 4 seconds
-    setTimeout(() => {
-      form.remove();
-      iframe.remove();
-      resolve({ status: 'success' });
-    }, 4000);
+    // Use fetch GET with no-cors — the request WILL reach Google, response is opaque (that's fine)
+    fetch(url, { method: 'GET', mode: 'no-cors' })
+      .then(() => {
+        console.log('Google Sheet sync sent for', action);
+        resolve({ status: 'success' });
+      })
+      .catch((err) => {
+        console.error('Google Sheet sync failed:', err);
+        resolve({ status: 'error' });
+      });
   });
+};
+
+// Test function - opens the URL directly in a new tab so we can see if Apps Script works
+window.testGoogleSheetConnection = function() {
+  const s = Store.settings();
+  if (!s.googleSheetUrl) { showToast('No Google Sheet URL configured', 'error'); return; }
+  const testUrl = s.googleSheetUrl + '?action=test&name=TestClient&phone=1234567890';
+  window.open(testUrl, '_blank');
+  showToast('Test sent! Check your Google Sheet for a test row.', 'info');
 };
 
 // ── NOTIFICATIONS ───────────────────────────────────────────
