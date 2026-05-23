@@ -2062,13 +2062,21 @@ function renderSettings(container) {
           await new Promise(r => setTimeout(r, 600)); // Delay to avoid Apps Script rate limits
         }
         for (const l of loans) {
-          if (window.syncToGoogleSheet) await window.syncToGoogleSheet('add_loan', l);
+          if (window.syncToGoogleSheet) {
+            const cClient = clients.find(c => c.id === l.clientId);
+            const lStats = window.calcLoanStats ? window.calcLoanStats(l) : null;
+            await window.syncToGoogleSheet('add_loan', { ...l, clientName: cClient?.name, loanStats: lStats });
+          }
           done++;
           syncExistingBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-2"></i>Syncing... (${done}/${total})`;
           await new Promise(r => setTimeout(r, 600));
         }
         for (const p of payments) {
-          if (window.syncToGoogleSheet) await window.syncToGoogleSheet('add_payment', p);
+          if (window.syncToGoogleSheet) {
+            const l = loans.find(x => x.id === p.loanId);
+            const lStats = l && window.calcLoanStats ? window.calcLoanStats(l) : null;
+            await window.syncToGoogleSheet('add_payment', { ...p, loanStats: lStats, clientName: l?.clientName });
+          }
           done++;
           syncExistingBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-2"></i>Syncing... (${done}/${total})`;
           await new Promise(r => setTimeout(r, 600));
@@ -3505,7 +3513,11 @@ function bindGlobal() {
       }
       const newLoan = { id: uid(), clientId, interestType, principal, interestRate, duration, type, startDate, status: 'active', createdAt: today() };
       loans.push(newLoan);
-      if (window.syncToGoogleSheet) window.syncToGoogleSheet('add_loan', newLoan);
+      if (window.syncToGoogleSheet) {
+        const cClient = Store.clients().find(c => c.id === clientId);
+        const lStats = calcLoanStats(newLoan);
+        window.syncToGoogleSheet('add_loan', { ...newLoan, clientName: cClient?.name, loanStats: lStats });
+      }
     }
     Store.saveLoans(loans);
     bootstrap.Modal.getInstance($('#loanModal'))?.hide();
@@ -3557,7 +3569,11 @@ function bindGlobal() {
     const payment = { id: uid(), loanId, amount, date, note, createdAt: new Date().toISOString() };
     const payments = Store.payments();
     payments.push(payment);
-    if (window.syncToGoogleSheet) window.syncToGoogleSheet('add_payment', payment);
+    const loan = Store.loans().find(l => l.id === loanId);
+    if (window.syncToGoogleSheet) {
+      const stats = loan ? calcLoanStats(loan) : null;
+      window.syncToGoogleSheet('add_payment', { ...payment, loanStats: stats, clientName: loan?.clientName });
+    }
     Store.savePayments(payments);
     const loan = Store.loans().find(l => l.id === loanId);
     if (loan) {
