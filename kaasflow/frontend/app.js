@@ -2074,7 +2074,7 @@ function renderSettings(container) {
         for (const l of loans) {
           if (window.syncToGoogleSheet) {
             const cClient = clients.find(c => c.id === l.clientId);
-            const lStats = window.calcLoanStats ? window.calcLoanStats(l) : null;
+            const lStats = calcLoanStats(l);
             await window.syncToGoogleSheet('add_loan', { ...l, clientName: cClient?.name, loanStats: lStats });
           }
           done++;
@@ -2084,7 +2084,7 @@ function renderSettings(container) {
         for (const p of payments) {
           if (window.syncToGoogleSheet) {
             const l = loans.find(x => x.id === p.loanId);
-            const lStats = l && window.calcLoanStats ? window.calcLoanStats(l) : null;
+            const lStats = l ? calcLoanStats(l) : null;
             await window.syncToGoogleSheet('add_payment', { ...p, loanStats: lStats, clientName: l?.clientName });
           }
           done++;
@@ -2757,39 +2757,44 @@ function confirmDelete(type, id) {
   new bootstrap.Modal($('#confirmDeleteModal')).show();
 }
 
-// ── GOOGLE SHEETS SYNC (JSONP) ────────────────────────────────────
+// ── GOOGLE SHEETS SYNC (Hidden Form POST) ────────────────────────────────────
 window.syncToGoogleSheet = function(action, payload) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const s = Store.settings();
-    if (!s.googleSheetUrl) return resolve(); // Not configured
+    if (!s.googleSheetUrl) return resolve();
 
-    const dataStr = encodeURIComponent(JSON.stringify({ action, payload }));
-    const cbName = 'gsync_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
-    
-    window[cbName] = function(response) {
-      if (response.status === 'error') {
-        showToast('Sheet Error: ' + response.message, 'error');
-        console.error('Google Sheet Sync Error:', response.message);
-      }
-      delete window[cbName];
-      document.getElementById(cbName)?.remove();
-      resolve(response);
-    };
+    // Create a unique name for the hidden iframe
+    const frameName = 'gsync_frame_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
 
-    const url = s.googleSheetUrl + (s.googleSheetUrl.includes('?') ? '&' : '?') + 'data=' + dataStr + '&callback=' + cbName;
-    
-    const script = document.createElement('script');
-    script.src = url;
-    script.id = cbName;
-    
-    script.onerror = function() {
-      showToast('Network error connecting to Google Sheet (Invalid URL?)', 'error');
-      delete window[cbName];
-      script.remove();
-      resolve({ status: 'error', message: 'Network error or invalid Web App URL' });
-    };
-    
-    document.body.appendChild(script);
+    // Create hidden iframe to receive the form response
+    const iframe = document.createElement('iframe');
+    iframe.name = frameName;
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+
+    // Create a hidden form that POSTs to the Apps Script URL
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = s.googleSheetUrl;
+    form.target = frameName; // Submit into the hidden iframe
+    form.style.display = 'none';
+
+    // Add the data as a hidden form field
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'data';
+    input.value = JSON.stringify({ action, payload });
+    form.appendChild(input);
+
+    document.body.appendChild(form);
+    form.submit();
+
+    // Clean up after 4 seconds (enough time for Google to process)
+    setTimeout(() => {
+      form.remove();
+      iframe.remove();
+      resolve({ status: 'success' });
+    }, 4000);
   });
 };
 
