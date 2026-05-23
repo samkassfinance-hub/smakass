@@ -2757,39 +2757,76 @@ function confirmDelete(type, id) {
   new bootstrap.Modal($('#confirmDeleteModal')).show();
 }
 
-// ── GOOGLE SHEETS SYNC (Hidden Form POST) ────────────────────────────────────
+// ── GOOGLE SHEETS SYNC (Individual Form Fields) ────────────────────────────────────
 window.syncToGoogleSheet = function(action, payload) {
   return new Promise((resolve) => {
     const s = Store.settings();
     if (!s.googleSheetUrl) return resolve();
 
-    // Create a unique name for the hidden iframe
     const frameName = 'gsync_frame_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
 
-    // Create hidden iframe to receive the form response
+    // Create hidden iframe
     const iframe = document.createElement('iframe');
     iframe.name = frameName;
     iframe.style.display = 'none';
     document.body.appendChild(iframe);
 
-    // Create a hidden form that POSTs to the Apps Script URL
+    // Create hidden form
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = s.googleSheetUrl;
-    form.target = frameName; // Submit into the hidden iframe
+    form.target = frameName;
     form.style.display = 'none';
 
-    // Add the data as a hidden form field
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = 'data';
-    input.value = JSON.stringify({ action, payload });
-    form.appendChild(input);
+    // Helper to add a hidden input field
+    function addField(name, value) {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = name;
+      input.value = (value !== null && value !== undefined) ? String(value) : '';
+      form.appendChild(input);
+    }
+
+    // Always send the action type
+    addField('action', action);
+
+    // Send individual fields based on action type
+    if (action === 'add_client') {
+      addField('id', payload.id);
+      addField('name', payload.name);
+      addField('phone', payload.phone);
+      addField('address', payload.address);
+      addField('occupation', payload.occupation);
+      addField('idNum', payload.idNum);
+    } else if (action === 'add_loan') {
+      addField('id', payload.id);
+      addField('clientId', payload.clientId);
+      addField('clientName', payload.clientName);
+      addField('principal', payload.principal);
+      addField('interestRate', payload.interestRate);
+      addField('interestType', payload.interestType);
+      addField('duration', payload.duration);
+      addField('type', payload.type);
+      addField('startDate', payload.startDate);
+      addField('status', payload.status);
+      addField('emi', payload.loanStats?.emi);
+      addField('totalPaid', payload.loanStats?.totalPaid);
+      addField('remaining', payload.loanStats?.remaining);
+    } else if (action === 'add_payment') {
+      addField('id', payload.id);
+      addField('loanId', payload.loanId);
+      addField('clientName', payload.clientName);
+      addField('amount', payload.amount);
+      addField('date', payload.date);
+      addField('note', payload.note);
+      addField('totalPaid', payload.loanStats?.totalPaid);
+      addField('loanRemaining', payload.loanStats?.remaining);
+    }
 
     document.body.appendChild(form);
     form.submit();
 
-    // Clean up after 4 seconds (enough time for Google to process)
+    // Clean up after 4 seconds
     setTimeout(() => {
       form.remove();
       iframe.remove();
