@@ -152,6 +152,11 @@ export function useApp(): AppState {
   );
 
   const upgradePro = useCallback((planType: PlanType) => {
+    // Open the personalized Razorpay link in a new tab
+    if (typeof window !== "undefined") {
+      window.open("https://razorpay.me/@samkass", "_blank");
+    }
+
     const expiryMap: Record<PlanType, number> = {
       monthly: 30 * 24 * 60 * 60 * 1000,
       quarterly: 90 * 24 * 60 * 60 * 1000,
