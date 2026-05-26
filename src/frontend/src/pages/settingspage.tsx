@@ -2,6 +2,8 @@ import {
   Bell,
   Check,
   ChevronRight,
+  Cloud,
+  CloudCog,
   CreditCard,
   Database,
   Download,
@@ -15,6 +17,9 @@ import {
   User,
   X,
 } from "lucide-react";
+import SupabaseModal from "../components/SupabaseModal";
+import type { SecondaryConnectionStatus } from "../lib/secondarySupabase";
+import { hasSecondaryCredentials } from "../lib/secondarySupabase";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PageProps } from "../App";
 import ThemeToggle from "../components/ThemeToggle";
@@ -356,6 +361,12 @@ export default function SettingsPage({ app }: PageProps) {
   const [importLoading, setImportLoading] = useState(false);
   const [importSuccess, setImportSuccess] = useState(false);
   const [exportSuccess, setExportSuccess] = useState(false);
+
+  /* ── Supabase modal ── */
+  const [showSupabaseModal, setShowSupabaseModal] = useState(false);
+  const [secondaryStatus, setSecondaryStatus] = useState<SecondaryConnectionStatus>(
+    () => hasSecondaryCredentials() ? "connected" : "not_connected"
+  );
 
   /* ── Toast ── */
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -1171,6 +1182,39 @@ export default function SettingsPage({ app }: PageProps) {
             loading={importLoading}
             success={importSuccess}
           />
+          <div
+            style={{
+              height: 1,
+              background: "var(--kf-divider)",
+              margin: "4px 0",
+            }}
+          />
+          <ActionRow
+            label={isTamil ? "தனிப்பட்ட கிளவுட் சேமிப்பகம்" : "Connect with Private Cloud Storage"}
+            sublabel={isTamil ? "உங்கள் தரவை பாதுகாப்பாக காப்புப்பிரதி எடுக்கவும்" : "Securely backup your data to cloud"}
+            onClick={() => setShowSupabaseModal(true)}
+            ocid="settings.private_cloud_button"
+            icon={<Cloud size={16} />}
+          />
+          <div
+            style={{
+              height: 1,
+              background: "var(--kf-divider)",
+              margin: "4px 0",
+            }}
+          />
+          <ActionRow
+            label={isTamil ? "Supabase இணைப்பு" : "Connect with Supabase"}
+            sublabel={
+              secondaryStatus === "connected"
+                ? (isTamil ? "இணைக்கப்பட்டது ✓" : "Connected ✓")
+                : (isTamil ? "உங்கள் சொந்த தரவுத்தளத்தை இணைக்கவும்" : "Connect your own database")
+            }
+            onClick={() => setShowSupabaseModal(true)}
+            ocid="settings.supabase_connect_button"
+            icon={<CloudCog size={16} />}
+            success={secondaryStatus === "connected"}
+          />
         </SectionCard>
       )}
 
@@ -1393,6 +1437,17 @@ export default function SettingsPage({ app }: PageProps) {
           </div>
         ))}
       </div>
+
+      {/* ── Supabase Connection Modal ── */}
+      <SupabaseModal
+        isOpen={showSupabaseModal}
+        onClose={() => setShowSupabaseModal(false)}
+        isTamil={isTamil}
+        clients={app.clients}
+        loans={app.loans}
+        payments={app.payments}
+        onStatusChange={setSecondaryStatus}
+      />
     </div>
   );
 }

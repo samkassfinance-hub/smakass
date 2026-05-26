@@ -20,6 +20,14 @@ import {
 } from "../lib/storage";
 import { type TranslationKey, t as translate } from "../lib/translations";
 import type { Client, Loan, Page, Payment, PlanType, Settings } from "../types";
+import {
+  type SecondaryConnectionStatus,
+  hasSecondaryCredentials,
+  syncAllDataToSecondary,
+  syncClientToSecondary,
+  syncLoanToSecondary,
+  syncPaymentToSecondary,
+} from "../lib/secondarySupabase";
 
 export interface AppState {
   clients: Client[];
@@ -64,6 +72,9 @@ export interface AppState {
   savePayment: (payment: Payment) => void;
   deletePayment: (id: string) => void;
   t: (key: TranslationKey) => string;
+  // Secondary Supabase
+  secondarySupabaseStatus: SecondaryConnectionStatus;
+  syncAllToSecondary: () => Promise<void>;
 }
 
 const TWO_MONTHS_MS = 60 * 24 * 60 * 60 * 1000;
@@ -99,6 +110,10 @@ export function useApp(): AppState {
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [secondarySupabaseStatus, setSecondarySupabaseStatus] =
+    useState<SecondaryConnectionStatus>(() =>
+      hasSecondaryCredentials() ? "connected" : "not_connected",
+    );
 
   // ── Derived role ──
   const storedAuth = getAuth();
@@ -392,6 +407,10 @@ export function useApp(): AppState {
         : [...all, client];
     saveClients(next);
     setClients(next);
+    // Secondary Supabase sync (fire-and-forget)
+    if (hasSecondaryCredentials()) {
+      syncClientToSecondary(client).catch(() => {});
+    }
   }, []);
 
   const deleteClient = useCallback((id: string) => {
@@ -407,6 +426,13 @@ export function useApp(): AppState {
       idx >= 0 ? all.map((l) => (l.id === loan.id ? loan : l)) : [...all, loan];
     saveLoans(next);
     setLoans(next);
+    // Secondary Supabase sync (fire-and-forget)
+    if (hasSecondaryCredentials()) {
+      const allClients = getClients();
+      const clientName =
+        allClients.find((c) => c.id === loan.clientId)?.name || "Unknown";
+      syncLoanToSecondary(loan, getPayments(), clientName).catch(() => {});
+    }
   }, []);
 
   const deleteLoan = useCallback((id: string) => {
@@ -424,6 +450,17 @@ export function useApp(): AppState {
         : [...all, payment];
     savePayments(next);
     setPayments(next);
+    // Secondary Supabase sync (fire-and-forget)
+    if (hasSecondaryCredentials()) {
+      // Resolve client name via loanId
+      const allLoans = getLoans();
+      const allClients = getClients();
+      const loan = allLoans.find((l) => l.id === payment.loanId);
+      const clientName = loan
+        ? allClients.find((c) => c.id === loan.clientId)?.name || "Unknown"
+        : "Unknown";
+      syncPaymentToSecondary(payment, clientName).catch(() => {});
+    }
   }, []);
 
   const deletePayment = useCallback((id: string) => {
@@ -444,6 +481,18 @@ export function useApp(): AppState {
     (key: TranslationKey) => translate(key, lang),
     [lang],
   );
+
+  // Bulk sync to secondary Supabase
+  const syncAllToSecondary = useCallback(async () => {
+    if (!hasSecondaryCredentials()) return;
+    setSecondarySupabaseStatus("syncing");
+    const result = await syncAllDataToSecondary(
+      getClients(),
+      getLoans(),
+      getPayments(),
+    );
+    setSecondarySupabaseStatus(result.success ? "connected" : "failed");
+  }, []);
 
   return {
     clients,
@@ -481,5 +530,7 @@ export function useApp(): AppState {
     savePayment,
     deletePayment,
     t: tFn,
+    secondarySupabaseStatus,
+    syncAllToSecondary,
   };
 }
