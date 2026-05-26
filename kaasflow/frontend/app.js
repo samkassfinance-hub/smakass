@@ -2194,7 +2194,8 @@ create table if not exists payments (
         } else {
           showToast('Initial sync partially failed - will retry in background', 'warning');
         }
-        checkAndShowSchemaWarning();
+        await checkAndShowSchemaWarning();
+        updateStatusUI();
       } else {
         SecondarySupabase.setStatus('failed');
         updateStatusUI();

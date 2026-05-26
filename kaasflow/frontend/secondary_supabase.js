@@ -50,10 +50,47 @@
     }
   }
 
+  // Deterministic String-to-UUID helper to resolve type mismatch with Postgres uuid columns
+  function stringToUUID(str) {
+    if (!str) return '00000000-0000-0000-0000-000000000000';
+    
+    // If it's already a valid UUID, return it
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(str)) {
+      return str.toLowerCase();
+    }
+    
+    // Hash the string deterministically to generate a valid version 4 UUID shape
+    let h1 = 0x811c9dc5;
+    let h2 = 0xc9dc5811;
+    let h3 = 0x5811c9dc;
+    let h4 = 0x11c9dc58;
+    
+    for (let i = 0; i < str.length; i++) {
+      const charCode = str.charCodeAt(i);
+      h1 = (h1 ^ charCode) * 16777619;
+      h2 = (h2 ^ (charCode + i)) * 16777619;
+      h3 = (h3 ^ (charCode * (i + 1))) * 16777619;
+      h4 = (h4 ^ (charCode - i)) * 16777619;
+    }
+    
+    const hex = (val) => (val >>> 0).toString(16).padStart(8, '0');
+    const rawHex = hex(h1) + hex(h2) + hex(h3) + hex(h4);
+    
+    const part1 = rawHex.substring(0, 8);
+    const part2 = rawHex.substring(8, 12);
+    const part3 = '4' + rawHex.substring(13, 16);
+    const variant = (parseInt(rawHex.substring(16, 17), 16) & 0x3 | 0x8).toString(16);
+    const part4 = variant + rawHex.substring(17, 20);
+    const part5 = rawHex.substring(20, 32);
+    
+    return `${part1}-${part2}-${part3}-${part4}-${part5}`;
+  }
+
   // Map Client data for secondary Supabase matching table schema
   function mapClient(c) {
     return {
-      id: c.id,
+      id: stringToUUID(c.id),
       name: c.name || '',
       phone: c.phone || '',
       address: c.address || '',
@@ -76,7 +113,7 @@
     const remaining = Math.max(0, principal - paid);
 
     return {
-      id: l.id,
+      id: stringToUUID(l.id),
       client: clientName,
       principal: principal,
       emi: emi,
@@ -90,7 +127,7 @@
   // Map Payment data for secondary Supabase matching table schema
   function mapPayment(p, clientName) {
     return {
-      id: p.id,
+      id: stringToUUID(p.id),
       date: p.date || new Date().toISOString().split('T')[0],
       client: clientName,
       amount: Number(p.amount) || 0,
