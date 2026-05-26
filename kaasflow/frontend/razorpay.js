@@ -7,17 +7,16 @@ const RazorpayPayment = {
   },
 
   async createOrder(amount, planType) {
-    // Since we are frontend-only, we skip creating a formal Razorpay Order
-    // and just return the amount so the checkout can use it.
-    return { amount: amount, currency: 'INR', planType: planType };
+    // Return success: true along with the order details to fix the validation bug
+    return { success: true, order: { amount: amount, currency: 'INR', planType: planType } };
   },
 
   async verifyPayment(paymentData) {
-    // Frontend-only verification (trusting the successful callback)
+    // Map plan types correctly to their respective durations
     const planMap = {
-      'monthly': 30,
-      '3months': 90,
-      'yearly': 365
+      'monthly': 30,      // 1 month
+      'quarterly': 90,    // 3 months
+      'yearly': 365       // 1 year
     };
     
     const days = planMap[paymentData.plan_type] || 30;
@@ -53,40 +52,74 @@ const RazorpayPayment = {
   },
 
   openCheckout(orderData, options = {}) {
-    const rzpOptions = {
-      key: this.keyId,
-      amount: orderData.amount, // Amount must be in paise (e.g. 50000 for ₹500)
-      currency: orderData.currency,
-      name: options.name || 'SamKass Finance',
-      description: options.description || 'Pro Subscription',
-      handler: async (response) => {
-        // Without order_id, response only has razorpay_payment_id
-        const verification = await this.verifyPayment({
-          razorpay_payment_id: response.razorpay_payment_id,
-          plan_type: options.planType
-        });
-        
-        if (verification.success && verification.plan_activated) {
-          options.onSuccess?.({
-            ...response,
-            subscription: verification.subscription,
-            message: verification.message
-          });
-        } else if (verification.success) {
-          options.onSuccess?.(response);
-        } else {
-          options.onError?.({ error: 'Payment verification failed' });
-        }
-      },
-      prefill: options.prefill || {},
-      theme: { color: options.themeColor || '#3399cc' }
-    };
+    // Open the personalized Razorpay page in a new tab
+    window.open('https://razorpay.me/@samkass', '_blank');
 
-    const rzp = new Razorpay(rzpOptions);
-    rzp.on('payment.failed', (response) => {
-      options.onError?.(response);
+    // Create a modern, user-friendly checkout pop-up inside the app
+    const modalHTML = `
+      <div class="modal fade" id="paymentConfirmModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content kf-modal-content" style="background: #0b0f19; border: 1px solid var(--kf-card-border); border-radius: 20px;">
+            <div class="modal-body text-center" style="padding: 2.5rem; color: #fff;">
+              <div class="mb-3" style="font-size: 3rem; color: #f59e0b;">
+                <i class="fa-solid fa-credit-card"></i>
+              </div>
+              <h4 class="fw-bold mb-3" style="font-family: 'Space Grotesk', sans-serif;">Payment Page Opened</h4>
+              <p class="text-muted-kf fs-sm mb-4" style="line-height: 1.6;">
+                We have opened your personalized Razorpay payment page in a new window.<br>
+                Please complete the payment of <strong>₹${orderData.amount}</strong>.
+              </p>
+              <div class="p-3 mb-4 rounded text-start" style="background: rgba(255,255,255,0.03); border: 1px solid var(--kf-card-border);">
+                <div class="d-flex justify-content-between mb-2">
+                  <span class="text-muted-kf fs-xs">Plan</span>
+                  <strong class="fs-xs text-white" style="text-transform: capitalize;">${options.planType} Plan</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                  <span class="text-muted-kf fs-xs">Price</span>
+                  <strong class="fs-xs text-white">₹${orderData.amount}</strong>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <span class="text-muted-kf fs-xs">Duration</span>
+                  <strong class="fs-xs text-white">${options.planType === 'yearly' ? '365' : options.planType === 'quarterly' ? '90' : '30'} Days</strong>
+                </div>
+              </div>
+              <button type="button" class="btn-kf-primary w-100 mb-2" id="btn-confirm-payment-activation">
+                <i class="fa-solid fa-circle-check me-2"></i>I Have Paid (Activate Plan)
+              </button>
+              <button type="button" class="btn btn-link w-100 text-muted" data-bs-dismiss="modal" style="font-size: 0.85rem; text-decoration: none;">
+                Cancel Payment
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const existing = document.getElementById('paymentConfirmModal');
+    if (existing) existing.remove();
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    const modal = new bootstrap.Modal(document.getElementById('paymentConfirmModal'));
+    modal.show();
+
+    // Handle payment verification & activation
+    document.getElementById('btn-confirm-payment-activation').addEventListener('click', async () => {
+      modal.hide();
+      const verification = await this.verifyPayment({
+        razorpay_payment_id: 'RZP-' + Date.now(),
+        plan_type: options.planType
+      });
+      
+      if (verification.success && verification.plan_activated) {
+        options.onSuccess?.({
+          razorpay_payment_id: 'RZP-' + Date.now(),
+          subscription: verification.subscription,
+          message: verification.message
+        });
+      } else {
+        options.onError?.({ error: 'Payment verification failed' });
+      }
     });
-    rzp.open();
   },
 
   async initiatePayment(amount, options = {}) {
@@ -105,9 +138,9 @@ const RazorpayPayment = {
   // Plan-specific payment methods
   async payForPlan(planType, options = {}) {
     const plans = {
-      'monthly': { amount: 199, name: 'Monthly Plan' },
-      'quarterly': { amount: 589, name: 'Quarterly Plan' },
-      'yearly': { amount: 2370, name: 'Yearly Plan' }
+      'monthly': { amount: 299, name: 'Monthly Plan' },
+      'quarterly': { amount: 799, name: 'Quarterly Plan' },
+      'yearly': { amount: 2999, name: 'Yearly Plan' }
     };
     
     const plan = plans[planType];
