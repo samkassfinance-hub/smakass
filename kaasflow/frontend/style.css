@@ -2795,3 +2795,19 @@ h1, h2, h3, h4, h5, h6 {
     gap: 0.5rem !important;
   }
 }
+
+/* ── Secondary Supabase status pulse animations ── */
+@keyframes pulse-connected {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(76, 175, 26, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(76, 175, 26, 0); }
+}
+@keyframes pulse-syncing {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(255, 193, 7, 0); }
+}
+.pulse-connected {
+  animation: pulse-connected 2s infinite;
+}
+.pulse-syncing {
+  animation: pulse-syncing 1.2s infinite;
+}

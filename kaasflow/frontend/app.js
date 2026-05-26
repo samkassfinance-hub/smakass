@@ -253,6 +253,12 @@ const Store = {
       clearTimeout(window._kfSyncTimer);
       window._kfSyncTimer = setTimeout(() => KFSync.backup(true), 2000);
     }
+    if (window.SecondarySupabase && SecondarySupabase.hasCredentials() && LS[key] !== 'kf_session') {
+      clearTimeout(window._kfSecondarySyncTimer);
+      window._kfSecondarySyncTimer = setTimeout(() => {
+        SecondarySupabase.syncAll(Store.clients(), Store.loans(), Store.payments());
+      }, 2000);
+    }
   },
   clients: () => Store.get('clients'),
   loans: () => Store.get('loans'),
@@ -1909,8 +1915,13 @@ function renderSettings(container) {
       <div class="kf-card pro-card" data-ocid="settings.data_card">
         <div class="section-title"><i class="fa-solid fa-database"></i>Data Management</div>
         <button class="btn-kf-outline pro-btn-outline w-100 mb-3" id="btn-settings-export-pdf" data-ocid="settings.export_pdf_button"><i class="fa-solid fa-file-pdf me-1"></i>Export Data (PDF)</button>
-        <button class="btn-kf-outline pro-btn-outline w-100 mb-3" id="btn-connect-google-sheet"><i class="fa-brands fa-google me-1"></i>Connect with Google Sheet</button>
         <button class="btn-kf-danger pro-btn-danger w-100" id="btn-clear-data" data-ocid="settings.clear_data_button"><i class="fa-solid fa-trash me-1"></i><span data-i18n="clearData">${t('clearData')}</span></button>
+      </div>
+
+      <div class="kf-card pro-card" data-ocid="settings.private_cloud_card">
+        <div class="section-title"><i class="fa-solid fa-cloud"></i>Private Cloud Storage</div>
+        <p class="text-muted-kf fs-sm mb-3">Connect your own Supabase cloud database for secure synced backup storage.</p>
+        <button class="btn-kf-outline pro-btn-outline w-100" id="btn-connect-supabase-storage"><i class="fa-solid fa-link me-1"></i>Connect Storage</button>
       </div>
 
       <!-- Legal & Contact Options -->
@@ -2000,110 +2011,259 @@ function renderSettings(container) {
   $('#btn-upgrade')?.addEventListener('click', () => bootstrap.Modal.getOrCreateInstance($('#upgradeModal')).show());
   $('#banner-upgrade-btn') && $('#banner-upgrade-btn').addEventListener('click', () => bootstrap.Modal.getOrCreateInstance($('#upgradeModal')).show());
 
-  $('#btn-connect-google-sheet')?.addEventListener('click', () => {
-    const s = Store.settings();
-    let modalEl = document.getElementById('gsheetModal');
+  $('#btn-connect-supabase-storage')?.addEventListener('click', () => {
+    let modalEl = document.getElementById('supabaseModal');
     if (!modalEl) {
       modalEl = document.createElement('div');
       modalEl.className = 'modal fade';
-      modalEl.id = 'gsheetModal';
+      modalEl.id = 'supabaseModal';
       modalEl.tabIndex = '-1';
       document.body.appendChild(modalEl);
     }
-    
+
+    const creds = SecondarySupabase.getCredentials() || { url: '', anonKey: '' };
+    const currentStatus = SecondarySupabase.getStatus();
+
+    const getStatusText = (status) => {
+      if (status === 'connected') return 'Connected';
+      if (status === 'syncing') return 'Syncing';
+      if (status === 'invalid') return 'Invalid Credentials';
+      if (status === 'failed') return 'Connection Failed';
+      return 'Not Connected';
+    };
+
+    const getStatusColor = (status) => {
+      if (status === 'connected') return '#4caf1a'; // Green
+      if (status === 'syncing') return '#ffc107'; // Yellow
+      if (status === 'invalid' || status === 'failed') return '#ff4444'; // Red
+      return '#8a9c8a'; // Gray
+    };
+
+    const updateStatusUI = () => {
+      const status = SecondarySupabase.getStatus();
+      const statusEl = document.getElementById('supabase-status-val');
+      const dotEl = document.getElementById('supabase-status-dot');
+      if (statusEl && dotEl) {
+        statusEl.textContent = getStatusText(status);
+        statusEl.style.color = getStatusColor(status);
+        dotEl.style.backgroundColor = getStatusColor(status);
+        
+        // Remove old animations
+        dotEl.className = 'status-dot';
+        if (status === 'syncing') dotEl.classList.add('pulse-syncing');
+        else if (status === 'connected') dotEl.classList.add('pulse-connected');
+      }
+    };
+
     modalEl.innerHTML = `
       <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content kf-card pro-card" style="border:none;">
-          <div class="p-4">
-            <h4 class="mb-3">Connect Google Sheet</h4>
-            <p class="text-muted-kf">Paste your Google Apps Script Web App URL to automatically sync new clients and loans to your Google Sheet.</p>
-            <div class="mb-4">
-              <label class="form-label fw-bold">Web App URL (API Key)</label>
-              <input type="text" class="form-control kf-input pro-input mb-3" id="google-sheet-url" placeholder="https://script.google.com/macros/s/..." value="${s.googleSheetUrl || ''}">
-              ${s.googleSheetUrl ? `<button class="btn-kf-outline w-100 mt-2 mb-2" id="btn-test-gsheet" style="border-color:#ffc107;color:#ffc107;"><i class="fa-solid fa-flask me-2"></i>Test Connection First</button><button class="btn-kf-outline w-100 mt-2" id="btn-sync-existing-gsheet"><i class="fa-solid fa-cloud-arrow-up me-2"></i>Sync All Existing Data Now</button>` : ''}
+        <div class="modal-content kf-card pro-card" style="border:none; max-width: 460px; margin: auto;">
+          <div class="p-4" style="max-height: 85vh; overflow-y: auto;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h4 class="mb-0 fw-bold"><i class="fa-solid fa-cloud me-2 text-primary-kf"></i>Private Supabase Storage</h4>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="d-flex gap-2 justify-content-end">
-              <button class="btn-kf-outline px-4" data-bs-dismiss="modal">Cancel</button>
-              <button class="btn-kf-primary px-4" id="save-gsheet-btn">Save Configuration</button>
+            
+            <p class="text-muted-kf fs-sm mb-4" style="line-height: 1.6; background: rgba(255,255,255,0.03); border: 1px solid var(--kf-card-border); border-radius: 12px; padding: 12px;">
+              If you would like to use your own private storage for your financier data, you can connect your personal data securely. Once connected, all future data will automatically sync to your private storage. If you need this service CONTACT whatsapp number: <strong>7904987242</strong> or mail <strong>{ mohansampath098@gmail.com }</strong>
+            </p>
+
+            <div class="d-flex align-items-center gap-2 mb-4 p-2" style="background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px dashed var(--kf-card-border)">
+              <div id="supabase-status-dot" class="${currentStatus === 'connected' ? 'pulse-connected' : (currentStatus === 'syncing' ? 'pulse-syncing' : '')}" style="width: 10px; height: 10px; border-radius: 50%; background-color: ${getStatusColor(currentStatus)}; margin-left: 8px;"></div>
+              <span class="fs-sm fw-bold">Connection Status:</span>
+              <span id="supabase-status-val" class="fs-sm fw-bold" style="color: ${getStatusColor(currentStatus)}">${getStatusText(currentStatus)}</span>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-bold fs-xs text-muted-kf">Supabase Project URL</label>
+              <input type="text" class="form-control kf-input pro-input" id="sec-supabase-url" placeholder="https://your-project.supabase.co" value="${creds.url || ''}">
+            </div>
+
+            <div class="mb-4">
+              <label class="form-label fw-bold fs-xs text-muted-kf">Supabase Anon Key</label>
+              <input type="password" class="form-control kf-input pro-input" id="sec-supabase-key" placeholder="Enter your public anon key" value="${creds.anonKey || ''}">
+            </div>
+
+            <div class="d-flex flex-column gap-2 mb-3">
+              <button class="btn-kf-primary w-100" id="btn-sec-supabase-connect"><i class="fa-solid fa-plug me-2"></i>Connect</button>
+              <button class="btn-kf-outline w-100" id="btn-sec-supabase-test" style="border-color:#ffc107;color:#ffc107;"><i class="fa-solid fa-flask me-2"></i>Test Connection</button>
+              <button class="btn-kf-outline w-100" id="btn-sec-supabase-disconnect" style="border-color:#ff4444;color:#ff4444;"><i class="fa-solid fa-power-off me-2"></i>Disconnect</button>
+            </div>
+
+            <div class="mt-4" id="supabase-sql-instructions" style="display: none;">
+              <h5 class="fs-sm fw-bold text-muted-kf mb-2"><i class="fa-solid fa-code me-1"></i>Required SQL Schema</h5>
+              <p class="text-muted-kf fs-xs mb-2">If your secondary database tables are missing, paste this SQL script inside your Supabase dashboard's SQL Editor to set them up.</p>
+              <div class="position-relative">
+                <pre class="bg-dark p-2 text-white fs-xs rounded overflow-auto" style="max-height: 120px; font-family: monospace; white-space: pre;">
+-- Paste this in your Supabase SQL Editor
+create table if not exists clients (
+  id uuid primary key default gen_random_uuid(),
+  name text,
+  phone text,
+  address text,
+  occupation text,
+  created_at timestamptz default now()
+);
+
+create table if not exists loans (
+  id uuid primary key default gen_random_uuid(),
+  client text,
+  principal numeric,
+  emi numeric,
+  paid numeric,
+  remaining numeric,
+  status text,
+  created_at timestamptz default now()
+);
+
+create table if not exists payments (
+  id uuid primary key default gen_random_uuid(),
+  date text,
+  client text,
+  amount numeric,
+  mode text,
+  note text,
+  created_at timestamptz default now()
+);
+                </pre>
+                <button class="btn btn-sm btn-outline-warning position-absolute top-0 end-0 m-1" id="btn-copy-supabase-sql" style="font-size: 0.65rem;"><i class="fa-solid fa-copy me-1"></i>Copy</button>
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-end mt-4">
+              <button class="btn-kf-outline px-4" data-bs-dismiss="modal">Close</button>
             </div>
           </div>
         </div>
       </div>
     `;
-    
+
     const m = new bootstrap.Modal(modalEl);
     m.show();
 
-    document.getElementById('save-gsheet-btn').addEventListener('click', () => {
-      const url = document.getElementById('google-sheet-url').value.trim();
-      
-      if (url && !url.startsWith('https://script.google.com/macros/s/')) {
-        showToast('Invalid URL! Must start with https://script.google.com/macros/s/', 'error');
+    // Check if schema warning should be shown
+    const checkAndShowSchemaWarning = async () => {
+      if (SecondarySupabase.getStatus() === 'connected') {
+        const check = await SecondarySupabase.checkTables();
+        if (!check.clients || !check.loans || !check.payments) {
+          document.getElementById('supabase-sql-instructions').style.display = 'block';
+        } else {
+          document.getElementById('supabase-sql-instructions').style.display = 'none';
+        }
+      } else {
+        document.getElementById('supabase-sql-instructions').style.display = 'none';
+      }
+    };
+
+    checkAndShowSchemaWarning();
+
+    // Connect handler
+    document.getElementById('btn-sec-supabase-connect').addEventListener('click', async () => {
+      const url = document.getElementById('sec-supabase-url').value.trim();
+      const key = document.getElementById('sec-supabase-key').value.trim();
+
+      if (!SecondarySupabase.isValidUrl(url)) {
+        showToast('Invalid Supabase Project URL structure', 'error');
+        SecondarySupabase.setStatus('invalid');
+        updateStatusUI();
         return;
       }
-      if (url && !url.endsWith('/exec')) {
-        showToast('Invalid URL! Must end with /exec (Did you copy the Web app URL?)', 'error');
+      if (!key || key.length < 20) {
+        showToast('Invalid Anon Key structure', 'error');
+        SecondarySupabase.setStatus('invalid');
+        updateStatusUI();
         return;
       }
 
-      const st = Store.settings();
-      st.googleSheetUrl = url;
-      Store.saveSettings(st);
-      m.hide();
-      showToast('Google Sheet connection saved!', 'success');
-      setTimeout(() => navigateTo('settings'), 300); // Reload settings to show sync button
+      SecondarySupabase.setStatus('syncing');
+      updateStatusUI();
+
+      const test = await SecondarySupabase.testConnection(url, key);
+      if (test.success) {
+        SecondarySupabase.saveCredentials(url, key);
+        SecondarySupabase.getClient(); // initialize client
+        SecondarySupabase.setStatus('connected');
+        updateStatusUI();
+        showToast('Successfully connected and configured secondary Supabase!', 'success');
+
+        // Sync existing data
+        showToast('Starting background database sync...', 'info');
+        const syncRes = await SecondarySupabase.syncAll(Store.clients(), Store.loans(), Store.payments());
+        if (syncRes.success) {
+          showToast('All data successfully synced to Private Supabase Storage!', 'success');
+        } else {
+          showToast('Initial sync partially failed - will retry in background', 'warning');
+        }
+        checkAndShowSchemaWarning();
+      } else {
+        SecondarySupabase.setStatus('failed');
+        updateStatusUI();
+        showToast(`Connection failed: ${test.error || 'Check URL/Key'}`, 'error');
+      }
     });
 
-    const testBtn = document.getElementById('btn-test-gsheet');
-    if (testBtn) {
-      testBtn.addEventListener('click', () => {
-        window.testGoogleSheetConnection();
-      });
-    }
+    // Test handler
+    document.getElementById('btn-sec-supabase-test').addEventListener('click', async () => {
+      const url = document.getElementById('sec-supabase-url').value.trim();
+      const key = document.getElementById('sec-supabase-key').value.trim();
 
-    const syncExistingBtn = document.getElementById('btn-sync-existing-gsheet');
-    if (syncExistingBtn) {
-      syncExistingBtn.addEventListener('click', async () => {
-        syncExistingBtn.disabled = true;
-        syncExistingBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Syncing...';
-        const clients = Store.clients();
-        const loans = Store.loans();
-        const payments = Store.payments();
-        let total = clients.length + loans.length + payments.length;
-        let done = 0;
-        
-        for (const c of clients) {
-          if (window.syncToGoogleSheet) await window.syncToGoogleSheet('add_client', c);
-          done++;
-          syncExistingBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-2"></i>Syncing... (${done}/${total})`;
-          await new Promise(r => setTimeout(r, 600)); // Delay to avoid Apps Script rate limits
+      showToast('Testing database connection...', 'info');
+      const test = await SecondarySupabase.testConnection(url, key);
+      if (test.success) {
+        showToast(test.warning === 'Schema missing' ? 'Connection successful! (Tables are missing)' : 'Database connection verified!', 'success');
+        if (test.warning === 'Schema missing') {
+          document.getElementById('supabase-sql-instructions').style.display = 'block';
         }
-        for (const l of loans) {
-          if (window.syncToGoogleSheet) {
-            const cClient = clients.find(c => c.id === l.clientId);
-            const lStats = calcLoanStats(l);
-            await window.syncToGoogleSheet('add_loan', { ...l, clientName: cClient?.name, loanStats: lStats });
-          }
-          done++;
-          syncExistingBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-2"></i>Syncing... (${done}/${total})`;
-          await new Promise(r => setTimeout(r, 600));
-        }
-        for (const p of payments) {
-          if (window.syncToGoogleSheet) {
-            const l = loans.find(x => x.id === p.loanId);
-            const lStats = l ? calcLoanStats(l) : null;
-            await window.syncToGoogleSheet('add_payment', { ...p, loanStats: lStats, clientName: l?.clientName });
-          }
-          done++;
-          syncExistingBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-2"></i>Syncing... (${done}/${total})`;
-          await new Promise(r => setTimeout(r, 600));
-        }
-        
-        syncExistingBtn.innerHTML = '<i class="fa-solid fa-check me-2"></i>Sync Complete!';
-        showToast('All existing data synced to Google Sheet!', 'success');
-        setTimeout(() => m.hide(), 1500);
+      } else {
+        showToast(`Verification failed: ${test.error || 'Check credentials'}`, 'error');
+      }
+    });
+
+    // Disconnect handler
+    document.getElementById('btn-sec-supabase-disconnect').addEventListener('click', () => {
+      SecondarySupabase.clearCredentials();
+      document.getElementById('sec-supabase-url').value = '';
+      document.getElementById('sec-supabase-key').value = '';
+      updateStatusUI();
+      document.getElementById('supabase-sql-instructions').style.display = 'none';
+      showToast('Private storage disconnected successfully.', 'info');
+    });
+
+    // Copy SQL script handler
+    document.getElementById('btn-copy-supabase-sql').addEventListener('click', () => {
+      const sqlText = `create table if not exists clients (
+  id uuid primary key default gen_random_uuid(),
+  name text,
+  phone text,
+  address text,
+  occupation text,
+  created_at timestamptz default now()
+);
+
+create table if not exists loans (
+  id uuid primary key default gen_random_uuid(),
+  client text,
+  principal numeric,
+  emi numeric,
+  paid numeric,
+  remaining numeric,
+  status text,
+  created_at timestamptz default now()
+);
+
+create table if not exists payments (
+  id uuid primary key default gen_random_uuid(),
+  date text,
+  client text,
+  amount numeric,
+  mode text,
+  note text,
+  created_at timestamptz default now()
+);`;
+      navigator.clipboard.writeText(sqlText).then(() => {
+        showToast('SQL script copied to clipboard!', 'success');
       });
-    }
+    });
   });
 
   $('#btn-settings-export-pdf')?.addEventListener('click', () => exportAllDataAsPDF());
@@ -2764,69 +2924,9 @@ function confirmDelete(type, id) {
   new bootstrap.Modal($('#confirmDeleteModal')).show();
 }
 
-// ── GOOGLE SHEETS SYNC (Image Pixel - same as direct navigation) ────────────────────────────────────
-window.syncToGoogleSheet = function(action, payload) {
-  return new Promise((resolve) => {
-    const s = Store.settings();
-    if (!s.googleSheetUrl) return resolve();
 
-    // Build query parameters from the payload
-    const params = new URLSearchParams();
-    params.append('action', action);
 
-    if (action === 'add_client') {
-      params.append('id', payload.id || '');
-      params.append('name', payload.name || '');
-      params.append('phone', payload.phone || '');
-      params.append('address', payload.address || '');
-      params.append('occupation', payload.occupation || '');
-    } else if (action === 'add_loan') {
-      params.append('id', payload.id || '');
-      params.append('clientId', payload.clientId || '');
-      params.append('clientName', payload.clientName || '');
-      params.append('principal', payload.principal || 0);
-      params.append('interestRate', payload.interestRate || 0);
-      params.append('interestType', payload.interestType || '');
-      params.append('duration', payload.duration || 0);
-      params.append('type', payload.type || '');
-      params.append('startDate', payload.startDate || '');
-      params.append('status', payload.status || '');
-      params.append('emi', payload.loanStats?.emi || 0);
-      params.append('totalPaid', payload.loanStats?.totalPaid || 0);
-      params.append('remaining', payload.loanStats?.remaining || 0);
-    } else if (action === 'add_payment') {
-      params.append('id', payload.id || '');
-      params.append('loanId', payload.loanId || '');
-      params.append('clientName', payload.clientName || '');
-      params.append('amount', payload.amount || 0);
-      params.append('date', payload.date || '');
-      params.append('note', payload.note || '');
-      params.append('totalPaid', payload.loanStats?.totalPaid || 0);
-      params.append('loanRemaining', payload.loanStats?.remaining || 0);
-    }
 
-    const url = s.googleSheetUrl + '?' + params.toString();
-
-    // Image pixel technique - browser loads URL exactly like direct navigation
-    // This follows ALL redirects and CANNOT be blocked by CORS
-    const img = new Image();
-    img.onload = img.onerror = () => {
-      // onerror fires because response isn't an image, but the request WAS sent and processed
-      console.log('Google Sheet sync completed for', action);
-      resolve({ status: 'success' });
-    };
-    img.src = url;
-  });
-};
-
-// Test function - opens the URL directly in a new tab so we can see if Apps Script works
-window.testGoogleSheetConnection = function() {
-  const s = Store.settings();
-  if (!s.googleSheetUrl) { showToast('No Google Sheet URL configured', 'error'); return; }
-  const testUrl = s.googleSheetUrl + '?action=test&name=TestClient&phone=1234567890';
-  window.open(testUrl, '_blank');
-  showToast('Test sent! Check your Google Sheet for a test row.', 'info');
-};
 
 // ── NOTIFICATIONS ───────────────────────────────────────────
 
@@ -3512,7 +3612,6 @@ function bindGlobal() {
       }
       const newClient = { id: uid(), name, phone, address: $('#client-address').value.trim(), idNum: $('#client-id-num').value.trim(), occupation: $('#client-occupation').value.trim(), createdAt: today() };
       clients.push(newClient);
-      if (window.syncToGoogleSheet) window.syncToGoogleSheet('add_client', newClient);
     }
     Store.saveClients(clients);
     bootstrap.Modal.getInstance($('#clientModal'))?.hide();
@@ -3558,11 +3657,6 @@ function bindGlobal() {
       }
       const newLoan = { id: uid(), clientId, interestType, principal, interestRate, duration, type, startDate, status: 'active', createdAt: today() };
       loans.push(newLoan);
-      if (window.syncToGoogleSheet) {
-        const cClient = Store.clients().find(c => c.id === clientId);
-        const lStats = calcLoanStats(newLoan);
-        window.syncToGoogleSheet('add_loan', { ...newLoan, clientName: cClient?.name, loanStats: lStats });
-      }
     }
     Store.saveLoans(loans);
     bootstrap.Modal.getInstance($('#loanModal'))?.hide();
@@ -3615,10 +3709,6 @@ function bindGlobal() {
     const payments = Store.payments();
     payments.push(payment);
     const loan = Store.loans().find(l => l.id === loanId);
-    if (window.syncToGoogleSheet) {
-      const stats = loan ? calcLoanStats(loan) : null;
-      window.syncToGoogleSheet('add_payment', { ...payment, loanStats: stats, clientName: loan?.clientName });
-    }
     Store.savePayments(payments);
     if (loan) {
       const stats = calcLoanStats(loan);
