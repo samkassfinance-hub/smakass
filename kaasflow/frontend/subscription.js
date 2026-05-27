@@ -103,6 +103,28 @@
       if (!stored) {
         this.setDefaultPlan();
       }
+      this.syncFromSettings();
+    }
+
+    syncFromSettings() {
+      try {
+        const settings = JSON.parse(localStorage.getItem('kf_settings') || '{}');
+        const sub = this.getCurrentSubscription();
+        if (settings.plan && settings.plan !== 'free' && sub && sub.planId !== settings.plan) {
+          const plan = PLANS[settings.plan.toUpperCase()];
+          if (plan) {
+            const startDate = settings.paymentDate ? new Date(settings.paymentDate) : new Date();
+            const expiryDate = new Date(startDate.getTime() + (plan.duration * 24 * 60 * 60 * 1000));
+            
+            sub.planId = settings.plan;
+            sub.startDate = startDate.toISOString();
+            sub.expiryDate = expiryDate.toISOString();
+            localStorage.setItem(this.storageKey, JSON.stringify(sub));
+          }
+        }
+      } catch (e) {
+        console.error("Failed to sync subscription from settings:", e);
+      }
     }
 
     setDefaultPlan() {
@@ -650,7 +672,8 @@
     getClientLimit: () => manager.getClientLimit(),
     getCurrentPlan: () => manager.getCurrentPlan(),
     renderPlanInfo: () => ui.renderPlanInfo(),
-    selectPlan: (planId) => ui.showPaymentModal(planId)
+    selectPlan: (planId) => ui.showPaymentModal(planId),
+    syncFromSettings: () => manager.syncFromSettings()
   };
 
 })();

@@ -1833,6 +1833,13 @@ function renderProfile(container) {
 }
 
 function renderSettings(container) {
+  if (window.KFSubscription) {
+    window.KFSubscription.syncFromSettings();
+    if (window.KFSubscription.ui) {
+      window.KFSubscription.ui.updateUpgradeModal();
+    }
+  }
+
   const plan = getPlan();
   const planExpiry = getPlanExpiryTime();
   
@@ -1869,10 +1876,15 @@ function renderSettings(container) {
             <div>
               <div class="settings-row-label" style="font-size:1.15rem"><i class="fa-solid fa-circle-check" style="color:var(--color-primary)"></i> ${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan</div>
               ${planExpiry ? `<div class="settings-row-sub text-muted-kf">Expires: ${fmtDate(planExpiry)}</div>` : ''}
-            </div>
+            ${plan !== 'yearly' ? `
             <button class="btn-kf-primary pro-upgrade-btn" id="btn-upgrade" data-ocid="settings.upgrade_button">
-              <i class="fa-solid fa-rocket me-1"></i><span data-i18n="upgrade">${t('upgrade')}</span>
+              <i class="fa-solid fa-rocket me-1"></i><span>Upgrade</span>
             </button>
+            ` : `
+            <button class="btn-kf-primary pro-upgrade-btn" disabled style="background: #10b981; border: none; cursor: default;">
+              <i class="fa-solid fa-circle-check me-1"></i><span>Upgraded</span>
+            </button>
+            `}
           </div>
         </div>
       </div>
