@@ -538,7 +538,21 @@ function getPin() {
   return s.appPin || null;
 }
 
-function logout() {
+async function logout() {
+  try {
+    const session = getSession();
+    const token = session?.token;
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    
+    await fetch(`${API_BASE}/logout`, {
+      method: 'POST',
+      headers
+    });
+  } catch (e) {
+    console.warn("Failed to clear backend session cookies:", e);
+  }
+
   localStorage.removeItem(LS.session);
   localStorage.removeItem(LS.clients);
   localStorage.removeItem(LS.loans);
@@ -2324,9 +2338,7 @@ create table if not exists payments (
 
   $('#btn-logout').addEventListener('click', () => {
     state.deleteCallback = () => {
-      requirePinToProceed('Logout', () => {
-        logout();
-      });
+      logout();
     };
     $('#confirm-delete-msg').textContent = 'Are you sure you want to logout?';
     $('#confirm-delete-btn').textContent = 'Logout';
