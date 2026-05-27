@@ -3839,7 +3839,9 @@ function initiatePlanPayment(planType) {
     }
   });
 
-  showToast('Initiating secure payment...', 'info');
+  if (typeof showToast === 'function') {
+    showToast('Initiating secure payment...', 'info');
+  }
 
   // Trigger Razorpay
   RazorpayPayment.payForPlan(planType, {
@@ -3862,12 +3864,40 @@ function initiatePlanPayment(planType) {
       });
 
       Store.saveSettings(settings);
-      showToast('✅ Payment confirmed! ' + PLAN_NAMES[planType] + ' activated.', 'success');
+
+      // Also update kf_subscription in localStorage for subscription.js compatibility
+      const sub = JSON.parse(localStorage.getItem('kf_subscription') || '{}');
+      const durationDays = planType === 'yearly' ? 365 : planType === 'quarterly' ? 90 : 30;
+      const startDate = new Date();
+      const expiryDate = new Date(startDate.getTime() + (durationDays * 24 * 60 * 60 * 1000));
+      sub.planId = planType;
+      sub.startDate = startDate.toISOString();
+      sub.expiryDate = expiryDate.toISOString();
+      sub.totalPaid = (sub.totalPaid || 0) + PLAN_PRICES[planType];
+      if (!sub.paymentHistory) sub.paymentHistory = [];
+      sub.paymentHistory.push({
+        date: startDate.toISOString(),
+        amount: PLAN_PRICES[planType],
+        planId: planType,
+        planName: PLAN_NAMES[planType],
+        type: 'subscription',
+        txnId: response.razorpay_payment_id
+      });
+      localStorage.setItem('kf_subscription', JSON.stringify(sub));
+
+      if (typeof showToast === 'function') {
+        showToast('✅ Payment confirmed! ' + PLAN_NAMES[planType] + ' activated.', 'success');
+      }
       
-      // Explicit 30-day limit popup for the user
+      // Explicit limit popup for the user
       setTimeout(() => {
-        alert('🎉 Upgrade Successful!\n\nYou now have unlimited access and a 30-day limit before renewal. Enjoy KaasFlow Premium!');
+        alert('🎉 Upgrade Successful!\n\nYou now have unlimited access. Enjoy KaasFlow Premium!');
       }, 500);
+
+      // Sync to Supabase
+      if (window.KFSync) {
+        window.KFSync.backup(true);
+      }
 
       // Refresh checks
       checkAccessControl();
@@ -3876,7 +3906,9 @@ function initiatePlanPayment(planType) {
     },
     onError: (err) => {
       console.error(err);
-      showToast('Payment failed or was cancelled.', 'error');
+      if (typeof showToast === 'function') {
+        showToast(err.error || 'Payment failed or was cancelled.', 'error');
+      }
     }
   });
 }

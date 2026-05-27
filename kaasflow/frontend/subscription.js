@@ -33,7 +33,7 @@
     MONTHLY: {
       id: 'monthly',
       name: 'Monthly Plan',
-      price: 299,
+      price: 199,
       clientLimit: Infinity,
       duration: 30,
       features: {
@@ -52,7 +52,7 @@
     QUARTERLY: {
       id: 'quarterly',
       name: 'Quarterly Plan',
-      price: 799,
+      price: 589,
       clientLimit: Infinity,
       duration: 90,
       features: {
@@ -67,12 +67,12 @@
         advancedReports: true
       },
       badge: 'PRO',
-      savings: 'Save ₹98'
+      savings: 'Save ₹8'
     },
     YEARLY: {
       id: 'yearly',
       name: 'Yearly Plan',
-      price: 2999,
+      price: 2370,
       clientLimit: Infinity,
       duration: 365,
       features: {
@@ -87,7 +87,7 @@
         advancedReports: true
       },
       badge: 'PRO',
-      savings: 'Save ₹589'
+      savings: 'Save ₹18'
     }
   };
 
@@ -325,73 +325,92 @@
       const plan = PLANS[planId.toUpperCase()];
       if (!plan) return;
 
-      // Open the personalized Razorpay link in a new tab
-      window.open('https://razorpay.me/@samkass', '_blank');
+      // Close upgrade modal
+      const upgradeModalEl = document.getElementById('upgradeModal');
+      if (upgradeModalEl) {
+        const upgradeModalInst = bootstrap.Modal.getInstance(upgradeModalEl);
+        if (upgradeModalInst) upgradeModalInst.hide();
+      }
 
-      // Create a modern, user-friendly checkout pop-up inside the app
-      const modalHTML = `
-        <div class="modal fade" id="paymentConfirmModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-          <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content kf-modal-content" style="background: #0b0f19; border: 1px solid var(--kf-card-border); border-radius: 20px;">
-              <div class="modal-body text-center" style="padding: 2.5rem; color: #fff;">
-                <div class="mb-3" style="font-size: 3rem; color: #f59e0b;">
-                  <i class="fa-solid fa-credit-card"></i>
-                </div>
-                <h4 class="fw-bold mb-3" style="font-family: 'Space Grotesk', sans-serif;">Payment Page Opened</h4>
-                <p class="text-muted-kf fs-sm mb-4" style="line-height: 1.6;">
-                  We have opened your personalized Razorpay payment page in a new window.<br>
-                  Please complete the payment of <strong>₹${plan.price}</strong>.
-                </p>
-                <div class="p-3 mb-4 rounded text-start" style="background: rgba(255,255,255,0.03); border: 1px solid var(--kf-card-border);">
-                  <div class="d-flex justify-content-between mb-2">
-                    <span class="text-muted-kf fs-xs">Plan</span>
-                    <strong class="fs-xs text-white">${plan.name}</strong>
-                  </div>
-                  <div class="d-flex justify-content-between mb-2">
-                    <span class="text-muted-kf fs-xs">Price</span>
-                    <strong class="fs-xs text-white">₹${plan.price}</strong>
-                  </div>
-                  <div class="d-flex justify-content-between">
-                    <span class="text-muted-kf fs-xs">Duration</span>
-                    <strong class="fs-xs text-white">${plan.duration} Days</strong>
-                  </div>
-                </div>
-                <button type="button" class="btn-kf-primary w-100 mb-2" id="btn-confirm-payment-activation">
-                  <i class="fa-solid fa-circle-check me-2"></i>I Have Paid (Activate Plan)
-                </button>
-                <button type="button" class="btn btn-link w-100 text-muted" data-bs-dismiss="modal" style="font-size: 0.85rem; text-decoration: none;">
-                  Cancel Payment
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
+      if (typeof showToast === 'function') {
+        showToast('Initiating secure payment...', 'info');
+      }
 
-      const existing = document.getElementById('paymentConfirmModal');
-      if (existing) existing.remove();
+      // Trigger the real RazorpayPayment checkout!
+      window.RazorpayPayment.payForPlan(planId, {
+        onSuccess: (response) => {
+          // Calculate expiry date
+          const durationDays = plan.duration || 30;
+          const startDate = new Date();
+          const expiryDate = new Date(startDate.getTime() + (durationDays * 24 * 60 * 60 * 1000));
 
-      document.body.insertAdjacentHTML('beforeend', modalHTML);
-      const modal = new bootstrap.Modal(document.getElementById('paymentConfirmModal'));
-      modal.show();
+          // 1. Update kf_subscription in localStorage via SubscriptionManager
+          const sub = this.manager.getCurrentSubscription() || {
+            planId: 'free',
+            startDate: new Date().toISOString(),
+            expiryDate: null,
+            totalPaid: 0,
+            paymentHistory: []
+          };
+          
+          sub.planId = plan.id;
+          sub.startDate = startDate.toISOString();
+          sub.expiryDate = expiryDate.toISOString();
+          sub.totalPaid += plan.price;
+          sub.paymentHistory.push({
+            date: startDate.toISOString(),
+            amount: plan.price,
+            planId: plan.id,
+            planName: plan.name,
+            type: 'subscription',
+            txnId: response.razorpay_payment_id
+          });
+          localStorage.setItem(this.manager.storageKey, JSON.stringify(sub));
 
-      // Handle payment verification & activation
-      document.getElementById('btn-confirm-payment-activation').addEventListener('click', () => {
-        modal.hide();
-        // Payment successful – activate plan
-        const result = this.manager.upgradeToPlan(planId);
-        if (result.success) {
-          this.showSuccessScreen(result);
+          // 2. Update kf_settings in localStorage (for app.js compatibility)
+          const settings = JSON.parse(localStorage.getItem('kf_settings') || '{}');
+          settings.plan = planId;
+          settings.paymentDate = startDate.toISOString();
+          if (!settings.planPayments) {
+            settings.planPayments = [];
+          }
+          settings.planPayments.push({
+            date: startDate.toISOString().split('T')[0],
+            plan: planId,
+            amount: plan.price,
+            txnId: response.razorpay_payment_id
+          });
+          localStorage.setItem('kf_settings', JSON.stringify(settings));
+
+          // 3. Show success Toast and screen
+          if (typeof showToast === 'function') {
+            showToast('✅ Payment confirmed! ' + plan.name + ' activated.', 'success');
+          }
+          this.showSuccessScreen({
+            planName: plan.name,
+            cost: plan.price,
+            expiryDate: expiryDate.toISOString()
+          });
+
           this.updateHeaderBadge();
           this.updateUpgradeModal();
-          // Close upgrade modal
-          const upgradeModalEl = document.getElementById('upgradeModal');
-          if (upgradeModalEl) {
-            const upgradeModalInst = bootstrap.Modal.getInstance(upgradeModalEl);
-            if (upgradeModalInst) upgradeModalInst.hide();
+          
+          if (window.KFSync) {
+            window.KFSync.backup(true);
+          }
+          
+          // Refresh access controls
+          if (typeof checkAccessControl === 'function') {
+            checkAccessControl();
           }
           if (window.KF && window.KF.refreshCurrentPage) {
             window.KF.refreshCurrentPage();
+          }
+        },
+        onError: (err) => {
+          console.error(err);
+          if (typeof showToast === 'function') {
+            showToast(err.error || 'Payment failed or was cancelled.', 'error');
           }
         }
       });
