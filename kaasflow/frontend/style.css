@@ -2059,7 +2059,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .pro-btn-logout {
-  background: var(--kf-danger) !important;
+  background: var(--color-danger) !important;
   color: #ffffff !important;
   border: none !important;
   border-radius: var(--radius-lg);

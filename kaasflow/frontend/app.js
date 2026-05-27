@@ -195,6 +195,140 @@ const T = {
   }
 };
 
+const INDIAN_LANGS = {
+  as: {
+    dashboard: 'ড্যাশবৰ্ড', clients: 'গ্ৰাহকসকল', loans: 'ঋণসমূহ',
+    collect: 'সংগ্ৰহ', reports: 'প্ৰতিবেদন', settings: 'ছেটিংছ',
+    logout: 'লগ আউট', language: 'ভাষা', cancel: 'বাতিল',
+    saveClient: 'গ্ৰাহক সংৰক্ষণ', saveLoan: 'ঋণ সংৰক্ষণ', clearData: 'তথ্য মচি পেলাওক'
+  },
+  bn: {
+    dashboard: 'ড্যাশবোর্ড', clients: 'গ্রাহক', loans: 'ঋণ',
+    collect: 'সংগ্রহ', reports: 'রিপোর্ট', settings: 'সেটিংস',
+    logout: 'লগ আউট', language: 'ভাষা', cancel: 'বাতিল',
+    saveClient: 'গ্রাহক সংরক্ষণ', saveLoan: 'ঋণ সংরক্ষণ', clearData: 'সব তথ্য মুছুন'
+  },
+  brx: {
+    dashboard: 'ড্যাশবোৰ্ড', clients: 'গ্রাহকশিং', loans: 'শেন্থোংশিং',
+    collect: 'খোমজিনবা', reports: 'রিপোর্তশিং', settings: 'সেতিংস',
+    logout: 'লগ আউত', language: 'লোন', cancel: 'তোকপা',
+    saveClient: 'গ্রাহক থমজিনবা', saveLoan: 'শেন্থোং থমজিনবা', clearData: 'অপুম্বা দেতা লৌথোকপা'
+  },
+  doi: {
+    dashboard: 'डैशबोर्ड', clients: 'ग्राहक', loans: 'कर्ज',
+    collect: 'इकट्ठा', reports: 'रिपोर्ट', settings: 'सैटिंग्स',
+    logout: 'लॉगआउट', language: 'बोली', cancel: 'रद्द',
+    saveClient: 'ग्राहक बचाओ', saveLoan: 'कर्ज बचाओ', clearData: 'सारे डेटा साफ करो'
+  },
+  gu: {
+    dashboard: 'ડેશબોર્ડ', clients: 'ગ્રાહકો', loans: 'લોન',
+    collect: 'એકત્રિત કરો', reports: 'અહેવાલો', settings: 'સેટિંગ્સ',
+    logout: 'લોગ આઉટ', language: 'ભાષા', cancel: 'રદ કરો',
+    saveClient: 'ગ્રાહક સાચવો', saveLoan: 'લોન સાચવો', clearData: 'બધો ડેટા સાફ કરો'
+  },
+  hi: {
+    dashboard: 'डैशबोर्ड', clients: 'ग्राहक', loans: 'ऋण',
+    collect: 'संग्रह', reports: 'रिपोर्ट', settings: 'सेटिंग्स',
+    logout: 'लॉग आउट', language: 'भाषा', cancel: 'रद्द करें',
+    saveClient: 'ग्राहक सहेजें', saveLoan: 'ऋण सहेजें', clearData: 'सभी डेटा मिटाएं',
+    totalClients: 'कुल ग्राहक', loanGiven: 'दिया गया ऋण', collected: 'वसूल किया गया', pending: 'लंबित',
+    dueToday: 'आज देय', recordPayment: 'भुगतान दर्ज करें', changePin: 'पिन बदलें'
+  },
+  kn: {
+    dashboard: 'ಡ್ಯಾಶ್‌ಬೋರ್ಡ್', clients: 'ಗ್ರಾಹಕರು', loans: 'ಸಾಲಗಳು',
+    collect: 'ಸಂಗ್ರಹಿಸಿ', reports: 'ವರದಿಗಳು', settings: 'ಸೆಟ್ಟಿಂಗ್‌ಗಳು',
+    logout: 'ಲಾಗ್ ಔಟ್', language: 'ಭಾಷೆ', cancel: 'ರದ್ದುಗೊಳಿಸु',
+    saveClient: 'ಗ್ರಾಹಕರನ್ನು ಉಳಿಸು', saveLoan: 'ಸಾಲವನ್ನು ಉಳಿಸು', clearData: 'ಎಲ್ಲಾ ಡೇಟಾವನ್ನು ಅಳಿಸು'
+  },
+  ks: {
+    dashboard: 'ڈیش بورڈ', clients: 'خریدار', loans: 'قرضہ',
+    collect: 'جمع کَرُن', reports: 'رپوٹ', settings: 'سیٹنگ',
+    logout: 'لاگ آؤٹ', language: 'زبان', cancel: 'منسوخ',
+    saveClient: 'خریدار تھاوُن', saveLoan: 'قرضہ تھاوُن', clearData: 'ساری ڈیٹا صاف کَرُن'
+  },
+  kok: {
+    dashboard: 'डॅशबोर्ड', clients: 'गिऱ्हाईक', loans: 'ऋण',
+    collect: 'एकठा करप', reports: 'अहवाल', settings: 'मांडणी',
+    logout: 'भायर सरप', language: 'भास', cancel: 'रद्द करप',
+    saveClient: 'गिऱ्हाईक सांबाळप', saveLoan: 'ऋण सांबाळप', clearData: 'सगळी म्हायती काडून उडोवप'
+  },
+  mai: {
+    dashboard: 'डैशबोर्ड', clients: 'ग्राहक', loans: 'ऋण',
+    collect: 'संग्रह', reports: 'रिपोर्ट', settings: 'सेटिंग्स',
+    logout: 'लॉगआउट', language: 'भाषा', cancel: 'रद्द करू',
+    saveClient: 'ग्राहक बचाउ', saveLoan: 'ऋण बचाउ', clearData: 'सभ डेटा साफ करू'
+  },
+  ml: {
+    dashboard: 'ഡാഷ്‌ബോർഡ്', clients: 'ഇടപാടുകാർ', loans: 'വായ്പകൾ',
+    collect: 'ശേഖരിക്കുക', reports: 'റിപ്പോർട്ടുകൾ', settings: 'ക്രമീകരണങ്ങൾ',
+    logout: 'ലോഗ് ഔട്ട്', language: 'ഭാഷ', cancel: 'റദ്ദാക്കുക',
+    saveClient: 'ഇടപാടുകാരനെ സംരക്ഷിക്കുക', saveLoan: 'വായ്പ സംരക്ഷിക്കുക', clearData: 'എല്ലാ ഡാറ്റയും മായ്ക്കുക'
+  },
+  mni: {
+    dashboard: 'ডেশবোর্দ', clients: 'গ্রাহকশিং', loans: 'শেন্থোংশিং',
+    collect: 'খোমজিনবা', reports: 'রিপোর্তশিং', settings: 'সেতিংস',
+    logout: 'লোগ আউত', language: 'লোন', cancel: 'তোকপা',
+    saveClient: 'গ্রাহক থমজিনবা', saveLoan: 'শেন্থোং থমজিনবা', clearData: 'অপুম্বা দেতা লৌথোকপা'
+  },
+  mr: {
+    dashboard: 'डॅशबोर्ड', clients: 'ग्राहक', loans: 'कर्ज',
+    collect: 'वसुली', reports: 'अहवाल', settings: 'सेटिंग्ज',
+    logout: 'बाहेर पडा', language: 'भाषा', cancel: 'रद्द करा',
+    saveClient: 'ग्राहक जतन करा', saveLoan: 'कर्ज जतन करा', clearData: 'सर्व डेटा मिटवा',
+    totalClients: 'एकूण ग्राहक', loanGiven: 'दिलेले कर्ज', collected: 'वसुली केलेले', pending: 'प्रलंबित'
+  },
+  ne: {
+    dashboard: 'ड्यासबोर्ड', clients: 'ग्राहकहरू', loans: 'ऋणहरू',
+    collect: 'संकलन', reports: 'रिपोर्टहरू', settings: 'सेटिङहरू',
+    logout: 'लग आउट', language: 'भाषा', cancel: 'रद्द गर्नुहोस्',
+    saveClient: 'ग्राहक सुरक्षित गर्नुहोस्', saveLoan: 'ऋण सुरक्षित गर्नुहोस्', clearData: 'सबै डाटा मेटाउनुहोस्'
+  },
+  or: {
+    dashboard: 'ଡ୍ୟାସବୋର୍ଡ', clients: 'ଗ୍ରାହକ', loans: 'ଋଣ',
+    collect: 'ସଂଗ୍ରହ', reports: 'ରିପୋର୍ଟ', settings: 'ସେଟିଂସ',
+    logout: 'ଲଗ ଆଉଟ', language: 'ଭାଷା', cancel: 'ବାତିล କରନ୍ତୁ',
+    saveClient: 'ଗ୍ରାହକ ସଞ୍ચୟ କରନ୍ତୁ', saveLoan: 'ଋଣ ସଞ୍ଚୟ କରନ୍ତು', clearData: 'ସବୁ ଡାଟା ଲିଭାନ୍ତୁ'
+  },
+  pa: {
+    dashboard: 'ਡੈਸ਼ਬੋਰਡ', clients: 'ਗਾਹਕ', loans: 'ਕਰਜ਼ੇ',
+    collect: 'ਇਕੱਠਾ ਕਰੋ', reports: 'ਰਿਪੋਰਟਾਂ', settings: 'ਸੈਟਿੰਗਾਂ',
+    logout: 'ਲੌਗ ਆਉਟ', language: 'ਭਾਸ਼ਾ', cancel: 'ਰੱਦ ਕਰੋ',
+    saveClient: 'ਗਾਹਕ ਸੰਭਾਲੋ', saveLoan: 'ਕਰਜ਼ਾ ਸੰਭਾਲੋ', clearData: 'ਸਾਰਾ ਡੇਟਾ ਸਾਫ਼ ਕਰੋ'
+  },
+  sa: {
+    dashboard: 'पट्टिका', clients: 'ग्राहकाः', loans: 'ऋणानि',
+    collect: 'संग्रहः', reports: 'विवरणानि', settings: 'समायोजनानि',
+    logout: 'बहिर्गमनम्', language: 'भाषा', cancel: 'प्रत्याहारः',
+    saveClient: 'ग्राहकं रक्षतु', saveLoan: 'ऋणं रक्षतु', clearData: 'सर्वाणि विवरणानि निष्कासयतु'
+  },
+  sat: {
+    dashboard: 'ড্যাশবোর্ড', clients: 'গ্রাহককো', loans: 'ঋণকো',
+    collect: 'তুমাল', reports: 'রিপোর্টকো', settings: 'সেটিংস',
+    logout: 'লগআউট', language: 'পারসি', cancel: 'বাতিল',
+    saveClient: 'গ্রাহক সাঁচাও', saveLoan: 'ঋণ সাঁচাও', clearData: 'সাঁচাও ডাটা মেটাও'
+  },
+  sd: {
+    dashboard: 'ڊيش بورڊ', clients: 'گراهڪ', loans: 'قرضا',
+    collect: 'گڏ ڪرڻ', reports: 'رپورتون', settings: 'سيٽنگون',
+    logout: 'لاگ آئوٽ', language: 'ٻولي', cancel: 'رد ڪرڻ',
+    saveClient: 'گراهڪ بچايو', saveLoan: 'قرضو بچايو', clearData: 'سڄو ڊيٽا ختم ڪريو'
+  },
+  te: {
+    dashboard: 'డాష్‌బోర్డ్', clients: 'కస్టమర్లు', loans: 'రుణాలు',
+    collect: 'వసూలు', reports: 'నివేదికలు', settings: 'సెట్టింగ్స్',
+    logout: 'లాగ్ అవుట్', language: 'భాష', cancel: 'రద్దు చేయి',
+    saveClient: 'కస్టమర్ సేవ్ చేయి', saveLoan: 'రుణం సేవ్ చేయి', clearData: 'మొత్తం డేటా తుడిచివేయి'
+  },
+  ur: {
+    dashboard: 'ڈیش بورڈ', clients: 'گراہک', loans: 'قرضے',
+    collect: 'وصولی', reports: 'رپورٹیں', settings: 'سیٹنگز',
+    logout: 'لاگ آؤట్', language: 'زبان', cancel: 'منسوخ کریں',
+    saveClient: 'گراہک محفوظ کریں', saveLoan: 'قرضہ محفوظ کریں', clearData: 'تمام डेटा साफ करें'
+  }
+};
+
+Object.assign(T, INDIAN_LANGS);
+
 // ── STATE ─────────────────────────────────────────────────────
 const state = {
   page: 'dashboard',
@@ -213,7 +347,8 @@ const state = {
 
 // ── HELPERS ──────────────────────────────────────────────────
 const t = (key, ...args) => {
-  const fn = T[state.lang][key];
+  const dict = T[state.lang] || T.en;
+  const fn = dict[key];
   if (typeof fn === 'function') return fn(...args);
   return fn || T.en[key] || key;
 };
@@ -318,8 +453,9 @@ function translateDOM() {
   const elements = document.querySelectorAll('[data-i18n]');
   elements.forEach(el => {
     const key = el.getAttribute('data-i18n');
-    if (T[state.lang] && T[state.lang][key]) {
-      el.textContent = T[state.lang][key];
+    const dict = T[state.lang] || T.en;
+    if (dict && dict[key]) {
+      el.textContent = dict[key];
     } else if (T.en[key]) {
       el.textContent = T.en[key];
     }
@@ -1943,10 +2079,31 @@ function renderSettings(container) {
           <div>
             <div class="settings-row-label"><i class="fa-solid fa-language"></i><span data-i18n="language">${t('language')}</span></div>
           </div>
-          <div class="lang-toggle pro-lang-toggle">
-            <button class="lang-toggle-btn ${state.lang === 'en' ? 'active' : ''}" data-lang="en" data-ocid="settings.lang_en_button">English</button>
-            <button class="lang-toggle-btn ${state.lang === 'ta' ? 'active' : ''}" data-lang="ta" data-ocid="settings.lang_ta_button">தமிழ்</button>
-          </div>
+          <select class="form-select kf-input pro-input" id="settings-lang-select" style="max-width:200px; font-size:0.9rem;" data-ocid="settings.lang_select">
+            <option value="en" ${state.lang === 'en' ? 'selected' : ''}>English</option>
+            <option value="ta" ${state.lang === 'ta' ? 'selected' : ''}>தமிழ் (Tamil)</option>
+            <option value="as" ${state.lang === 'as' ? 'selected' : ''}>অসমীয়া (Assamese)</option>
+            <option value="bn" ${state.lang === 'bn' ? 'selected' : ''}>বাংলা (Bengali)</option>
+            <option value="brx" ${state.lang === 'brx' ? 'selected' : ''}>बड़ो (Bodo)</option>
+            <option value="doi" ${state.lang === 'doi' ? 'selected' : ''}>डोगरी (Dogri)</option>
+            <option value="gu" ${state.lang === 'gu' ? 'selected' : ''}>ગુજરાતી (Gujarati)</option>
+            <option value="hi" ${state.lang === 'hi' ? 'selected' : ''}>हिन्दी (Hindi)</option>
+            <option value="kn" ${state.lang === 'kn' ? 'selected' : ''}>ಕನ್ನಡ (Kannada)</option>
+            <option value="ks" ${state.lang === 'ks' ? 'selected' : ''}>کٲشُر (Kashmiri)</option>
+            <option value="kok" ${state.lang === 'kok' ? 'selected' : ''}>कोंकणी (Konkani)</option>
+            <option value="mai" ${state.lang === 'mai' ? 'selected' : ''}>मैथिली (Maithili)</option>
+            <option value="ml" ${state.lang === 'ml' ? 'selected' : ''}>മലയാളം (Malayalam)</option>
+            <option value="mni" ${state.lang === 'mni' ? 'selected' : ''}>মৈতৈলোন্ (Manipuri)</option>
+            <option value="mr" ${state.lang === 'mr' ? 'selected' : ''}>मराठी (Marathi)</option>
+            <option value="ne" ${state.lang === 'ne' ? 'selected' : ''}>नेपाली (Nepali)</option>
+            <option value="or" ${state.lang === 'or' ? 'selected' : ''}>ଓଡ଼ିଆ (Odia)</option>
+            <option value="pa" ${state.lang === 'pa' ? 'selected' : ''}>ਪੰਜਾਬੀ (Punjabi)</option>
+            <option value="sa" ${state.lang === 'sa' ? 'selected' : ''}>संस्कृतम् (Sanskrit)</option>
+            <option value="sat" ${state.lang === 'sat' ? 'selected' : ''}>ᱥᱟᱱᱛᱟᱲᱤ (Santali)</option>
+            <option value="sd" ${state.lang === 'sd' ? 'selected' : ''}>سنڌي (Sindhi)</option>
+            <option value="te" ${state.lang === 'te' ? 'selected' : ''}>తెలుగు (Telugu)</option>
+            <option value="ur" ${state.lang === 'ur' ? 'selected' : ''}>اردو (Urdu)</option>
+          </select>
         </div>
       </div>
 
@@ -2041,17 +2198,17 @@ function renderSettings(container) {
     applyTheme(theme);
   });
 
-  $$('.lang-toggle-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const lang = btn.dataset.lang;
+  const langSelect = container.querySelector('#settings-lang-select');
+  if (langSelect) {
+    langSelect.addEventListener('change', (e) => {
+      const lang = e.target.value;
       const s = Store.settings();
       s.lang = lang;
       Store.saveSettings(s);
       applyLang(lang);
-      $$('.lang-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
       navigateTo('settings');
     });
-  });
+  }
 
   container.querySelector('#btn-goto-profile')?.addEventListener('click', () => {
     navigateTo('profile');
