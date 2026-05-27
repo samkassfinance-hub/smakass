@@ -372,7 +372,7 @@ async function localRegister(payload) {
 
   return {
     success: true,
-    token: 'local-session-' + Date.now(),
+    token: 'local-session:' + encodeURIComponent(newUser.email) + ':' + Date.now(),
     user: {
       email: newUser.email,
       name: newUser.financierName,
@@ -395,7 +395,7 @@ async function localLogin(payload) {
 
   return {
     success: true,
-    token: 'local-session-' + Date.now(),
+    token: 'local-session:' + encodeURIComponent(user.email) + ':' + Date.now(),
     user: {
       email: user.email,
       name: user.financierName,
@@ -469,7 +469,7 @@ window.handleGoogleLogin = async function(response) {
   const res = await apiAuth('google', { token: response.credential });
 
   if (res.success) {
-    Store.saveSession({ token: res.token || 'google-session', user: res.user });
+    Store.saveSession({ token: res.token || ('google-session:' + encodeURIComponent(res.user?.email || googleUser.email) + ':' + Date.now()), user: res.user });
     const s = Store.settings();
     if (res.user?.name && !s.financierName) { s.financierName = res.user.name; Store.saveSettings(s); }
     if (res.user?.appPin) { s.appPin = res.user.appPin; Store.saveSettings(s); }
@@ -487,7 +487,7 @@ window.handleGoogleLogin = async function(response) {
       financierName: googleUser.name,
       picture: googleUser.picture
     };
-    Store.saveSession({ token: 'google-session-' + Date.now(), user });
+    Store.saveSession({ token: 'google-session:' + encodeURIComponent(user.email) + ':' + Date.now(), user });
     // Save to local users list for consistency
     const users = getLocalUsers();
     if (!users.find(u => u.email.toLowerCase() === googleUser.email.toLowerCase())) {
@@ -726,6 +726,31 @@ async function showApp() {
   
   // Render immediately with local data for zero-delay UX
   navigateTo(state.page || 'dashboard');
+  
+  // Asynchronously query the backend subscription status
+  if (window.RazorpayPayment) {
+    window.RazorpayPayment.checkSubscriptionStatus().then(status => {
+      if (status && status.active) {
+        const settings = Store.settings();
+        const oldPlan = settings.plan;
+        settings.plan = status.plan_type;
+        settings.paymentDate = status.end_date ? new Date(new Date(status.end_date).getTime() - (status.plan_type === 'yearly' ? 365 : status.plan_type === 'quarterly' ? 90 : 30) * 24 * 60 * 60 * 1000).toISOString() : new Date().toISOString();
+        Store.saveSettings(settings);
+        
+        // Update subscription manager local state
+        if (window.KFSubscription) {
+          window.KFSubscription.syncFromSettings();
+        }
+        
+        if (oldPlan !== status.plan_type) {
+          updatePlanBanner();
+          if (state.page === 'settings') {
+            navigateTo('settings');
+          }
+        }
+      }
+    }).catch(e => console.warn("Failed to check subscription status:", e));
+  }
   
   // Seamlessly sync with cloud in the background and soft-refresh if needed
   if (window.KFSync) {
@@ -3211,7 +3236,7 @@ function bindGlobal() {
     if (!password) { errEl.textContent = 'Enter your password'; errEl.classList.remove('d-none'); return; }
     const res = await apiAuth('login', { email, password });
     if (res.success) {
-      Store.saveSession({ token: res.token || ('session-' + Date.now()), user: res.user });
+      Store.saveSession({ token: res.token || ('session:' + encodeURIComponent(res.user?.email || email) + ':' + Date.now()), user: res.user });
       // Also save financierName into settings if available
       if (res.user) {
         const s = Store.settings();
@@ -3240,7 +3265,7 @@ function bindGlobal() {
     if (!password || password.length < 6) { errEl.textContent = 'Password must be at least 6 characters'; errEl.classList.remove('d-none'); return; }
     const res = await apiAuth('register', { email, password, financier_name: name, business_name: business });
     if (res.success) {
-      Store.saveSession({ token: res.token || ('session-' + Date.now()), user: res.user });
+      Store.saveSession({ token: res.token || ('session:' + encodeURIComponent(res.user?.email || email) + ':' + Date.now()), user: res.user });
       // Save user info into settings
       const s = Store.settings();
       if (name) s.financierName = name;
@@ -3597,6 +3622,20 @@ function bindGlobal() {
 
   // User menu
   $('#user-avatar-btn').addEventListener('click', () => navigateTo('settings'));
+
+  // Header Logout Button
+  $('#header-logout-btn')?.addEventListener('click', () => {
+    state.deleteCallback = () => {
+      requirePinToProceed('Logout', () => {
+        logout();
+      });
+    };
+    $('#confirm-delete-msg').textContent = 'Are you sure you want to logout?';
+    $('#confirm-delete-btn').textContent = 'Logout';
+    const titleEl = $('#confirmDeleteModal .modal-title');
+    if (titleEl) titleEl.textContent = 'Confirm Logout';
+    new bootstrap.Modal($('#confirmDeleteModal')).show();
+  });
 
   // Save client button
   $('#save-client-btn').addEventListener('click', () => {

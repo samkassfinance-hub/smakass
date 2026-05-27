@@ -27,6 +27,15 @@ const RazorpayPayment = {
     }
   },
 
+  getUserEmail() {
+    try {
+      const session = JSON.parse(localStorage.getItem('kf_session') || '{}');
+      return session.user?.email || null;
+    } catch {
+      return null;
+    }
+  },
+
   async createOrder(amount, planType) {
     try {
       const apiBase = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
@@ -38,11 +47,15 @@ const RazorpayPayment = {
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
+      const email = this.getUserEmail();
+      if (email) {
+        headers['X-User-Email'] = email;
+      }
 
       const res = await fetch(`${apiBase}/payment/create-order`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ amount, plan_type: planType })
+        body: JSON.stringify({ amount, plan_type: planType, email })
       });
       return await res.json();
     } catch (e) {
@@ -61,11 +74,15 @@ const RazorpayPayment = {
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
+      const email = this.getUserEmail();
+      if (email) {
+        headers['X-User-Email'] = email;
+      }
 
       const res = await fetch(`${apiBase}/payment/verify`, {
         method: 'POST',
         headers,
-        body: JSON.stringify(paymentData)
+        body: JSON.stringify({ ...paymentData, email })
       });
       return await res.json();
     } catch (e) {
@@ -84,8 +101,16 @@ const RazorpayPayment = {
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
+      const email = this.getUserEmail();
+      if (email) {
+        headers['X-User-Email'] = email;
+      }
 
-      const res = await fetch(`${apiBase}/subscription/status`, { headers });
+      const url = email 
+        ? `${apiBase}/subscription/status?email=${encodeURIComponent(email)}`
+        : `${apiBase}/subscription/status`;
+
+      const res = await fetch(url, { headers });
       return await res.json();
     } catch (e) {
       return { active: false, error: e.message };

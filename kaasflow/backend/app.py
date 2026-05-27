@@ -82,15 +82,56 @@ def debug_env():
 # ── Cloud Sync Routes ────────────────────────────────────────
 
 def get_user_email_from_token():
+    """Extract user email with multi-channel authentication fallbacks"""
+    import urllib.parse
+    
+    # 1. Check X-User-Email header first
+    email_header = request.headers.get('X-User-Email')
+    if email_header:
+        return email_header.strip()
+
+    # 2. Check Authorization header Bearer token
     auth_header = request.headers.get('Authorization')
-    if not auth_header or not auth_header.startswith('Bearer '):
-        return None
-    token = auth_header.split(' ')[1]
+    if auth_header and auth_header.startswith('Bearer '):
+        token = auth_header.split(' ')[1]
+        
+        # Try standard JWT decode
+        try:
+            payload = decode_token(token)
+            if payload and payload.get('sub'):
+                return payload.get('sub').strip()
+        except Exception as e:
+            print(f"JWT decode failed: {e}")
+            
+        # Try custom session token format: session:email:timestamp
+        if ':' in token:
+            parts = token.split(':')
+            for part in parts:
+                unquoted = urllib.parse.unquote(part)
+                if '@' in unquoted:
+                    return unquoted.strip()
+        # Try hyphen separation: session-email-timestamp
+        elif '-' in token:
+            parts = token.split('-')
+            for part in parts:
+                unquoted = urllib.parse.unquote(part)
+                if '@' in unquoted:
+                    return unquoted.strip()
+                    
+    # 3. Check request JSON body or query args as final fallbacks
     try:
-        payload = decode_token(token)
-        return payload.get('sub') if payload else None
-    except:
-        return None
+        if request.is_json and request.json:
+            email = request.json.get('email') or request.json.get('user_email')
+            if email:
+                return email.strip()
+    except Exception as e:
+        print(f"Failed to read JSON body: {e}")
+        
+    email = request.args.get('email') or request.args.get('user_email')
+    if email:
+        return email.strip()
+        
+    return None
 
 @app.route('/api/sync/status', methods=['GET'])
 def sync_status():

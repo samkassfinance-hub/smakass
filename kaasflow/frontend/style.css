@@ -2059,16 +2059,26 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .pro-btn-logout {
-  background: transparent;
-  color: var(--color-danger);
-  border: 1px solid var(--color-danger);
+  background: var(--kf-danger) !important;
+  color: #ffffff !important;
+  border: none !important;
   border-radius: var(--radius-lg);
 }
 
 .pro-btn-logout:hover {
-  background: var(--color-danger-bg);
-  color: var(--color-danger);
+  background: #dc2626 !important;
+  color: #ffffff !important;
 }
+
+#header-logout-btn {
+  color: var(--kf-danger) !important;
+}
+
+#header-logout-btn:hover {
+  color: #ff3b30 !important;
+  background: rgba(239, 68, 68, 0.12) !important;
+}
+
 
 /* ── ONBOARDING REDESIGN STYLES ── */
 #auth-screen {
