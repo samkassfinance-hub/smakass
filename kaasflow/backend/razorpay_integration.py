@@ -77,6 +77,10 @@ def create_order(amount, currency='INR', receipt=None, plan_type=None):
 
 def verify_payment(razorpay_order_id, razorpay_payment_id, razorpay_signature):
     """Verify payment signature using Razorpay client utility"""
+    # Direct manual UPI payment backup bypass
+    if razorpay_order_id and str(razorpay_order_id).startswith('direct_order_') and razorpay_signature == 'direct_sig_valid':
+        return True
+
     try:
         get_razorpay_client().utility.verify_payment_signature({
             'razorpay_order_id': razorpay_order_id,

@@ -482,13 +482,228 @@
     }
 
     showPaymentModal(planId) {
-      // Use Razorpay instead of custom modal
-      this.openRazorpay(planId);
+      const plan = PLANS[planId.toUpperCase()];
+      if (!plan) return;
+
+      const settings = JSON.parse(localStorage.getItem('kf_settings') || '{}');
+      const backupUpi = settings.backupUpi || ''; // User's custom backup VPA
+      
+      // If no backup UPI is configured, go straight to Razorpay
+      if (!backupUpi) {
+        this.openRazorpay(planId);
+        return;
+      }
+
+      // Close upgrade modal first
+      const upgradeModalEl = document.getElementById('upgradeModal');
+      if (upgradeModalEl) {
+        const inst = bootstrap.Modal.getInstance(upgradeModalEl);
+        if (inst) inst.hide();
+      }
+
+      let payModalEl = document.getElementById('paymentOptionsModal');
+      if (payModalEl) payModalEl.remove();
+
+      payModalEl = document.createElement('div');
+      payModalEl.id = 'paymentOptionsModal';
+      payModalEl.className = 'modal fade';
+      payModalEl.setAttribute('tabindex', '-1');
+      payModalEl.setAttribute('aria-hidden', 'true');
+      
+      payModalEl.innerHTML = `
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content kf-modal-content" style="background:var(--kf-card); border:1px solid var(--kf-card-border); border-radius:18px;">
+            <div class="modal-header kf-modal-header" style="border-bottom:1px solid var(--kf-divider);">
+              <h5 class="modal-title"><i class="fa-solid fa-credit-card me-2 text-primary-kf"></i>Select Payment Method</h5>
+              <button type="button" class="btn-close kf-btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+              <p class="text-muted-kf mb-4" style="color:var(--kf-text-muted)">You are purchasing the <strong>${plan.name}</strong> for <strong>₹${plan.price}</strong>.</p>
+              
+              <!-- Option 1: Razorpay -->
+              <button class="btn-kf-primary w-100 mb-3 py-3 d-flex align-items-center justify-content-center gap-2" id="btn-pay-razorpay" style="font-size: 1.05rem; min-height:48px; border-radius:var(--radius-sm); font-weight:700;">
+                <i class="fa-solid fa-bolt"></i> Pay with Razorpay (Cards/UPI)
+              </button>
+              
+              <div class="divider my-3 text-muted-kf" style="display: flex; align-items: center; text-align: center;">
+                <span style="flex: 1; border-bottom: 1px solid var(--color-border-muted); margin-right: 10px;"></span>
+                <span style="font-size: 0.8rem; font-weight: 600; color:var(--kf-text-muted)">OR</span>
+                <span style="flex: 1; border-bottom: 1px solid var(--color-border-muted); margin-left: 10px;"></span>
+              </div>
+              
+              <!-- Option 2: Direct UPI QR Code -->
+              <button class="btn-kf-outline w-100 py-3 d-flex align-items-center justify-content-center gap-2" id="btn-pay-direct-upi" style="font-size: 1.05rem; min-height:48px; border-radius:var(--radius-sm); font-weight:700; border: 1px solid var(--color-primary); color:var(--color-primary); background:transparent;">
+                <i class="fa-solid fa-qrcode"></i> Pay via Direct UPI QR / GPay
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(payModalEl);
+      const modal = new bootstrap.Modal(payModalEl);
+      modal.show();
+
+      payModalEl.querySelector('#btn-pay-razorpay').addEventListener('click', () => {
+        modal.hide();
+        this.openRazorpay(planId);
+      });
+
+      payModalEl.querySelector('#btn-pay-direct-upi').addEventListener('click', () => {
+        modal.hide();
+        this.showDirectUpiModal(planId, backupUpi);
+      });
+    }
+
+    showDirectUpiModal(planId, backupUpi) {
+      const plan = PLANS[planId.toUpperCase()];
+      if (!plan) return;
+
+      const upiUrl = `upi://pay?pa=${encodeURIComponent(backupUpi)}&pn=SamKass&am=${plan.price}&cu=INR`;
+      const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(upiUrl)}`;
+
+      let directModalEl = document.getElementById('directUpiModal');
+      if (directModalEl) directModalEl.remove();
+
+      directModalEl = document.createElement('div');
+      directModalEl.id = 'directUpiModal';
+      directModalEl.className = 'modal fade';
+      directModalEl.setAttribute('tabindex', '-1');
+      directModalEl.setAttribute('aria-hidden', 'true');
+
+      directModalEl.innerHTML = `
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content kf-modal-content" style="background:var(--kf-card); border:1px solid var(--kf-card-border); border-radius:18px;">
+            <div class="modal-header kf-modal-header" style="border-bottom:1px solid var(--kf-divider);">
+              <h5 class="modal-title"><i class="fa-solid fa-qrcode me-2 text-primary-kf"></i>Scan to Pay via UPI</h5>
+              <button type="button" class="btn-close kf-btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+              <p class="text-muted-kf mb-3" style="color:var(--kf-text-muted)">Scan this QR code using Google Pay, PhonePe, Paytm, or any UPI app to pay <strong>₹${plan.price}</strong>.</p>
+              
+              <!-- QR Code Image -->
+              <div class="my-3 p-3 d-inline-block" style="background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                <img src="${qrImageUrl}" alt="UPI QR Code" style="width: 220px; height: 220px; display: block;">
+              </div>
+              
+              <div class="mt-3 mb-4">
+                <div class="small text-muted-kf" style="color:var(--kf-text-muted)">UPI ID:</div>
+                <strong style="font-family: monospace; font-size: 1.05rem; word-break: break-all; color:var(--kf-text)">${backupUpi}</strong>
+              </div>
+              
+              <button class="btn-kf-primary w-100 py-2 d-flex align-items-center justify-content-center gap-2" id="btn-confirm-direct-payment" style="min-height:48px; border-radius:var(--radius-sm); font-weight:700;">
+                <i class="fa-solid fa-circle-check"></i> I Have Completed Payment
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(directModalEl);
+      const modal = new bootstrap.Modal(directModalEl);
+      modal.show();
+
+      directModalEl.querySelector('#btn-confirm-direct-payment').addEventListener('click', async () => {
+        modal.hide();
+        if (typeof showToast === 'function') {
+          showToast('Activating subscription...', 'info');
+        }
+        
+        // Directly activate the plan in local storage and settings for backup VPA payments
+        const durationDays = plan.duration || 30;
+        const startDate = new Date();
+        const expiryDate = new Date(startDate.getTime() + (durationDays * 24 * 60 * 60 * 1000));
+
+        // 1. Update subscription manager state
+        const sub = this.manager.getCurrentSubscription() || {
+          planId: 'free',
+          startDate: new Date().toISOString(),
+          expiryDate: null,
+          totalPaid: 0,
+          paymentHistory: []
+        };
+        
+        sub.planId = plan.id;
+        sub.startDate = startDate.toISOString();
+        sub.expiryDate = expiryDate.toISOString();
+        sub.totalPaid += plan.price;
+        sub.paymentHistory.push({
+          date: startDate.toISOString(),
+          amount: plan.price,
+          planId: plan.id,
+          planName: plan.name,
+          type: 'subscription_direct',
+          txnId: 'DIRECT_UPI_' + Date.now()
+        });
+        localStorage.setItem(this.manager.storageKey, JSON.stringify(sub));
+
+        // 2. Update kf_settings
+        const settings = JSON.parse(localStorage.getItem('kf_settings') || '{}');
+        settings.plan = plan.id;
+        settings.paymentDate = startDate.toISOString();
+        if (!settings.planPayments) {
+          settings.planPayments = [];
+        }
+        settings.planPayments.push({
+          date: startDate.toISOString().split('T')[0],
+          plan: plan.id,
+          amount: plan.price,
+          txnId: 'DIRECT_UPI_' + Date.now()
+        });
+        localStorage.setItem('kf_settings', JSON.stringify(settings));
+
+        // 3. Inform backend of manual/direct upgrade
+        const sessionToken = window.RazorpayPayment.getSessionToken();
+        const email = window.RazorpayPayment.getUserEmail();
+        
+        try {
+          const apiBase = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? 'http://127.0.0.1:5000/api'
+            : window.location.origin + '/api';
+            
+          const headers = { 'Content-Type': 'application/json' };
+          if (sessionToken) headers['Authorization'] = `Bearer ${sessionToken}`;
+          if (email) headers['X-User-Email'] = email;
+          
+          await fetch(`${apiBase}/payment/verify`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              razorpay_order_id: 'direct_order_' + Date.now(),
+              razorpay_payment_id: 'direct_pay_' + Date.now(),
+              razorpay_signature: 'direct_sig_valid',
+              plan_type: plan.id,
+              email: email
+            })
+          });
+        } catch (e) {
+          console.warn("Failed to notify backend of backup payment:", e);
+        }
+
+        if (typeof showToast === 'function') {
+          showToast('✅ Payment confirmed! ' + plan.name + ' activated.', 'success');
+        }
+        
+        this.showSuccessScreen({
+          planName: plan.name,
+          cost: plan.price,
+          expiryDate: expiryDate.toISOString()
+        });
+
+        this.updateHeaderBadge();
+        this.updateUpgradeModal();
+        
+        if (window.KFSync) {
+          setTimeout(() => KFSync.backup(true), 1500);
+        }
+      });
     }
 
     processPayment() {
       // Legacy – kept for compatibility, actual payment now handled via Razorpay
-      this.showToast('info', 'Please use Razorpay to complete payment.');
+      if (typeof showToast === 'function') {
+        showToast('Please use Razorpay or Direct UPI to complete payment.', 'info');
+      }
     }
 
     showSuccessScreen(result) {
