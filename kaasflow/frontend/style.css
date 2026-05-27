@@ -2070,15 +2070,6 @@ h1, h2, h3, h4, h5, h6 {
   color: #ffffff !important;
 }
 
-#header-logout-btn {
-  color: var(--kf-danger) !important;
-}
-
-#header-logout-btn:hover {
-  color: #ff3b30 !important;
-  background: rgba(239, 68, 68, 0.12) !important;
-}
-
 
 /* ── ONBOARDING REDESIGN STYLES ── */
 #auth-screen {

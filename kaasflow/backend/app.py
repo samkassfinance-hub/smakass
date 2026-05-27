@@ -9,8 +9,8 @@ if backend_dir not in sys.path:
 from flask import Flask
 from flask_cors import CORS
 from dotenv import load_dotenv
-
-load_dotenv()
+env_path = os.path.join(backend_dir, '.env')
+load_dotenv(dotenv_path=env_path)
 
 app = Flask(__name__)
 

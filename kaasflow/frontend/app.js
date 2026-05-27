@@ -1955,16 +1955,6 @@ function renderSettings(container) {
         <button class="btn-kf-danger pro-btn-danger w-100" id="btn-clear-data" data-ocid="settings.clear_data_button"><i class="fa-solid fa-trash me-1"></i><span data-i18n="clearData">${t('clearData')}</span></button>
       </div>
 
-      <div class="kf-card pro-card" data-ocid="settings.backup_payment_card">
-        <div class="section-title"><i class="fa-solid fa-qrcode"></i>Backup UPI Payment</div>
-        <p class="text-muted-kf fs-sm mb-3">Add your personal or business UPI ID (e.g., mohan@okaxis) to enable a backup QR payment option if Razorpay UPI is not active.</p>
-        <div class="form-group mb-3">
-          <label for="settings-backup-upi" class="form-label text-muted-kf" style="font-size:0.85rem; font-weight:600;">Backup UPI ID</label>
-          <input type="text" id="settings-backup-upi" class="form-control" placeholder="name@bankname" value="${settings.backupUpi || ''}" style="min-height: 40px; margin-top: 5px;">
-        </div>
-        <button class="btn-kf-primary w-100" id="btn-save-backup-upi" style="min-height:40px;">Save UPI ID</button>
-      </div>
-
       <div class="kf-card pro-card" data-ocid="settings.private_cloud_card">
         <div class="section-title"><i class="fa-solid fa-cloud"></i>Private Cloud Storage</div>
         <p class="text-muted-kf fs-sm mb-3">Connect your own Supabase cloud database for secure synced backup storage.</p>
@@ -2026,19 +2016,6 @@ function renderSettings(container) {
     } else if (action === 'delete') {
       permanentDeleteRecycleBinItem(binId);
     }
-  });
-
-  // Settings event handlers
-  $('#btn-save-backup-upi')?.addEventListener('click', () => {
-    const upiVal = $('#settings-backup-upi').value.trim();
-    if (upiVal && !upiVal.includes('@')) {
-      showToast('Please enter a valid UPI ID (containing @)', 'error');
-      return;
-    }
-    const s = Store.settings();
-    s.backupUpi = upiVal;
-    Store.saveSettings(s);
-    showToast('Backup UPI ID saved successfully!', 'success');
   });
 
 
@@ -3643,20 +3620,6 @@ function bindGlobal() {
 
   // User menu
   $('#user-avatar-btn').addEventListener('click', () => navigateTo('settings'));
-
-  // Header Logout Button
-  $('#header-logout-btn')?.addEventListener('click', () => {
-    state.deleteCallback = () => {
-      requirePinToProceed('Logout', () => {
-        logout();
-      });
-    };
-    $('#confirm-delete-msg').textContent = 'Are you sure you want to logout?';
-    $('#confirm-delete-btn').textContent = 'Logout';
-    const titleEl = $('#confirmDeleteModal .modal-title');
-    if (titleEl) titleEl.textContent = 'Confirm Logout';
-    new bootstrap.Modal($('#confirmDeleteModal')).show();
-  });
 
   // Save client button
   $('#save-client-btn').addEventListener('click', () => {

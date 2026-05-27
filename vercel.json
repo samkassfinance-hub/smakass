@@ -11,8 +11,8 @@
     }
   ],
   "env": {
-    "RAZORPAY_KEY_ID": "rzp_test_Ss58AcIHlslSdI",
-    "RAZORPAY_KEY_SECRET": "tpJco5KKgp7YhoKpw7pD9zep"
+    "RAZORPAY_KEY_ID": "rzp_live_SuharfZYrJBbHj",
+    "RAZORPAY_KEY_SECRET": "FsmmZywk4NGiI1PxIS4UWb0e"
   },
   "routes": [
     {
