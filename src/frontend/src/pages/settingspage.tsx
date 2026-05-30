@@ -1,6 +1,7 @@
 import {
   Bell,
   Check,
+  ChevronDown,
   ChevronRight,
   Cloud,
   CloudCog,
@@ -12,6 +13,7 @@ import {
   Palette,
   Save,
   Shield,
+  Star,
   Trash2,
   Upload,
   User,
@@ -767,27 +769,38 @@ export default function SettingsPage({ app }: PageProps) {
           <div className="form-label" style={{ marginBottom: "8px" }}>
             {t("language")}
           </div>
-          <div className="lang-seg" data-ocid="settings.language_toggle">
-            <button
-              type="button"
-              data-ocid="settings.language_en"
-              className={`lang-seg-btn ${
-                settings.language === "en" ? "active" : ""
-              }`}
-              onClick={() => handleLanguage("en")}
+          <div style={{ position: "relative", width: "100%", display: "flex", alignItems: "center" }}>
+            <select
+              value={settings.language}
+              onChange={(e) => handleLanguage(e.target.value as "en" | "ta")}
+              className="form-input form-select"
+              data-ocid="settings.language_select"
+              style={{ 
+                fontWeight: 600, 
+                fontSize: "1rem", 
+                appearance: "none", 
+                paddingRight: "44px", 
+                cursor: "pointer",
+                width: "100%",
+                WebkitAppearance: "none",
+                MozAppearance: "none"
+              }}
             >
-              🇬🇧 English
-            </button>
-            <button
-              type="button"
-              data-ocid="settings.language_ta"
-              className={`lang-seg-btn ${
-                settings.language === "ta" ? "active" : ""
-              }`}
-              onClick={() => handleLanguage("ta")}
-            >
-              🇮🇳 தமிழ்
-            </button>
+              <option value="en">🇬🇧 English</option>
+              <option value="ta">🇮🇳 தமிழ்</option>
+            </select>
+            <ChevronDown 
+              size={20} 
+              style={{ 
+                position: "absolute", 
+                right: "14px", 
+                top: "50%", 
+                transform: "translateY(-50%)", 
+                color: "var(--kf-amber)", 
+                pointerEvents: "none",
+                zIndex: 1
+              }} 
+            />
           </div>
         </div>
 
@@ -1021,20 +1034,28 @@ export default function SettingsPage({ app }: PageProps) {
                   <button
                     type="button"
                     data-ocid="settings.renew_button"
+                    className="btn-primary hover-lift"
                     onClick={() => setShowUpgradeModal(true)}
                     style={{
-                      marginTop: "10px",
-                      padding: "8px 16px",
-                      borderRadius: "20px",
-                      background: "rgba(245,158,11,0.12)",
-                      border: "1px solid rgba(245,158,11,0.3)",
-                      color: "var(--kf-amber)",
-                      fontWeight: 700,
-                      fontSize: "0.8rem",
+                      marginTop: "16px",
+                      padding: "20px 32px",
+                      borderRadius: "16px",
+                      background: "linear-gradient(135deg, var(--kf-amber), var(--kf-amber-dark))",
+                      boxShadow: "0 8px 24px rgba(245,158,11,0.4)",
+                      color: "#0a0e1a",
+                      fontWeight: 900,
+                      fontSize: "1.3rem",
                       cursor: "pointer",
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "10px",
+                      minHeight: "64px",
                     }}
                   >
-                    {isTamil ? "புதுப்பி" : "Renew Plan"}
+                    <Star size={24} />
+                    {isTamil ? "மேம்படுத்து / புதுப்பி" : "Upgrade / Renew Plan"}
                   </button>
                 )}
             </div>
@@ -1219,42 +1240,55 @@ export default function SettingsPage({ app }: PageProps) {
       )}
 
       {/* ══════════════════════════════
-           SECURITY (all roles — logout)
+           ACCOUNT ACTIONS (logout + danger zone)
       ══════════════════════════════ */}
       <SectionCard
         icon={<Shield size={16} />}
         title={lbl.security}
         subtitle={lbl.securitySub}
       >
-        <ActionRow
-          label={lbl.logoutLabel}
-          sublabel={lbl.logoutSub}
-          onClick={() => setConfirmLogout(true)}
-          ocid="settings.logout_button"
-          icon={<LogOut size={16} />}
-        />
-      </SectionCard>
+        {/* Actions side by side */}
+        <div style={{ display: "flex", gap: "12px", marginTop: "8px" }}>
+          <button
+            type="button"
+            className="btn-logout hover-lift"
+            onClick={() => setConfirmLogout(true)}
+            data-ocid="settings.logout_button"
+            style={{
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              padding: "14px",
+              fontSize: "0.95rem",
+              opacity: 1,
+              filter: "none",
+            }}
+          >
+            <LogOut size={20} /> {lbl.logoutLabel}
+          </button>
 
-      {/* ══════════════════════════════
-           DANGER ZONE (admin only)
-      ══════════════════════════════ */}
-      {isAdmin && (
-        <SectionCard
-          icon={<Trash2 size={16} />}
-          title={lbl.danger}
-          subtitle={lbl.dangerSub}
-          danger
-        >
-          <ActionRow
-            label={lbl.clearLabel}
-            sublabel={lbl.clearSub}
-            onClick={() => setConfirmClear(true)}
-            ocid="settings.clear_data_button"
-            icon={<Trash2 size={16} />}
-            danger
-          />
-        </SectionCard>
-      )}
+          {isAdmin && (
+            <button
+              type="button"
+              className="btn-missed hover-lift"
+              onClick={() => setConfirmClear(true)}
+              data-ocid="settings.clear_data_button"
+              style={{
+                flex: 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+                padding: "12px",
+              }}
+            >
+              <Trash2 size={18} /> {lbl.clearLabel}
+            </button>
+          )}
+        </div>
+      </SectionCard>
 
       {/* ── App version ── */}
       <div className="settings-version">

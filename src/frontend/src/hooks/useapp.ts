@@ -1,10 +1,11 @@
 import { useActor } from "@caffeineai/core-infrastructure";
 import { useCallback, useEffect, useState } from "react";
 import { UserRole, createActor } from "../backend";
-import { hashPin } from "../lib/hashPin";
+import { getOrGenerateIdentity } from "../lib/identity";
 import { generateSampleData } from "../lib/sampleData";
 import {
   clearSession,
+  getActiveEmail,
   getAuth,
   getClients,
   getLoans,
@@ -17,8 +18,27 @@ import {
   savePayments,
   saveSession,
   saveSettings,
+  setActiveEmail,
 } from "../lib/storage";
 import { type TranslationKey, t as translate } from "../lib/translations";
+
+// Wrapper to inject identity into the actor
+const createActorWithIdentity = (
+  canisterId: any,
+  uploadFile: any,
+  downloadFile: any,
+  options: any = {}
+) => {
+  const email = getActiveEmail();
+  if (email) {
+    const identity = getOrGenerateIdentity(email);
+    options = {
+      ...options,
+      agentOptions: { ...options?.agentOptions, identity },
+    };
+  }
+  return createActor(canisterId, uploadFile, downloadFile, options);
+};
 import type { Client, Loan, Page, Payment, PlanType, Settings } from "../types";
 import {
   type SecondaryConnectionStatus,
@@ -52,16 +72,13 @@ export interface AppState {
   upgradePro: (planType: PlanType) => void;
   // Actions
   navigate: (page: Page, id?: string) => void;
-  login: (phone: string, pin: string) => Promise<boolean>;
+  login: (email: string) => Promise<boolean>;
   logout: () => void;
   register: (
-    phone: string,
-    pin: string,
+    email: string,
     financierName: string,
     businessName: string,
   ) => Promise<void>;
-  resetPin: (phone: string, newPin: string) => Promise<boolean>;
-  changePin: (currentPin: string, newPin: string) => Promise<boolean>;
   checkPhoneExists: (phone: string) => Promise<boolean>;
   refreshData: () => void;
   updateSettings: (s: Partial<Settings>) => void;
@@ -89,7 +106,7 @@ function ensureTrialEnd(s: Settings): Settings {
 const STAFF_ALLOWED_PAGES: Page[] = ["collection", "reports", "settings"];
 
 export function useApp(): AppState {
-  const { actor } = useActor(createActor);
+  const { actor } = useActor(createActorWithIdentity as any);
   const [clients, setClients] = useState<Client[]>(() => getClients());
   const [loans, setLoans] = useState<Loan[]>(() => getLoans());
   const [payments, setPayments] = useState<Payment[]>(() => getPayments());
@@ -152,39 +169,89 @@ export function useApp(): AppState {
   );
 
   const upgradePro = useCallback((planType: PlanType) => {
-    // Open the personalized Razorpay link in a new tab
-    if (typeof window !== "undefined") {
-      window.open("https://razorpay.me/@samkass", "_blank");
+    if (typeof window === "undefined" || !(window as any).Razorpay) {
+      alert("Payment gateway is loading, please try again in a moment.");
+      return;
     }
 
-    const expiryMap: Record<PlanType, number> = {
-      monthly: 30 * 24 * 60 * 60 * 1000,
-      quarterly: 90 * 24 * 60 * 60 * 1000,
-      yearly: 365 * 24 * 60 * 60 * 1000,
+    const priceMap: Record<PlanType, number> = {
+      monthly: 27000, // amount in paise (₹270)
+      quarterly: 85000, // ₹850
+      yearly: 199900, // ₹1,999
     };
-    const expiry = Date.now() + expiryMap[planType];
-    const current = getSettings();
-    const updated: Settings = {
-      ...current,
-      plan: "pro",
-      planType,
-      planExpiry: expiry,
+
+    const options = {
+      key: "rzp_test_dummy_key", // Replace with your actual Razorpay Key ID
+      amount: priceMap[planType].toString(),
+      currency: "INR",
+      name: "KaasFlow SaaS",
+      description: `Upgrade to ${planType.charAt(0).toUpperCase() + planType.slice(1)} Plan`,
+      image: "/favicon.ico", // Your logo
+      handler: function (response: any) {
+        // Payment success callback
+        console.log("Payment successful:", response);
+        
+        const expiryMap: Record<PlanType, number> = {
+          monthly: 30 * 24 * 60 * 60 * 1000,
+          quarterly: 90 * 24 * 60 * 60 * 1000,
+          yearly: 365 * 24 * 60 * 60 * 1000,
+        };
+        const expiry = Date.now() + expiryMap[planType];
+        const current = getSettings();
+        const updated: Settings = {
+          ...current,
+          plan: "pro",
+          planType,
+          planExpiry: expiry,
+        };
+        saveSettings(updated);
+        setSettings(updated);
+        setShowUpgradeModal(false);
+        
+        // Show success message
+        alert(`Successfully upgraded to ${planType} plan! 🎉`);
+      },
+      prefill: {
+        name: getSettings().financierName || "User Name",
+        email: getActiveEmail() || "user@example.com",
+        contact: getSettings().phone || "",
+      },
+      notes: {
+        plan_type: planType,
+        user_email: getActiveEmail() || "",
+      },
+      theme: {
+        color: "#f59e0b" // var(--kf-amber)
+      },
+      modal: {
+        ondismiss: function() {
+          console.log("Payment popup closed by user");
+        }
+      }
     };
-    saveSettings(updated);
-    setSettings(updated);
-    setShowUpgradeModal(false);
+
+    const rzp = new (window as any).Razorpay(options);
+    
+    rzp.on("payment.failed", function (response: any) {
+      console.error("Payment failed:", response.error);
+      alert(`Payment failed: ${response.error.description || "Please try again"}`);
+    });
+    
+    rzp.open();
   }, []);
 
   const login = useCallback(
-    async (phone: string, pin: string): Promise<boolean> => {
+    async (email: string): Promise<boolean> => {
       setIsAuthLoading(true);
       setAuthError(null);
       try {
-        const hashed = await hashPin(pin);
+        setActiveEmail(email); // Set before actor calls to inject identity
+        
         // Try backend first
         if (actor) {
           try {
-            const result = await actor.login(phone, hashed);
+            // new backend login takes no arguments since it relies on msg.caller
+            const result = await (actor as any).login();
             if (result.__kind__ === "ok") {
               const profile = result.ok;
               const userRole: "admin" | "staff" =
@@ -195,14 +262,15 @@ export function useApp(): AppState {
                 ...currentSettings,
                 financierName: profile.financierName,
                 businessName: profile.businessName,
-                phone: profile.phone,
+                phone: profile.email || email,
                 role: userRole,
               });
               saveSettings(withTrial);
-              saveAuth({ phone, pin: hashed, role: userRole });
+              saveAuth({ phone: email, pin: "google-auth", role: userRole });
               const session = {
                 loggedIn: true,
                 loginTime: new Date().toISOString(),
+                email: email,
               };
               saveSession(session);
               generateSampleData();
@@ -211,24 +279,22 @@ export function useApp(): AppState {
               refreshData();
               return true;
             }
-            setAuthError(result.err || "Incorrect PIN. Please try again.");
+            setAuthError(result.err || "Failed to login. Please register.");
             return false;
-          } catch {
+          } catch (e) {
+            console.error("Backend login error", e);
             // Fall through to localStorage
           }
         }
+        
         // Offline fallback: localStorage
         const auth = getAuth();
-        if (!auth || auth.phone !== phone) {
-          setAuthError("Phone number not found.");
+        if (!auth || auth.phone !== email) {
+          setAuthError("User not found locally. Please register.");
           return false;
         }
-        const pinMatches = auth.pin === pin || auth.pin === hashed;
-        if (!pinMatches) {
-          setAuthError("Incorrect PIN. Please try again.");
-          return false;
-        }
-        const session = { loggedIn: true, loginTime: new Date().toISOString() };
+        
+        const session = { loggedIn: true, loginTime: new Date().toISOString(), email: email };
         saveSession(session);
         generateSampleData();
         setIsLoggedIn(true);
@@ -238,7 +304,7 @@ export function useApp(): AppState {
         setIsAuthLoading(false);
       }
     },
-    [actor, refreshData],
+    [actor, refreshData]
   );
 
   const logout = useCallback(() => {
@@ -250,21 +316,20 @@ export function useApp(): AppState {
 
   const register = useCallback(
     async (
-      phone: string,
-      pin: string,
+      email: string,
       financierName: string,
       businessName: string,
     ) => {
       setIsAuthLoading(true);
       setAuthError(null);
       try {
-        const hashed = await hashPin(pin);
+        setActiveEmail(email); // Set before actor calls to inject identity
+        
         // Try backend registration first
         if (actor) {
           try {
-            const result = await actor.register(
-              phone,
-              hashed,
+            const result = await (actor as any).register(
+              email,
               financierName,
               businessName,
               UserRole.admin,
@@ -273,16 +338,17 @@ export function useApp(): AppState {
               setAuthError(result.err || "Registration failed.");
               return;
             }
-          } catch {
+          } catch (e) {
+            console.error("Backend register error", e);
             // Fall through to localStorage only
           }
         }
         // Always save locally for offline support
-        saveAuth({ phone, pin: hashed, role: "admin" });
+        saveAuth({ phone: email, pin: "google-auth", role: "admin" });
         const newSettings: Settings = ensureTrialEnd({
           financierName,
           businessName,
-          phone,
+          phone: email,
           language: "en",
           theme: "dark",
           plan: "free",
@@ -291,7 +357,7 @@ export function useApp(): AppState {
           role: "admin",
         });
         saveSettings(newSettings);
-        const session = { loggedIn: true, loginTime: new Date().toISOString() };
+        const session = { loggedIn: true, loginTime: new Date().toISOString(), email: email };
         saveSession(session);
         generateSampleData();
         setHasAuth(true);
@@ -305,81 +371,7 @@ export function useApp(): AppState {
     [actor, refreshData],
   );
 
-  const resetPin = useCallback(
-    async (phone: string, newPin: string): Promise<boolean> => {
-      setIsAuthLoading(true);
-      setAuthError(null);
-      try {
-        const hashed = await hashPin(newPin);
-        // Try backend first
-        if (actor) {
-          try {
-            const result = await actor.resetPin(phone, hashed);
-            if (result.__kind__ === "err") {
-              setAuthError(result.err || "Phone number not found.");
-              return false;
-            }
-          } catch {
-            // Fall through to localStorage
-          }
-        }
-        // Always update locally for offline support
-        const auth = getAuth();
-        if (!auth || auth.phone !== phone) {
-          setAuthError("Phone number not found.");
-          return false;
-        }
-        saveAuth({ ...auth, pin: hashed });
-        return true;
-      } finally {
-        setIsAuthLoading(false);
-      }
-    },
-    [actor],
-  );
 
-  const changePin = useCallback(
-    async (currentPin: string, newPin: string): Promise<boolean> => {
-      setIsAuthLoading(true);
-      setAuthError(null);
-      try {
-        const auth = getAuth();
-        if (!auth) {
-          setAuthError("Not authenticated.");
-          return false;
-        }
-        const currentHashed = await hashPin(currentPin);
-        const newHashed = await hashPin(newPin);
-        // Verify current PIN matches
-        if (auth.pin !== currentHashed) {
-          setAuthError("Current PIN is incorrect.");
-          return false;
-        }
-        // Try backend
-        if (actor) {
-          try {
-            const result = await actor.changePin(
-              auth.phone,
-              currentHashed,
-              newHashed,
-            );
-            if (result.__kind__ === "err") {
-              setAuthError(result.err || "Failed to change PIN.");
-              return false;
-            }
-          } catch {
-            // Fall through to local-only update
-          }
-        }
-        // Always update locally
-        saveAuth({ ...auth, pin: newHashed });
-        return true;
-      } finally {
-        setIsAuthLoading(false);
-      }
-    },
-    [actor],
-  );
 
   const checkPhoneExists = useCallback(
     async (phone: string): Promise<boolean> => {
@@ -523,8 +515,6 @@ export function useApp(): AppState {
     login,
     logout,
     register,
-    resetPin,
-    changePin,
     checkPhoneExists,
     refreshData,
     updateSettings,

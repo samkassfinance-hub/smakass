@@ -465,11 +465,13 @@ body {
   height: 64px;
   background-color: var(--kf-nav-bg);
   border-top: 1px solid var(--kf-header-border);
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   align-items: center;
-  justify-content: space-around;
   z-index: 100;
   box-shadow: var(--kf-shadow-nav);
+  gap: 2px;
 }
 
 .bottom-nav-item {
@@ -478,15 +480,17 @@ body {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  flex: 1;
+  flex: 1 1 0%;
   min-height: 44px;
-  padding: 4px 0;
+  padding: 4px 2px;
   background: transparent;
   border: none;
   cursor: pointer;
   color: var(--kf-filter-color);
   transition: color 0.2s;
   position: relative;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .bottom-nav-item:hover {
@@ -509,10 +513,28 @@ body {
 }
 
 .bottom-nav-label {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 500;
   line-height: 1;
   font-family: "DM Sans", sans-serif;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  text-align: center;
+}
+
+.bottom-nav-label.tamil-text {
+  font-size: 7.5px;
+  font-family: "Noto Sans Tamil", sans-serif;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  line-height: 1.2;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  padding: 0 2px;
 }
 
 /* ── Cards ── */
@@ -679,6 +701,33 @@ body {
   background-color: #dc2626;
 }
 
+.btn-logout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: var(--kf-btn-secondary-bg);
+  color: var(--kf-text);
+  border: 1.5px solid var(--kf-btn-secondary-border);
+  border-radius: 12px;
+  font-weight: 700;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.95rem;
+  padding: 12px 18px;
+  min-height: 48px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-logout:hover {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: var(--kf-amber);
+  border-color: var(--kf-amber);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+}
+
 .btn-reminder {
   display: inline-flex;
   align-items: center;
@@ -774,10 +823,6 @@ body {
   cursor: pointer;
   outline: none;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  background-size: 18px;
 }
 
 .form-select:focus {
@@ -1802,6 +1847,15 @@ body {
   to {
     transform: scale(1);
     opacity: 1;
+  }
+}
+
+@keyframes bounce-down {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(3px);
   }
 }
 
