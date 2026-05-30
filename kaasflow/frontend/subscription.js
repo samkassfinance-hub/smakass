@@ -8,7 +8,7 @@
   'use strict';
 
   // ─── YOUR RAZORPAY KEY ID (replace with your actual key) ─────
-  const RAZORPAY_KEY = 'rzp_test_YourKeyHere'; // e.g. rzp_live_xxxxxxxxxxxxxx
+  const RAZORPAY_KEY = 'rzp_live_SuharfZYrJBbHj'; // Your live Razorpay Key ID
 
   const PLANS = {
     FREE: {
@@ -33,7 +33,7 @@
     MONTHLY: {
       id: 'monthly',
       name: 'Monthly Plan',
-      price: 199,
+      price: 270, // ₹270
       clientLimit: Infinity,
       duration: 30,
       features: {
@@ -52,7 +52,7 @@
     QUARTERLY: {
       id: 'quarterly',
       name: 'Quarterly Plan',
-      price: 589,
+      price: 850, // ₹850
       clientLimit: Infinity,
       duration: 90,
       features: {
@@ -67,12 +67,12 @@
         advancedReports: true
       },
       badge: 'PRO',
-      savings: 'Save ₹8'
+      savings: 'Save ₹60'
     },
     YEARLY: {
       id: 'yearly',
       name: 'Yearly Plan',
-      price: 2370,
+      price: 1999, // ₹1,999
       clientLimit: Infinity,
       duration: 365,
       features: {
@@ -87,7 +87,7 @@
         advancedReports: true
       },
       badge: 'PRO',
-      savings: 'Save ₹18'
+      savings: 'Save ₹1,241'
     }
   };
 
@@ -307,13 +307,15 @@
 
     renderPlanCard(plan, isCurrent) {
       const isRecommended = plan.id === 'yearly';
+      const perDayPrice = (plan.price / plan.duration).toFixed(1);
       
       return `
         <div class="plan-card ${isRecommended ? 'plan-card-featured' : ''} ${isCurrent ? 'plan-card-current' : ''}">
-          ${isRecommended ? '<div class="plan-badge-top">Best Value ⭐</div>' : ''}
-          ${isCurrent ? '<div class="plan-badge-current">Current Plan</div>' : ''}
+          ${isRecommended ? '<div class="plan-badge-top">⭐ Best Value</div>' : ''}
+          ${isCurrent ? '<div class="plan-badge-current">✓ Current Plan</div>' : ''}
           <div class="plan-label">${plan.name}</div>
           <div class="plan-price">₹${plan.price}<span>/${plan.duration} days</span></div>
+          <div class="plan-per-day" style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 4px;">₹${perDayPrice}/day</div>
           ${plan.savings ? `<div class="plan-saving-badge">${plan.savings}</div>` : ''}
           <ul class="plan-features">
             <li><i class="fa-solid fa-check"></i> Unlimited clients</li>
@@ -321,13 +323,13 @@
             <li><i class="fa-solid fa-check"></i> Collection mode</li>
             <li><i class="fa-solid fa-check"></i> WhatsApp reminders</li>
             <li><i class="fa-solid fa-check"></i> Excel & PDF export</li>
-            <li><i class="fa-solid fa-check"></i> Data backup</li>
+            <li><i class="fa-solid fa-check"></i> Cloud backup</li>
           </ul>
           <button type="button" 
                   class="btn-plan-choose ${isRecommended ? 'btn-plan-choose-featured' : ''}" 
                   onclick="window.KFSubscription.selectPlan('${plan.id}')"
                   ${isCurrent ? 'disabled' : ''}>
-            ${isCurrent ? 'Current Plan' : 'Choose Plan'}
+            ${isCurrent ? '✓ Current Plan' : `Pay ₹${plan.price}`}
           </button>
         </div>
       `;
@@ -347,6 +349,12 @@
       const plan = PLANS[planId.toUpperCase()];
       if (!plan) return;
 
+      // Get current user's phone/email for account isolation
+      const settings = JSON.parse(localStorage.getItem('kf_settings') || '{}');
+      const userPhone = settings.phone || '';
+      const userEmail = window.RazorpayPayment?.getUserEmail() || '';
+      const userIdentifier = userPhone || userEmail || 'unknown';
+
       // Close upgrade modal
       const upgradeModalEl = document.getElementById('upgradeModal');
       if (upgradeModalEl) {
@@ -355,30 +363,44 @@
       }
 
       if (typeof showToast === 'function') {
-        showToast('Initiating secure payment...', 'info');
+        showToast('Opening payment gateway...', 'info');
       }
 
       // Trigger the real RazorpayPayment checkout!
       window.RazorpayPayment.payForPlan(planId, {
+        prefill: {
+          name: settings.financierName || 'User',
+          email: userEmail,
+          contact: userPhone
+        },
         onSuccess: (response) => {
           // Calculate expiry date
           const durationDays = plan.duration || 30;
           const startDate = new Date();
           const expiryDate = new Date(startDate.getTime() + (durationDays * 24 * 60 * 60 * 1000));
 
-          // 1. Update kf_subscription in localStorage via SubscriptionManager
-          const sub = this.manager.getCurrentSubscription() || {
+          // IMPORTANT: Store subscription linked to current user's phone/email
+          const subscriptionKey = `kf_subscription_${userIdentifier}`;
+          
+          // 1. Update user-specific subscription in localStorage
+          const sub = JSON.parse(localStorage.getItem(subscriptionKey) || JSON.stringify({
             planId: 'free',
             startDate: new Date().toISOString(),
             expiryDate: null,
             totalPaid: 0,
-            paymentHistory: []
-          };
+            paymentHistory: [],
+            userIdentifier: userIdentifier,
+            userPhone: userPhone,
+            userEmail: userEmail
+          }));
           
           sub.planId = plan.id;
           sub.startDate = startDate.toISOString();
           sub.expiryDate = expiryDate.toISOString();
           sub.totalPaid += plan.price;
+          sub.userIdentifier = userIdentifier;
+          sub.userPhone = userPhone;
+          sub.userEmail = userEmail;
           sub.paymentHistory.push({
             date: startDate.toISOString(),
             amount: plan.price,
@@ -387,12 +409,16 @@
             type: 'subscription',
             txnId: response.razorpay_payment_id
           });
+          localStorage.setItem(subscriptionKey, JSON.stringify(sub));
+          
+          // Also update the generic key for backward compatibility
           localStorage.setItem(this.manager.storageKey, JSON.stringify(sub));
 
-          // 2. Update kf_settings in localStorage (for app.js compatibility)
-          const settings = JSON.parse(localStorage.getItem('kf_settings') || '{}');
+          // 2. Update kf_settings for current user
           settings.plan = planId;
+          settings.planExpiry = expiryDate.getTime();
           settings.paymentDate = startDate.toISOString();
+          settings.userIdentifier = userIdentifier; // Link settings to user
           if (!settings.planPayments) {
             settings.planPayments = [];
           }
@@ -400,13 +426,14 @@
             date: startDate.toISOString().split('T')[0],
             plan: planId,
             amount: plan.price,
-            txnId: response.razorpay_payment_id
+            txnId: response.razorpay_payment_id,
+            userIdentifier: userIdentifier
           });
           localStorage.setItem('kf_settings', JSON.stringify(settings));
 
           // 3. Show success Toast and screen
           if (typeof showToast === 'function') {
-            showToast('✅ Payment confirmed! ' + plan.name + ' activated.', 'success');
+            showToast(`✅ Payment successful! ${plan.name} activated for ${userPhone || userEmail}`, 'success');
           }
           this.showSuccessScreen({
             planName: plan.name,
@@ -428,9 +455,14 @@
           if (window.KF && window.KF.refreshCurrentPage) {
             window.KF.refreshCurrentPage();
           }
+          
+          // Reload page to reflect changes
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
         },
         onError: (err) => {
-          console.error(err);
+          console.error('Payment error:', err);
           if (typeof showToast === 'function') {
             showToast(err.error || 'Payment failed or was cancelled.', 'error');
           }

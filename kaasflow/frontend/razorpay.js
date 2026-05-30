@@ -1,6 +1,7 @@
 // Razorpay Payment Integration
 const RazorpayPayment = {
-  keyId: 'rzp_live_SuharfZYrJBbHj', // Fallback to provided live key
+  keyId: 'rzp_live_SuharfZYrJBbHj', // Your live Razorpay Key ID
+  keySecret: 'FsmmZywk4NGiI1PxIS4UWb0e', // Your live Razorpay Key Secret (keep secure!)
   
   async init() {
     try {
@@ -34,6 +35,23 @@ const RazorpayPayment = {
     } catch {
       return null;
     }
+  },
+
+  // Get current logged-in user's phone number for account isolation
+  getUserPhone() {
+    try {
+      const settings = JSON.parse(localStorage.getItem('kf_settings') || '{}');
+      return settings.phone || null;
+    } catch {
+      return null;
+    }
+  },
+
+  // Get unique user identifier for account isolation
+  getUserIdentifier() {
+    const phone = this.getUserPhone();
+    const email = this.getUserEmail();
+    return phone || email || 'unknown_user';
   },
 
   async createOrder(amount, planType) {
@@ -119,6 +137,10 @@ const RazorpayPayment = {
 
   openCheckout(orderData, options = {}) {
     const self = this;
+    const userIdentifier = this.getUserIdentifier();
+    const userPhone = this.getUserPhone();
+    const userEmail = this.getUserEmail();
+    
     const rzpOptions = {
       key: this.keyId,
       amount: orderData.amount,
@@ -128,7 +150,7 @@ const RazorpayPayment = {
       order_id: orderData.id,
       handler: async function (response) {
         if (typeof showToast === 'function') {
-          showToast('Verifying payment signature...', 'info');
+          showToast('Verifying payment...', 'info');
         }
         
         try {
@@ -136,14 +158,18 @@ const RazorpayPayment = {
             razorpay_order_id: response.razorpay_order_id,
             razorpay_payment_id: response.razorpay_payment_id,
             razorpay_signature: response.razorpay_signature,
-            plan_type: options.planType
+            plan_type: options.planType,
+            user_identifier: userIdentifier, // Link payment to specific user
+            user_phone: userPhone,
+            user_email: userEmail
           });
           
           if (verification.success && verification.plan_activated) {
             options.onSuccess?.({
               razorpay_payment_id: response.razorpay_payment_id,
               subscription: verification.subscription,
-              message: verification.message
+              message: verification.message,
+              user_identifier: userIdentifier // Pass user identifier to success handler
             });
           } else {
             options.onError?.({ error: verification.error || 'Payment verification failed' });
@@ -154,24 +180,44 @@ const RazorpayPayment = {
       },
       prefill: {
         name: options.prefill?.name || '',
-        email: options.prefill?.email || '',
-        contact: options.prefill?.contact || ''
+        email: userEmail || options.prefill?.email || '',
+        contact: userPhone || options.prefill?.contact || ''
+      },
+      notes: {
+        user_identifier: userIdentifier,
+        user_phone: userPhone,
+        user_email: userEmail,
+        plan_type: options.planType
       },
       theme: {
-        color: '#10b981'
+        color: '#7ed321' // Green theme matching your app
       },
       modal: {
         ondismiss: function () {
+          if (typeof showToast === 'function') {
+            showToast('Payment cancelled', 'info');
+          }
           options.onError?.({ error: 'Payment checkout closed' });
         }
       }
     };
 
     if (window.Razorpay) {
-      const rzp = new window.Razorpay(rzpOptions);
-      rzp.open();
+      try {
+        const rzp = new window.Razorpay(rzpOptions);
+        rzp.open();
+      } catch (error) {
+        console.error('Razorpay error:', error);
+        if (typeof showToast === 'function') {
+          showToast('Failed to open payment gateway. Please try again.', 'error');
+        }
+        options.onError?.({ error: 'Failed to open Razorpay checkout' });
+      }
     } else {
-      options.onError?.({ error: 'Razorpay SDK failed to load.' });
+      if (typeof showToast === 'function') {
+        showToast('Payment gateway not loaded. Please refresh the page.', 'error');
+      }
+      options.onError?.({ error: 'Razorpay SDK not loaded' });
     }
   },
 
@@ -191,9 +237,9 @@ const RazorpayPayment = {
   // Plan-specific payment methods
   async payForPlan(planType, options = {}) {
     const plans = {
-      'monthly': { amount: 199, name: 'Monthly Plan' },
-      'quarterly': { amount: 589, name: 'Quarterly Plan' },
-      'yearly': { amount: 2370, name: 'Yearly Plan' }
+      'monthly': { amount: 27000, name: 'Monthly Plan' }, // ₹270 in paise
+      'quarterly': { amount: 85000, name: 'Quarterly Plan' }, // ₹850 in paise
+      'yearly': { amount: 199900, name: 'Yearly Plan' } // ₹1,999 in paise
     };
     
     const plan = plans[planType];
@@ -202,10 +248,20 @@ const RazorpayPayment = {
       return;
     }
     
+    // Get user details for prefill
+    const settings = JSON.parse(localStorage.getItem('kf_settings') || '{}');
+    const userPhone = this.getUserPhone();
+    const userEmail = this.getUserEmail();
+    
     await this.initiatePayment(plan.amount, {
       ...options,
       planType: planType,
-      description: plan.name
+      description: plan.name,
+      prefill: {
+        name: settings.financierName || 'User',
+        email: userEmail || '',
+        contact: userPhone || ''
+      }
     });
   }
 };
