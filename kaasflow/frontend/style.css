@@ -654,6 +654,20 @@ h1, h2, h3, h4, h5, h6 {
   line-height: 1;
   white-space: nowrap;
   transition: color 0.2s ease;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  padding: 0 2px;
+}
+
+/* Tamil text in bottom nav */
+body.tamil-text .nav-tab span {
+  font-size: 0.55rem;
+  font-weight: 700;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .nav-tab.active { color: var(--color-primary); }

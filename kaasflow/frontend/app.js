@@ -348,9 +348,10 @@ const state = {
 // ── HELPERS ──────────────────────────────────────────────────
 const t = (key, ...args) => {
   const dict = T[state.lang] || T.en;
-  const fn = dict[key];
-  if (typeof fn === 'function') return fn(...args);
-  return fn || T.en[key] || key;
+  let val = dict[key];
+  if (val === undefined) val = T.en[key];
+  if (typeof val === 'function') return val(...args);
+  return val !== undefined ? val : key;
 };
 
 const $ = (sel, ctx = document) => ctx.querySelector(sel);
@@ -454,10 +455,10 @@ function translateDOM() {
   elements.forEach(el => {
     const key = el.getAttribute('data-i18n');
     const dict = T[state.lang] || T.en;
-    if (dict && dict[key]) {
-      el.textContent = dict[key];
-    } else if (T.en[key]) {
-      el.textContent = T.en[key];
+    let val = dict[key];
+    if (val === undefined) val = T.en[key];
+    if (val !== undefined) {
+      el.textContent = val;
     }
   });
 }
@@ -2052,8 +2053,8 @@ function renderSettings(container) {
               <div class="settings-row-label" style="font-size:1.15rem"><i class="fa-solid fa-circle-check" style="color:var(--color-primary)"></i> ${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan</div>
               ${planExpiry ? `<div class="settings-row-sub text-muted-kf">Expires: ${fmtDate(planExpiry)}</div>` : ''}
             ${plan !== 'yearly' ? `
-            <button class="btn-kf-primary pro-upgrade-btn" id="btn-upgrade" data-ocid="settings.upgrade_button">
-              <i class="fa-solid fa-rocket me-1"></i><span>Upgrade</span>
+            <button class="btn-kf-primary pro-upgrade-btn" id="btn-upgrade" data-ocid="settings.upgrade_button" style="padding: 18px 32px; font-size: 1.2rem; min-height: 60px; font-weight: 800; border-radius: 14px; box-shadow: 0 8px 24px rgba(126, 211, 33, 0.4);">
+              <i class="fa-solid fa-rocket me-2" style="font-size: 1.3rem;"></i><span>Upgrade Now</span>
             </button>
             ` : `
             <button class="btn-kf-primary pro-upgrade-btn" disabled style="background: #10b981; border: none; cursor: default;">
@@ -2079,9 +2080,10 @@ function renderSettings(container) {
           <div>
             <div class="settings-row-label"><i class="fa-solid fa-language"></i><span data-i18n="language">${t('language')}</span></div>
           </div>
-          <select class="form-select kf-input pro-input" id="settings-lang-select" style="max-width:200px; font-size:0.9rem;" data-ocid="settings.lang_select">
-            <option value="en" ${state.lang === 'en' ? 'selected' : ''}>English</option>
-            <option value="ta" ${state.lang === 'ta' ? 'selected' : ''}>தமிழ் (Tamil)</option>
+          <div style="position: relative; max-width: 200px;">
+            <select class="form-select kf-input pro-input" id="settings-lang-select" style="width: 100%; font-size:0.9rem; appearance: none; -webkit-appearance: none; -moz-appearance: none; padding-right: 40px;" data-ocid="settings.lang_select">
+              <option value="en" ${state.lang === 'en' ? 'selected' : ''}>English</option>
+              <option value="ta" ${state.lang === 'ta' ? 'selected' : ''}>தமிழ் (Tamil)</option>
             <option value="as" ${state.lang === 'as' ? 'selected' : ''}>অসমীয়া (Assamese)</option>
             <option value="bn" ${state.lang === 'bn' ? 'selected' : ''}>বাংলা (Bengali)</option>
             <option value="brx" ${state.lang === 'brx' ? 'selected' : ''}>बड़ो (Bodo)</option>
@@ -2103,7 +2105,9 @@ function renderSettings(container) {
             <option value="sd" ${state.lang === 'sd' ? 'selected' : ''}>سنڌي (Sindhi)</option>
             <option value="te" ${state.lang === 'te' ? 'selected' : ''}>తెలుగు (Telugu)</option>
             <option value="ur" ${state.lang === 'ur' ? 'selected' : ''}>اردو (Urdu)</option>
-          </select>
+            </select>
+            <i class="fa-solid fa-chevron-down" style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--green-light); pointer-events: none; font-size: 14px;"></i>
+          </div>
         </div>
       </div>
 
@@ -2159,7 +2163,7 @@ function renderSettings(container) {
         <button class="btn-kf-outline flex-grow-1" style="color:var(--color-danger); border-color:var(--color-danger); min-height:48px;" id="btn-delete-account">
           <i class="fa-solid fa-user-xmark me-2"></i>Delete Account
         </button>
-        <button class="btn-kf-danger pro-btn-logout flex-grow-1" style="min-height:48px;" id="btn-logout" data-ocid="settings.logout_button">
+        <button class="btn-kf-outline flex-grow-1 pro-btn-logout" style="min-height:48px; font-weight: 700; border: 1.5px solid var(--border-default); transition: all 0.3s ease;" id="btn-logout" data-ocid="settings.logout_button" onmouseover="this.style.background='rgba(126, 211, 33, 0.1)'; this.style.borderColor='var(--green-mid)'; this.style.color='var(--green-light)'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(126, 211, 33, 0.2)';" onmouseout="this.style.background=''; this.style.borderColor='var(--border-default)'; this.style.color=''; this.style.transform=''; this.style.boxShadow='';">
           <i class="fa-solid fa-power-off me-2"></i><span data-i18n="logout">${t('logout')}</span>
         </button>
       </div>
