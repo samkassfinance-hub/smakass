@@ -38,17 +38,17 @@ class PlanManager:
         'monthly': {
             'name': 'Monthly Plan',
             'duration_days': 30,
-            'price': 199
+            'price': 270
         },
         'quarterly': {
             'name': 'Quarterly Plan',
             'duration_days': 90,
-            'price': 589
+            'price': 850
         },
         'yearly': {
             'name': 'Yearly Plan',
             'duration_days': 365,
-            'price': 2370
+            'price': 1999
         }
     }
     

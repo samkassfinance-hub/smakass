@@ -27,9 +27,9 @@ const FREE_CLIENT_LIMIT = 20;
 
 // ── PLAN UPGRADE STATE ──────────────────────────────────────
 const PLAN_PRICES = {
-  monthly: 199,
-  quarterly: 589,
-  yearly: 2370
+  monthly: 270,
+  quarterly: 850,
+  yearly: 1999
 };
 const PLAN_NAMES = {
   monthly: 'Monthly Plan',
