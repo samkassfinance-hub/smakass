@@ -1,31 +1,38 @@
-// Razorpay Payment Integration
+// Razorpay Payment Integration - DEBUG VERSION
 const RazorpayPayment = {
   keyId: 'rzp_live_SuharfZYrJBbHj',
   keySecret: 'FsmmZywk4NGiI1PxIS4UWb0e',
   
   async init() {
-    console.log('🔧 Initializing Razorpay with key:', this.keyId);
+    console.log('🔧 RazorpayPayment.init() called');
+    console.log('🔑 Key ID:', this.keyId);
     console.log('📦 Razorpay SDK loaded:', typeof window.Razorpay !== 'undefined');
     
     try {
       const apiBase = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
         ? 'http://127.0.0.1:5000/api'
         : window.location.origin + '/api';
+      
+      console.log('🌐 API Base:', apiBase);
         
       const res = await fetch(`${apiBase}/payment/key`);
       const data = await res.json();
+      console.log('✅ Backend key response:', data);
+      
       if (data.key) {
         this.keyId = data.key;
-        console.log('✅ Loaded key from backend:', this.keyId);
+        console.log('🔄 Updated Key ID from backend:', this.keyId);
       }
     } catch (e) {
-      console.warn("⚠️ Failed to load Razorpay Key from backend, using hardcoded:", e);
+      console.warn("⚠️ Failed to load Razorpay Key from backend:", e);
+      console.log('📌 Using hardcoded key:', this.keyId);
     }
   },
 
   getSessionToken() {
     try {
       const session = JSON.parse(localStorage.getItem('kf_session') || '{}');
+      console.log('🎫 Session token:', session.token ? 'Found' : 'Not found');
       return session.token || null;
     } catch {
       return null;
@@ -35,6 +42,7 @@ const RazorpayPayment = {
   getUserEmail() {
     try {
       const session = JSON.parse(localStorage.getItem('kf_session') || '{}');
+      console.log('📧 User email:', session.user?.email || 'Not found');
       return session.user?.email || null;
     } catch {
       return null;
@@ -57,7 +65,7 @@ const RazorpayPayment = {
   },
 
   async createOrder(amount, planType) {
-    console.log('📝 Creating Razorpay order:', { amount, planType });
+    console.log('📝 Creating order:', { amount, planType });
     
     try {
       const apiBase = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
@@ -74,6 +82,9 @@ const RazorpayPayment = {
         headers['X-User-Email'] = email;
       }
 
+      console.log('🌐 POST', `${apiBase}/payment/create-order`);
+      console.log('📤 Request body:', { amount, plan_type: planType, email });
+
       const res = await fetch(`${apiBase}/payment/create-order`, {
         method: 'POST',
         headers,
@@ -82,6 +93,7 @@ const RazorpayPayment = {
       
       const data = await res.json();
       console.log('📥 Order response:', data);
+      
       return data;
     } catch (e) {
       console.error('❌ Create order error:', e);
@@ -90,6 +102,8 @@ const RazorpayPayment = {
   },
 
   async verifyPayment(paymentData) {
+    console.log('🔍 Verifying payment:', paymentData);
+    
     try {
       const apiBase = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
         ? 'http://127.0.0.1:5000/api'
@@ -110,54 +124,22 @@ const RazorpayPayment = {
         headers,
         body: JSON.stringify({ ...paymentData, email })
       });
-      return await res.json();
+      
+      const data = await res.json();
+      console.log('✅ Verification response:', data);
+      
+      return data;
     } catch (e) {
+      console.error('❌ Verify payment error:', e);
       return { success: false, error: e.message };
-    }
-  },
-
-  async checkSubscriptionStatus() {
-    try {
-      const apiBase = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-        ? 'http://127.0.0.1:5000/api'
-        : window.location.origin + '/api';
-
-      const headers = {};
-      const token = this.getSessionToken();
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      const email = this.getUserEmail();
-      if (email) {
-        headers['X-User-Email'] = email;
-      }
-
-      const url = email 
-        ? `${apiBase}/subscription/status?email=${encodeURIComponent(email)}`
-        : `${apiBase}/subscription/status`;
-
-      const res = await fetch(url, { headers });
-      return await res.json();
-    } catch (e) {
-      return { active: false, error: e.message };
     }
   },
 
   openCheckout(orderData, options = {}) {
     console.log('💳 Opening Razorpay checkout...');
-    console.log('📦 Order ID:', orderData.id);
-    console.log('💰 Amount:', orderData.amount / 100, 'INR');
-    
-    // CRITICAL: Check if Razorpay SDK is loaded
-    if (typeof window.Razorpay === 'undefined') {
-      console.error('❌ CRITICAL: Razorpay SDK not loaded!');
-      alert('Payment gateway not loaded. Please refresh the page and try again.');
-      if (typeof showToast === 'function') {
-        showToast('Payment gateway not loaded. Please refresh the page.', 'error');
-      }
-      options.onError?.({ error: 'Razorpay SDK not loaded' });
-      return;
-    }
+    console.log('📦 Order data:', orderData);
+    console.log('⚙️ Options:', options);
+    console.log('🔍 window.Razorpay exists:', typeof window.Razorpay !== 'undefined');
     
     const self = this;
     const userIdentifier = this.getUserIdentifier();
@@ -172,7 +154,7 @@ const RazorpayPayment = {
       description: options.description || `${options.planType} Plan`,
       order_id: orderData.id,
       handler: async function (response) {
-        console.log('✅ Payment successful!', response.razorpay_payment_id);
+        console.log('✅ Payment successful!', response);
         
         if (typeof showToast === 'function') {
           showToast('Verifying payment...', 'info');
@@ -190,7 +172,7 @@ const RazorpayPayment = {
           });
           
           if (verification.success && verification.plan_activated) {
-            console.log('🎉 Plan activated successfully!');
+            console.log('🎉 Plan activated!');
             options.onSuccess?.({
               razorpay_payment_id: response.razorpay_payment_id,
               subscription: verification.subscription,
@@ -222,7 +204,7 @@ const RazorpayPayment = {
       },
       modal: {
         ondismiss: function () {
-          console.log('⚠️ Payment cancelled by user');
+          console.log('⚠️ Payment modal dismissed');
           if (typeof showToast === 'function') {
             showToast('Payment cancelled', 'info');
           }
@@ -231,50 +213,53 @@ const RazorpayPayment = {
       }
     };
 
-    console.log('🎯 Razorpay options prepared');
-    console.log('🔑 Using key:', this.keyId);
+    console.log('🎯 Razorpay options:', rzpOptions);
 
-    try {
-      console.log('🚀 Creating Razorpay instance...');
-      const rzp = new window.Razorpay(rzpOptions);
-      console.log('✅ Razorpay instance created successfully');
-      console.log('🔓 Opening checkout modal...');
-      rzp.open();
-      console.log('✅ Checkout modal opened!');
-    } catch (error) {
-      console.error('❌ CRITICAL ERROR opening Razorpay:', error);
-      console.error('Error details:', error.message, error.stack);
-      alert('Failed to open payment gateway: ' + error.message + '\n\nPlease refresh the page and try again.');
-      if (typeof showToast === 'function') {
-        showToast('Failed to open payment gateway. Please try again.', 'error');
+    if (window.Razorpay) {
+      try {
+        console.log('🚀 Creating Razorpay instance...');
+        const rzp = new window.Razorpay(rzpOptions);
+        console.log('✅ Razorpay instance created');
+        console.log('🔓 Opening checkout...');
+        rzp.open();
+        console.log('✅ Checkout opened');
+      } catch (error) {
+        console.error('❌ Razorpay error:', error);
+        if (typeof showToast === 'function') {
+          showToast('Failed to open payment gateway. Please try again.', 'error');
+        }
+        options.onError?.({ error: 'Failed to open Razorpay checkout' });
       }
-      options.onError?.({ error: 'Failed to open Razorpay checkout: ' + error.message });
+    } else {
+      console.error('❌ window.Razorpay is not defined!');
+      if (typeof showToast === 'function') {
+        showToast('Payment gateway not loaded. Please refresh the page.', 'error');
+      }
+      options.onError?.({ error: 'Razorpay SDK not loaded' });
     }
   },
 
   async initiatePayment(amount, options = {}) {
-    console.log('🎬 Initiating payment for amount:', amount);
+    console.log('🎬 Initiating payment:', { amount, options });
     
     try {
       const orderResponse = await this.createOrder(amount, options.planType);
       
       if (orderResponse.success && orderResponse.order) {
-        console.log('✅ Order created successfully, opening checkout...');
+        console.log('✅ Order created, opening checkout...');
         this.openCheckout(orderResponse.order, options);
       } else {
         console.error('❌ Order creation failed:', orderResponse.error);
-        alert('Failed to create payment order: ' + (orderResponse.error || 'Unknown error'));
         options.onError?.({ error: orderResponse.error || 'Order creation failed' });
       }
     } catch (error) {
       console.error('❌ Initiate payment error:', error);
-      alert('Payment initiation failed: ' + error.message);
       options.onError?.({ error: error.message });
     }
   },
 
   async payForPlan(planType, options = {}) {
-    console.log('💰 payForPlan called for:', planType);
+    console.log('💰 payForPlan called:', planType);
     
     const plans = {
       'monthly':   { amount: 270,  name: 'Monthly Plan' },
@@ -285,7 +270,6 @@ const RazorpayPayment = {
     const plan = plans[planType];
     if (!plan) {
       console.error('❌ Invalid plan type:', planType);
-      alert('Invalid plan selected: ' + planType);
       options.onError?.({ error: 'Invalid plan type' });
       return;
     }
@@ -296,7 +280,7 @@ const RazorpayPayment = {
     const userPhone = this.getUserPhone();
     const userEmail = this.getUserEmail();
     
-    console.log('👤 User:', { email: userEmail, phone: userPhone });
+    console.log('👤 User details:', { userPhone, userEmail, financierName: settings.financierName });
     
     await this.initiatePayment(plan.amount, {
       ...options,
@@ -311,4 +295,5 @@ const RazorpayPayment = {
   }
 };
 
-console.log('✅ razorpay.js loaded successfully');
+console.log('🔧 razorpay_debug.js loaded');
+console.log('📦 RazorpayPayment object:', RazorpayPayment);
