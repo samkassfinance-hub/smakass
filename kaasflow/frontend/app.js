@@ -580,6 +580,51 @@ async function apiAuth(endpoint, payload) {
   }
 }
 
+// ── USER DATA ISOLATION ──────────────────────────────────────
+// All localStorage keys that belong to a specific user.
+const USER_SCOPED_LS_KEYS = [
+  'kf_settings', 'kf_clients', 'kf_loans', 'kf_payments',
+  'kf_recycle_bin', 'kf_notifications', 'kf_subscription',
+  'kf_last_sync', 'kf_backup_data'
+];
+
+/**
+ * Wipes all user-scoped data from localStorage.
+ * Called when a different user logs in to prevent data crossover.
+ */
+function clearAllUserData() {
+  USER_SCOPED_LS_KEYS.forEach(k => localStorage.removeItem(k));
+  // Also clear dynamic per-user subscription keys
+  const toRemove = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && (k.startsWith('kf_subscription_') || k.startsWith('kf_backup_'))) {
+      toRemove.push(k);
+    }
+  }
+  toRemove.forEach(k => localStorage.removeItem(k));
+}
+
+/**
+ * Saves a session, enforcing strict isolation.
+ * If the incoming email differs from the stored session email,
+ * all previous user data is wiped before the new session is written.
+ */
+function saveSessionIsolated(token, user) {
+  const incomingEmail = (user?.email || '').toLowerCase();
+  let existingEmail = '';
+  try {
+    const existing = JSON.parse(localStorage.getItem('kf_session') || '{}');
+    existingEmail = (existing?.user?.email || '').toLowerCase();
+  } catch { /* ignore */ }
+
+  if (existingEmail && incomingEmail && existingEmail !== incomingEmail) {
+    // Different user — wipe all previous user data before saving new session
+    clearAllUserData();
+  }
+  localStorage.setItem('kf_session', JSON.stringify({ token, user }));
+}
+
 // Google Sign-In is initialized via HTML (g_id_onload) and handled by handleGoogleLogin below
 
 // Google Login Callback
@@ -606,7 +651,8 @@ window.handleGoogleLogin = async function(response) {
   const res = await apiAuth('google', { token: response.credential });
 
   if (res.success) {
-    Store.saveSession({ token: res.token || ('google-session:' + encodeURIComponent(res.user?.email || googleUser.email) + ':' + Date.now()), user: res.user });
+    const token = res.token || ('google-session:' + encodeURIComponent(res.user?.email || googleUser.email) + ':' + Date.now());
+    saveSessionIsolated(token, res.user);
     const s = Store.settings();
     if (res.user?.name && !s.financierName) { s.financierName = res.user.name; Store.saveSettings(s); }
     if (res.user?.appPin) { s.appPin = res.user.appPin; Store.saveSettings(s); }
@@ -624,7 +670,7 @@ window.handleGoogleLogin = async function(response) {
       financierName: googleUser.name,
       picture: googleUser.picture
     };
-    Store.saveSession({ token: 'google-session:' + encodeURIComponent(user.email) + ':' + Date.now(), user });
+    saveSessionIsolated('google-session:' + encodeURIComponent(user.email) + ':' + Date.now(), user);
     // Save to local users list for consistency
     const users = getLocalUsers();
     if (!users.find(u => u.email.toLowerCase() === googleUser.email.toLowerCase())) {
@@ -696,6 +742,7 @@ async function logout() {
   localStorage.removeItem(LS.payments);
   localStorage.removeItem(LS.settings);
   localStorage.removeItem(LS.recycleBin);
+  clearAllUserData();
   state.session = null;
   showAuth();
 }
@@ -707,7 +754,8 @@ function init() {
   if (urlParams.has('token')) {
     const token = urlParams.get('token');
     const email = urlParams.get('email') || '';
-    Store.saveSession({ token: token, user: { email: email, name: email.split('@')[0] } });
+    const user = { email: email, name: email.split('@')[0] };
+    saveSessionIsolated(token, user);
     // Clean query parameters from URL
     window.history.replaceState({}, document.title, window.location.pathname);
   }
@@ -3407,7 +3455,8 @@ function bindGlobal() {
     if (!password) { errEl.textContent = 'Enter your password'; errEl.classList.remove('d-none'); return; }
     const res = await apiAuth('login', { email, password });
     if (res.success) {
-      Store.saveSession({ token: res.token || ('session:' + encodeURIComponent(res.user?.email || email) + ':' + Date.now()), user: res.user });
+      const token = res.token || ('session:' + encodeURIComponent(res.user?.email || email) + ':' + Date.now());
+      saveSessionIsolated(token, res.user || { email });
       // Also save financierName into settings if available
       if (res.user) {
         const s = Store.settings();
@@ -3436,7 +3485,8 @@ function bindGlobal() {
     if (!password || password.length < 6) { errEl.textContent = 'Password must be at least 6 characters'; errEl.classList.remove('d-none'); return; }
     const res = await apiAuth('register', { email, password, financier_name: name, business_name: business });
     if (res.success) {
-      Store.saveSession({ token: res.token || ('session:' + encodeURIComponent(res.user?.email || email) + ':' + Date.now()), user: res.user });
+      const token = res.token || ('session:' + encodeURIComponent(res.user?.email || email) + ':' + Date.now());
+      saveSessionIsolated(token, res.user || { email });
       // Save user info into settings
       const s = Store.settings();
       if (name) s.financierName = name;

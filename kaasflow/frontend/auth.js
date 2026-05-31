@@ -1,4 +1,4 @@
-// KaasFlow Auth Logic
+// KaasFlow Auth Logic — with strict per-user data isolation
 
 let API_BASE = 'https://www.samkass.site/api';
 if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
@@ -7,6 +7,73 @@ if (window.location.hostname === 'localhost' || window.location.hostname === '12
     API_BASE = `http://${window.location.hostname}:5000/api`;
 } else if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
     API_BASE = window.location.origin + '/api';
+}
+
+/**
+ * USER-SCOPED DATA ISOLATION
+ * All app data keys that must be isolated per user.
+ * When a different email logs in, these keys are cleared so no data leaks.
+ */
+const USER_SCOPED_KEYS = [
+    'kf_settings',
+    'kf_subscription',
+    'kf_clients',
+    'kf_loans',
+    'kf_payments',
+    'kf_notifications',
+    'kf_pin_set',
+    'kf_app_pin',
+    'kf_theme',
+    'kf_lang',
+    'kf_last_sync',
+    'kf_backup_data'
+];
+
+/**
+ * Returns the email of the currently stored session, or null.
+ */
+function getCurrentSessionEmail() {
+    try {
+        const session = JSON.parse(localStorage.getItem('kf_session') || '{}');
+        return session?.user?.email || null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Clears all user-scoped data from localStorage.
+ * Called when a different user logs in to prevent data crossover.
+ */
+function clearUserScopedData() {
+    USER_SCOPED_KEYS.forEach(key => localStorage.removeItem(key));
+
+    // Also clear any dynamic user-specific subscription keys (kf_subscription_<identifier>)
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && (k.startsWith('kf_subscription_') || k.startsWith('kf_backup_'))) {
+            keysToRemove.push(k);
+        }
+    }
+    keysToRemove.forEach(k => localStorage.removeItem(k));
+}
+
+/**
+ * Saves the session and enforces isolation.
+ * If the incoming email differs from the stored session email, all previous
+ * user data is wiped before the new session is written.
+ */
+function saveSession(token, user) {
+    const incomingEmail = user?.email || null;
+    const existingEmail = getCurrentSessionEmail();
+
+    if (existingEmail && incomingEmail && existingEmail.toLowerCase() !== incomingEmail.toLowerCase()) {
+        // Different user — wipe all previous user data
+        clearUserScopedData();
+    }
+
+    localStorage.setItem('kf_session', JSON.stringify({ token, user }));
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -71,10 +138,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (response.ok) {
                 showSuccess('Login successful! Redirecting...');
-                localStorage.setItem('kf_session', JSON.stringify({ token: data.token, user: data.user }));
-                setTimeout(() => {
-                    window.location.href = '/'; // Redirect to main app
-                }, 1000);
+                saveSession(data.token, data.user);
+                setTimeout(() => { window.location.href = '/'; }, 1000);
             } else {
                 showError(data.error || 'Login failed');
             }
@@ -101,7 +166,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (response.ok) {
                 showSuccess(data.message || 'Check your email for the magic link!');
-                // If in development mode, the link might be returned in data.link
                 if (data.link) {
                     console.log('Dev Magic Link:', data.link);
                 }
@@ -114,7 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// Google GIS Callback
+// Google GIS Callback — called by Google Identity Services after user picks account
 async function handleCredentialResponse(response) {
     const errorBox = document.getElementById('error-box');
     const successBox = document.getElementById('success-box');
@@ -131,10 +195,11 @@ async function handleCredentialResponse(response) {
         if (res.ok) {
             successBox.textContent = 'Google login successful! Redirecting...';
             successBox.style.display = 'block';
-            localStorage.setItem('kf_session', JSON.stringify({ token: data.token, user: data.user }));
-            setTimeout(() => {
-                window.location.href = '/'; // Redirect to main app
-            }, 1000);
+
+            // Enforce isolation: clear previous user's data if email changed
+            saveSession(data.token, data.user);
+
+            setTimeout(() => { window.location.href = '/'; }, 1000);
         } else {
             errorBox.textContent = data.error || 'Google authentication failed';
             errorBox.style.display = 'block';

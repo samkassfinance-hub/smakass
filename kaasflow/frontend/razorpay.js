@@ -237,9 +237,9 @@ const RazorpayPayment = {
   // Plan-specific payment methods
   async payForPlan(planType, options = {}) {
     const plans = {
-      'monthly': { amount: 27000, name: 'Monthly Plan' }, // ₹270 in paise
-      'quarterly': { amount: 85000, name: 'Quarterly Plan' }, // ₹850 in paise
-      'yearly': { amount: 199900, name: 'Yearly Plan' } // ₹1,999 in paise
+      'monthly':   { amount: 270,  name: 'Monthly Plan' },   // ₹270
+      'quarterly': { amount: 850,  name: 'Quarterly Plan' },  // ₹850
+      'yearly':    { amount: 1999, name: 'Yearly Plan' }       // ₹1,999
     };
     
     const plan = plans[planType];
