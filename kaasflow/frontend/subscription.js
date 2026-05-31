@@ -344,7 +344,7 @@
       // Event listeners added dynamically via openRazorpay
     }
 
-    /** Open Razorpay checkout for a given plan */
+    /** Open Razorpay checkout for a given plan - INSTANT POPUP VERSION */
     openRazorpay(planId) {
       const plan = PLANS[planId.toUpperCase()];
       if (!plan) return;
@@ -362,12 +362,8 @@
         if (upgradeModalInst) upgradeModalInst.hide();
       }
 
-      if (typeof showToast === 'function') {
-        showToast('Opening payment gateway...', 'info');
-      }
-
-      // Trigger the real RazorpayPayment checkout!
-      window.RazorpayPayment.payForPlan(planId, {
+      // Trigger the INSTANT RazorpayPayment checkout (uses pre-loaded orders)
+      window.RazorpayPayment.payForPlanInstant(planId, {
         prefill: {
           name: settings.financierName || 'User',
           email: userEmail,

@@ -1,8 +1,9 @@
-// Razorpay Payment Integration - FIXED VERSION
+// Razorpay Payment Integration - INSTANT POPUP FIX
 const RazorpayPayment = {
   keyId: 'rzp_live_SuharfZYrJBbHj',
   keySecret: 'FsmmZywk4NGiI1PxIS4UWb0e',
   sdkLoaded: false,
+  preloadedOrders: {}, // Store pre-created orders for instant popup
   
   // Wait for Razorpay SDK to load
   async waitForSDK(maxAttempts = 20) {
@@ -46,6 +47,28 @@ const RazorpayPayment = {
     } catch (e) {
       console.warn("⚠️ Could not fetch key from backend, using hardcoded key:", e);
     }
+  },
+
+  // PRE-LOAD ORDERS FOR ALL PLANS (called when upgrade modal opens)
+  async preloadOrders() {
+    console.log('🔄 Pre-loading orders for all plans...');
+    const plans = ['monthly', 'quarterly', 'yearly'];
+    const amounts = { monthly: 270, quarterly: 850, yearly: 1999 };
+    
+    for (const plan of plans) {
+      try {
+        const orderData = await this.createOrder(amounts[plan], plan);
+        if (orderData.success && orderData.order) {
+          this.preloadedOrders[plan] = orderData.order;
+          console.log(`✅ Pre-loaded order for ${plan}:`, orderData.order.id);
+        } else {
+          console.warn(`⚠️ Failed to pre-load ${plan}:`, orderData.error);
+        }
+      } catch (e) {
+        console.error(`❌ Error pre-loading ${plan}:`, e);
+      }
+    }
+    console.log('✅ Order pre-loading complete');
   },
 
   getSessionToken() {
@@ -292,8 +315,60 @@ const RazorpayPayment = {
     }
   },
 
+  // INSTANT POPUP - Use pre-loaded order (NO ASYNC DELAY)
+  payForPlanInstant(planType, options = {}) {
+    console.log('💰 payForPlanInstant:', planType);
+    
+    const plans = {
+      'monthly':   { amount: 270,  name: 'Monthly Plan' },
+      'quarterly': { amount: 850,  name: 'Quarterly Plan' },
+      'yearly':    { amount: 1999, name: 'Yearly Plan' }
+    };
+    
+    const plan = plans[planType];
+    if (!plan) {
+      console.error('❌ Invalid plan:', planType);
+      alert('Invalid plan selected');
+      options.onError?.({ error: 'Invalid plan type' });
+      return;
+    }
+    
+    // Check if we have a pre-loaded order
+    const preloadedOrder = this.preloadedOrders[planType];
+    if (!preloadedOrder || !preloadedOrder.id) {
+      console.warn('⚠️ No pre-loaded order found, falling back to async flow');
+      alert('Payment setup incomplete. Please close and reopen the upgrade modal.');
+      // Trigger preload for next time
+      this.preloadOrders();
+      options.onError?.({ error: 'Order not pre-loaded' });
+      return;
+    }
+    
+    console.log('✅ Using pre-loaded order:', preloadedOrder.id);
+    console.log('📋 Plan:', plan.name, '| Amount: ₹' + plan.amount);
+    
+    const settings = JSON.parse(localStorage.getItem('kf_settings') || '{}');
+    const userPhone = this.getUserPhone();
+    const userEmail = this.getUserEmail();
+    
+    console.log('👤 User:', userEmail || userPhone || 'unknown');
+    
+    // Open Razorpay INSTANTLY - NO ASYNC GAP
+    this.openCheckout(preloadedOrder, {
+      ...options,
+      planType: planType,
+      description: plan.name,
+      prefill: {
+        name: settings.financierName || 'User',
+        email: userEmail || '',
+        contact: userPhone || ''
+      }
+    });
+  },
+
+  // Legacy method for backward compatibility
   async payForPlan(planType, options = {}) {
-    console.log('💰 payForPlan:', planType);
+    console.log('💰 payForPlan (legacy):', planType);
     
     const plans = {
       'monthly':   { amount: 270,  name: 'Monthly Plan' },

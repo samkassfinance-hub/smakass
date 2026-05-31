@@ -2266,8 +2266,34 @@ function renderSettings(container) {
     navigateTo('profile');
   });
 
-  $('#btn-upgrade')?.addEventListener('click', () => bootstrap.Modal.getOrCreateInstance($('#upgradeModal')).show());
-  $('#banner-upgrade-btn') && $('#banner-upgrade-btn').addEventListener('click', () => bootstrap.Modal.getOrCreateInstance($('#upgradeModal')).show());
+  // Upgrade button - preload orders when modal opens
+  $('#btn-upgrade')?.addEventListener('click', () => {
+    const modal = bootstrap.Modal.getOrCreateInstance($('#upgradeModal'));
+    modal.show();
+    // Preload orders for instant payment
+    if (window.RazorpayPayment && window.RazorpayPayment.preloadOrders) {
+      window.RazorpayPayment.preloadOrders();
+    }
+  });
+  $('#banner-upgrade-btn') && $('#banner-upgrade-btn').addEventListener('click', () => {
+    const modal = bootstrap.Modal.getOrCreateInstance($('#upgradeModal'));
+    modal.show();
+    // Preload orders for instant payment
+    if (window.RazorpayPayment && window.RazorpayPayment.preloadOrders) {
+      window.RazorpayPayment.preloadOrders();
+    }
+  });
+
+  // Also preload when upgrade modal is shown via Bootstrap event
+  const upgradeModalEl = $('#upgradeModal');
+  if (upgradeModalEl) {
+    upgradeModalEl.addEventListener('show.bs.modal', () => {
+      console.log('🔄 Upgrade modal opening - preloading orders...');
+      if (window.RazorpayPayment && window.RazorpayPayment.preloadOrders) {
+        window.RazorpayPayment.preloadOrders();
+      }
+    });
+  }
 
   $('#btn-connect-supabase-storage')?.addEventListener('click', () => {
     let modalEl = document.getElementById('supabaseModal');
@@ -4087,7 +4113,7 @@ function setupPinInputBehavior(containerSel) {
 
 // ── SLOT PURCHASE SYSTEM ─────────────────────────────────────
 // ── SUBSCRIPTION PAYMENT SYSTEM ──────────────────────────────
-async function initiatePlanPayment(planType) {
+function initiatePlanPayment(planType) {
   console.log('🎯 initiatePlanPayment called for:', planType);
   
   // Close upgrade modals immediately
@@ -4099,10 +4125,6 @@ async function initiatePlanPayment(planType) {
     }
   });
 
-  if (typeof showToast === 'function') {
-    showToast('Opening payment gateway...', 'info');
-  }
-
   // Ensure RazorpayPayment is ready
   if (typeof RazorpayPayment === 'undefined') {
     console.error('❌ RazorpayPayment not loaded!');
@@ -4110,23 +4132,17 @@ async function initiatePlanPayment(planType) {
     return;
   }
 
-  // Wait for SDK if needed
+  // Check if SDK is loaded
   if (!RazorpayPayment.sdkLoaded) {
-    console.log('⏳ Waiting for Razorpay SDK...');
-    if (typeof showToast === 'function') {
-      showToast('Loading payment gateway...', 'info');
-    }
-    const loaded = await RazorpayPayment.waitForSDK();
-    if (!loaded) {
-      alert('Payment gateway failed to load. Please check your internet connection and refresh the page.');
-      return;
-    }
+    console.error('❌ Razorpay SDK not loaded!');
+    alert('Payment gateway not ready. Please refresh the page.');
+    return;
   }
 
-  console.log('✅ RazorpayPayment ready, calling payForPlan...');
+  console.log('✅ RazorpayPayment ready, calling payForPlanInstant...');
 
-  // Trigger Razorpay
-  RazorpayPayment.payForPlan(planType, {
+  // Trigger Razorpay INSTANTLY using pre-loaded order (NO ASYNC DELAY)
+  RazorpayPayment.payForPlanInstant(planType, {
     onSuccess: (response) => {
       const settings = Store.settings();
       
