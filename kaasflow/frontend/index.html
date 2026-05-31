@@ -777,8 +777,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <!-- Google Identity Services -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <!-- Razorpay Payment Gateway -->
-  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <!-- Razorpay Payment Gateway - MUST LOAD BEFORE razorpay.js -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js" onload="console.log('✅ Razorpay SDK loaded')" onerror="console.error('❌ Failed to load Razorpay SDK')"></script>
 </head>
 
 <body id="app-body">

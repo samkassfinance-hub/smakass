@@ -4087,8 +4087,10 @@ function setupPinInputBehavior(containerSel) {
 
 // ── SLOT PURCHASE SYSTEM ─────────────────────────────────────
 // ── SUBSCRIPTION PAYMENT SYSTEM ──────────────────────────────
-function initiatePlanPayment(planType) {
-  // Close upgrade modals immediately to show the loader
+async function initiatePlanPayment(planType) {
+  console.log('🎯 initiatePlanPayment called for:', planType);
+  
+  // Close upgrade modals immediately
   ['upgradeModal', 'blockingUpgradeModal'].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
@@ -4098,8 +4100,30 @@ function initiatePlanPayment(planType) {
   });
 
   if (typeof showToast === 'function') {
-    showToast('Initiating secure payment...', 'info');
+    showToast('Opening payment gateway...', 'info');
   }
+
+  // Ensure RazorpayPayment is ready
+  if (typeof RazorpayPayment === 'undefined') {
+    console.error('❌ RazorpayPayment not loaded!');
+    alert('Payment system not loaded. Please refresh the page.');
+    return;
+  }
+
+  // Wait for SDK if needed
+  if (!RazorpayPayment.sdkLoaded) {
+    console.log('⏳ Waiting for Razorpay SDK...');
+    if (typeof showToast === 'function') {
+      showToast('Loading payment gateway...', 'info');
+    }
+    const loaded = await RazorpayPayment.waitForSDK();
+    if (!loaded) {
+      alert('Payment gateway failed to load. Please check your internet connection and refresh the page.');
+      return;
+    }
+  }
+
+  console.log('✅ RazorpayPayment ready, calling payForPlan...');
 
   // Trigger Razorpay
   RazorpayPayment.payForPlan(planType, {
