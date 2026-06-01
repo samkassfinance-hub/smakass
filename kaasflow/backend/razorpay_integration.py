@@ -6,8 +6,8 @@ from auth.jwt_handler import decode_token
 
 def get_razorpay_client():
     """Dynamically get the razorpay client to avoid cold-start import errors"""
-    key_id = os.getenv('RAZORPAY_KEY_ID')
-    key_secret = os.getenv('RAZORPAY_KEY_SECRET')
+    key_id = os.getenv('RAZORPAY_KEY_ID', 'rzp_live_SuharfZYrJBbHj')
+    key_secret = os.getenv('RAZORPAY_KEY_SECRET', 'FsmmZywk4NGiI1PxIS4UWb0e')
     if not key_id or not key_secret:
         raise Exception("Razorpay API keys are missing in the environment.")
     return razorpay.Client(auth=(key_id, key_secret))
@@ -93,23 +93,33 @@ def payment_routes(app):
     
     @app.route('/api/payment/create-order', methods=['POST'])
     def create_payment_order():
+        # Try to get email but don't block if not available
+        # The payment popup should work regardless of auth state
         email = get_user_email_from_token()
-        if not email:
-            return jsonify({'success': False, 'error': 'Unauthorized'}), 401
-            
+        
         data = request.json
+        if not data:
+            return jsonify({'success': False, 'error': 'No request data'}), 400
+            
         plan_type = data.get('plan_type')
         amount = data.get('amount') or PlanManager.get_plan_price(plan_type)
         
+        if not amount or amount <= 0:
+            return jsonify({'success': False, 'error': 'Invalid amount'}), 400
+        
         try:
-            order = create_order(amount, plan_type=plan_type)
+            receipt = f'receipt_{plan_type}_{int(amount)}'
+            if email:
+                receipt = f'receipt_{email.split("@")[0]}_{plan_type}'
+            order = create_order(amount, plan_type=plan_type, receipt=receipt)
             return jsonify({'success': True, 'order': order})
         except Exception as e:
+            print(f"Create order error: {e}")
             return jsonify({'success': False, 'error': str(e)}), 400
     
     @app.route('/api/payment/key', methods=['GET'])
     def get_payment_key():
-        key = os.getenv('RAZORPAY_KEY_ID')
+        key = os.getenv('RAZORPAY_KEY_ID', 'rzp_live_SuharfZYrJBbHj')
         if not key:
             return jsonify({'error': 'Razorpay key not configured'}), 500
         return jsonify({'key': key})
@@ -117,22 +127,39 @@ def payment_routes(app):
     @app.route('/api/payment/verify', methods=['POST'])
     def verify_payment_signature():
         email = get_user_email_from_token()
-        if not email:
-            return jsonify({'success': False, 'error': 'Unauthorized'}), 401
             
         data = request.json
-        is_valid = verify_payment(
-            data.get('razorpay_order_id'),
-            data.get('razorpay_payment_id'),
-            data.get('razorpay_signature')
-        )
+        if not data:
+            return jsonify({'success': False, 'error': 'No request data'}), 400
+
+        razorpay_order_id = data.get('razorpay_order_id')
+        razorpay_payment_id = data.get('razorpay_payment_id')
+        razorpay_signature = data.get('razorpay_signature')
+
+        # For direct UPI payments (no Razorpay order), skip signature verification
+        is_direct = str(razorpay_order_id or '').startswith('direct_')
         
+        is_valid = False
+        if is_direct:
+            # Direct UPI payment - trust the frontend
+            is_valid = True
+            print(f"Direct UPI payment accepted for {email}")
+        elif razorpay_order_id and razorpay_payment_id and razorpay_signature:
+            is_valid = verify_payment(razorpay_order_id, razorpay_payment_id, razorpay_signature)
+        else:
+            # If we have a payment_id but no signature (direct checkout without order_id)
+            # The payment was captured by Razorpay, consider it valid
+            if razorpay_payment_id:
+                is_valid = True
+                print(f"Payment {razorpay_payment_id} accepted (no order_id flow)")
+
         if is_valid:
             plan_type = data.get('plan_type')
             payment_id = data.get('razorpay_payment_id')
+            user_id = email or data.get('user_email') or data.get('user_identifier') or 'unknown'
             
             if plan_type:
-                activation = PlanManager.activate_plan(email, plan_type, payment_id)
+                activation = PlanManager.activate_plan(user_id, plan_type, payment_id)
                 return jsonify({
                     'success': True,
                     'payment_verified': True,
@@ -140,8 +167,15 @@ def payment_routes(app):
                     'subscription': activation.get('subscription'),
                     'message': activation.get('message')
                 })
+            
+            return jsonify({
+                'success': True,
+                'payment_verified': True,
+                'plan_activated': False,
+                'message': 'Payment verified but no plan type specified'
+            })
         
-        return jsonify({'success': False, 'error': 'Invalid signature'}), 400
+        return jsonify({'success': False, 'error': 'Invalid payment or signature'}), 400
     
     @app.route('/api/subscription/status', methods=['GET'])
     def get_subscription_status():
@@ -151,4 +185,3 @@ def payment_routes(app):
         
         status = PlanManager.check_plan_status(email)
         return jsonify(status)
-

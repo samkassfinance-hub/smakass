@@ -344,7 +344,7 @@
       // Event listeners added dynamically via openRazorpay
     }
 
-    /** Open Razorpay checkout for a given plan - INSTANT POPUP VERSION */
+    /** Open Razorpay checkout for a given plan - ROBUST VERSION */
     openRazorpay(planId) {
       const plan = PLANS[planId.toUpperCase()];
       if (!plan) return;
@@ -362,13 +362,17 @@
         if (upgradeModalInst) upgradeModalInst.hide();
       }
 
-      // Trigger the INSTANT RazorpayPayment checkout (uses pre-loaded orders)
-      window.RazorpayPayment.payForPlanInstant(planId, {
+      // Use the robust payForPlan method which has 3 fallback strategies:
+      // 1. Pre-loaded order (instant)
+      // 2. Backend order creation (async)
+      // 3. Direct Razorpay checkout without order_id
+      window.RazorpayPayment.payForPlan(planId, {
         prefill: {
           name: settings.financierName || 'User',
           email: userEmail,
           contact: userPhone
         },
+
         onSuccess: (response) => {
           // Calculate expiry date
           const durationDays = plan.duration || 30;
