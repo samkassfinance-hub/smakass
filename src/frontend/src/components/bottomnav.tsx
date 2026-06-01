@@ -27,6 +27,7 @@ const ADMIN_NAV_ITEMS: {
   { page: "loans", icon: CreditCard, labelKey: "loans" },
   { page: "collection", icon: Wallet, labelKey: "collection" },
   { page: "reports", icon: BarChart2, labelKey: "reports" },
+  { page: "settings", icon: Settings, labelKey: "settings" },
 ];
 
 const STAFF_NAV_ITEMS: {

@@ -2841,3 +2841,164 @@ body.tamil-text .nav-tab i {
 .pulse-syncing {
   animation: pulse-syncing 1.2s infinite;
 }
+
+
+/* ── SECURITY ENHANCEMENTS ──────────────────────────────────── */
+/* PIN Input Shake Animation */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
+  20%, 40%, 60%, 80% { transform: translateX(8px); }
+}
+
+.shake {
+  animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+/* PIN Input Success Animation */
+@keyframes success-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.pin-digit-input.success {
+  border-color: var(--color-success) !important;
+  background-color: var(--color-success-bg) !important;
+  animation: success-pulse 0.3s ease;
+}
+
+.pin-digit-input.shake {
+  border-color: var(--color-danger) !important;
+  animation: shake 0.5s;
+}
+
+/* Connection Status Pulse Animations */
+@keyframes pulse-connected {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+  50% { opacity: 0.8; box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+}
+
+@keyframes pulse-syncing {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.pulse-connected {
+  animation: pulse-connected 2s infinite;
+}
+
+.pulse-syncing {
+  animation: pulse-syncing 1s infinite;
+}
+
+/* Lockout Timer */
+.pin-lockout-timer {
+  color: var(--color-danger);
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
+
+/* ── LOADING OVERLAY ──────────────────────────────────────── */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.loading-spinner {
+  text-align: center;
+  color: var(--color-text);
+}
+
+.loading-message {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  margin-top: 1rem;
+}
+
+.spinner-border-sm {
+  width: 1rem;
+  height: 1rem;
+  border-width: 0.15rem;
+}
+
+/* ── CONNECTION INDICATOR ──────────────────────────────────── */
+.connection-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: var(--color-bg-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-success);
+  transition: background 0.3s;
+}
+
+.status-dot.offline {
+  background: var(--color-danger);
+}
+
+.status-dot.checking {
+  background: var(--color-warning);
+  animation: pulse-syncing 1s infinite;
+}
+
+.status-text {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ── VALIDATION FEEDBACK ──────────────────────────────────── */
+.is-invalid {
+  border-color: var(--color-danger) !important;
+  background-color: rgba(239, 68, 68, 0.05) !important;
+}
+
+.is-valid {
+  border-color: var(--color-success) !important;
+  background-color: rgba(34, 197, 94, 0.05) !important;
+}
+
+.invalid-feedback {
+  display: none;
+  color: var(--color-danger);
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+.invalid-feedback.d-block,
+.is-invalid ~ .invalid-feedback {
+  display: block;
+}
+
+.valid-feedback {
+  display: none;
+  color: var(--color-success);
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+.is-valid ~ .valid-feedback {
+  display: block;
+}

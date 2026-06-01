@@ -1,11 +1,13 @@
+import Principal "mo:base/Principal";
+
 module {
   /// User role: #admin has full access, #staff has collection-only access.
   public type UserRole = { #admin; #staff };
 
   /// A registered user account stored in canister state.
   public type UserAccount = {
-    phone : Text;
-    hashedPin : Text;
+    email : Text;
+    owner : Principal.Principal;
     financierName : Text;
     businessName : Text;
     role : UserRole;
@@ -14,7 +16,7 @@ module {
 
   /// Public-facing profile returned to callers (no sensitive fields).
   public type UserProfile = {
-    phone : Text;
+    email : Text;
     financierName : Text;
     businessName : Text;
     role : UserRole;

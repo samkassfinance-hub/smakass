@@ -1,56 +1,32 @@
 import Types "../types/auth";
 import AuthLib "../lib/auth";
 import Time "mo:core/Time";
+import Principal "mo:base/Principal";
 
 mixin (users : AuthLib.UserMap) {
-  /// Register a new user account with phone + hashed PIN.
-  /// Role defaults to #admin for owner registrations; pass #staff to create staff accounts.
-  public func register(
-    phone : Text,
-    hashedPin : Text,
+  /// Register a new user account with email.
+  /// Uses msg.caller for authentication and data isolation.
+  public shared(msg) func register(
+    email : Text,
     financierName : Text,
     businessName : Text,
     role : Types.UserRole,
   ) : async Types.SimpleResult {
-    AuthLib.register(users, phone, hashedPin, financierName, businessName, role, Time.now());
+    AuthLib.register(users, msg.caller, email, financierName, businessName, role, Time.now());
   };
 
-  /// Login with phone + hashed PIN. Returns user profile (including role) on success.
-  public func login(
-    phone : Text,
-    hashedPin : Text,
-  ) : async Types.AuthResult {
-    AuthLib.login(users, phone, hashedPin);
+  /// Login. Authenticates using msg.caller.
+  public shared(msg) func login() : async Types.AuthResult {
+    AuthLib.login(users, msg.caller);
   };
 
-  /// Reset PIN after verifying the phone number exists.
-  public func resetPin(
-    phone : Text,
-    newHashedPin : Text,
-  ) : async Types.SimpleResult {
-    AuthLib.resetPin(users, phone, newHashedPin);
+  /// Get the public profile for the currently logged in user.
+  public query shared(msg) func getMyProfile() : async ?Types.UserProfile {
+    AuthLib.getProfile(users, msg.caller);
   };
 
-  /// Change PIN atomically: verify current PIN then set new PIN.
-  public func changePin(
-    phone : Text,
-    currentHashedPin : Text,
-    newHashedPin : Text,
-  ) : async Types.SimpleResult {
-    AuthLib.changePin(users, phone, currentHashedPin, newHashedPin);
-  };
-
-  /// Get the public profile for a phone number (includes role).
-  public query func getUserProfile(
-    phone : Text,
-  ) : async ?Types.UserProfile {
-    AuthLib.getProfile(users, phone);
-  };
-
-  /// Check if a phone number is already registered.
-  public query func phoneExists(
-    phone : Text,
-  ) : async Bool {
-    AuthLib.phoneExists(users, phone);
+  /// Check if the current caller is already registered.
+  public query shared(msg) func isRegistered() : async Bool {
+    AuthLib.exists(users, msg.caller);
   };
 };

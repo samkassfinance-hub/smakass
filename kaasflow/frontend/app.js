@@ -7,14 +7,62 @@
 'use strict';
 
 // ── CONFIG ──────────────────────────────────────────────────
-let API_BASE = 'https://www.samkass.site/api';
-if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-  API_BASE = 'http://127.0.0.1:5000/api';
-} else if (window.location.port === '5500') {
-  API_BASE = `http://${window.location.hostname}:5000/api`;
-} else if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
-  API_BASE = window.location.origin + '/api';
-}
+// Centralized Application Configuration
+const AppConfig = {
+  // Environment detection
+  get environment() {
+    const hostname = window.location.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') return 'development';
+    if (hostname.includes('staging') || hostname.includes('test')) return 'staging';
+    return 'production';
+  },
+  
+  // API Base URL with environment-specific routing
+  get apiBase() {
+    const hostname = window.location.hostname;
+    const port = window.location.port;
+    const protocol = window.location.protocol;
+    
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return 'http://127.0.0.1:5000/api';
+    }
+    if (port === '5500') {
+      return `http://${hostname}:5000/api`;
+    }
+    if (protocol === 'http:' || protocol === 'https:') {
+      return window.location.origin + '/api';
+    }
+    return 'https://www.samkass.site/api';
+  },
+  
+  // External Service Keys (loaded from environment or defaults)
+  get googleClientId() {
+    return window.GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID';
+  },
+  
+  get razorpayKey() {
+    return window.RAZORPAY_KEY_ID || 'YOUR_RAZORPAY_KEY';
+  },
+  
+  // Feature Flags
+  features: {
+    encryption: true,
+    biometricAuth: false, // Not implemented yet
+    smsReminders: false, // Requires Twilio account
+    offlineSync: true
+  },
+  
+  // App Constants
+  freeClientLimit: 20,
+  pinAttempts: 3,
+  pinLockoutDuration: 5 * 60 * 1000, // 5 minutes
+  tokenRefreshBuffer: 2 * 60 * 1000, // Refresh 2 minutes before expiry
+  syncDebounce: 2000
+};
+
+// Legacy compatibility
+let API_BASE = AppConfig.apiBase;
+
 const LS = {
   session:  'kf_session',
   settings: 'kf_settings',
@@ -23,7 +71,908 @@ const LS = {
   payments: 'kf_payments',
   recycleBin: 'kf_recycle_bin',
 };
-const FREE_CLIENT_LIMIT = 20;
+const FREE_CLIENT_LIMIT = AppConfig.freeClientLimit;
+
+// ── SECURITY UTILITIES ──────────────────────────────────────
+
+// CryptoUtil - Web Crypto API wrapper for AES-256-GCM encryption
+const CryptoUtil = {
+  async deriveKey(password, salt) {
+    const enc = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey(
+      'raw',
+      enc.encode(password),
+      'PBKDF2',
+      false,
+      ['deriveBits', 'deriveKey']
+    );
+    return crypto.subtle.deriveKey(
+      {
+        name: 'PBKDF2',
+        salt: salt,
+        iterations: 100000,
+        hash: 'SHA-256'
+      },
+      keyMaterial,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['encrypt', 'decrypt']
+    );
+  },
+
+  async encrypt(plaintext, password) {
+    const enc = new TextEncoder();
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const key = await this.deriveKey(password, salt);
+    
+    const encrypted = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv: iv },
+      key,
+      enc.encode(plaintext)
+    );
+    
+    // Combine salt + iv + encrypted data
+    const result = new Uint8Array(salt.length + iv.length + encrypted.byteLength);
+    result.set(salt, 0);
+    result.set(iv, salt.length);
+    result.set(new Uint8Array(encrypted), salt.length + iv.length);
+    
+    // Return base64 encoded
+    return btoa(String.fromCharCode(...result));
+  },
+
+  async decrypt(ciphertext, password) {
+    try {
+      const data = Uint8Array.from(atob(ciphertext), c => c.charCodeAt(0));
+      
+      const salt = data.slice(0, 16);
+      const iv = data.slice(16, 28);
+      const encrypted = data.slice(28);
+      
+      const key = await this.deriveKey(password, salt);
+      const decrypted = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: iv },
+        key,
+        encrypted
+      );
+      
+      const dec = new TextDecoder();
+      return dec.decode(decrypted);
+    } catch (e) {
+      console.error('Decryption failed:', e);
+      return null;
+    }
+  },
+
+  // Generate device fingerprint for additional entropy
+  getDeviceFingerprint() {
+    const nav = navigator;
+    const screen = window.screen;
+    const data = [
+      nav.userAgent,
+      nav.language,
+      screen.colorDepth,
+      screen.width + 'x' + screen.height,
+      new Date().getTimezoneOffset(),
+      !!window.sessionStorage,
+      !!window.localStorage
+    ].join('|');
+    
+    // Simple hash of device characteristics
+    let hash = 0;
+    for (let i = 0; i < data.length; i++) {
+      const char = data.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return Math.abs(hash).toString(36);
+  }
+};
+
+// PIN Security Manager
+const PINManager = {
+  WEAK_PINS: ['1234', '4321', '0000', '1111', '2222', '3333', '4444', '5555', '6666', '7777', '8888', '9999', '0123', '3210', '1212', '2121'],
+  LOCKOUT_KEY: 'kf_pin_lockout',
+  ATTEMPTS_KEY: 'kf_pin_attempts',
+  MAX_ATTEMPTS: 3,
+  LOCKOUT_DURATION: 5 * 60 * 1000, // 5 minutes
+
+  isWeakPIN(pin) {
+    if (!pin || pin.length !== 4) return true;
+    if (this.WEAK_PINS.includes(pin)) return true;
+    // Check for sequential digits
+    const isSequential = /^(0123|1234|2345|3456|4567|5678|6789|9876|8765|7654|6543|5432|4321|3210)/.test(pin);
+    if (isSequential) return true;
+    // Check for repeating digits
+    if (/^(\d)\1{3}$/.test(pin)) return true;
+    return false;
+  },
+
+  isLockedOut() {
+    const lockoutData = sessionStorage.getItem(this.LOCKOUT_KEY);
+    if (!lockoutData) return false;
+    
+    const lockoutTime = parseInt(lockoutData);
+    if (Date.now() < lockoutTime) {
+      return true;
+    }
+    
+    // Lockout expired
+    sessionStorage.removeItem(this.LOCKOUT_KEY);
+    sessionStorage.removeItem(this.ATTEMPTS_KEY);
+    return false;
+  },
+
+  getLockoutTimeRemaining() {
+    const lockoutData = sessionStorage.getItem(this.LOCKOUT_KEY);
+    if (!lockoutData) return 0;
+    
+    const remaining = parseInt(lockoutData) - Date.now();
+    return Math.max(0, Math.ceil(remaining / 1000)); // Return seconds
+  },
+
+  recordFailedAttempt() {
+    const attempts = parseInt(sessionStorage.getItem(this.ATTEMPTS_KEY) || '0') + 1;
+    sessionStorage.setItem(this.ATTEMPTS_KEY, attempts.toString());
+    
+    if (attempts >= this.MAX_ATTEMPTS) {
+      const lockoutUntil = Date.now() + this.LOCKOUT_DURATION;
+      sessionStorage.setItem(this.LOCKOUT_KEY, lockoutUntil.toString());
+      return true; // Locked out
+    }
+    return false;
+  },
+
+  clearAttempts() {
+    sessionStorage.removeItem(this.ATTEMPTS_KEY);
+    sessionStorage.removeItem(this.LOCKOUT_KEY);
+  },
+
+  getAttemptsRemaining() {
+    const attempts = parseInt(sessionStorage.getItem(this.ATTEMPTS_KEY) || '0');
+    return Math.max(0, this.MAX_ATTEMPTS - attempts);
+  }
+};
+
+// AuthManager - Centralized authentication and token management
+const AuthManager = {
+  TOKEN_KEY: 'kf_session',
+  REFRESH_CHECK_INTERVAL: 60000, // Check every minute
+  _refreshTimer: null,
+  
+  // Parse JWT token (without verification - server verifies)
+  parseJWT(token) {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      return JSON.parse(jsonPayload);
+    } catch (e) {
+      console.error('Failed to parse JWT:', e);
+      return null;
+    }
+  },
+  
+  // Check if token is expired or about to expire
+  isTokenExpired(token, bufferMs = AppConfig.tokenRefreshBuffer) {
+    const payload = this.parseJWT(token);
+    if (!payload || !payload.exp) return true;
+    
+    const expiryTime = payload.exp * 1000; // Convert to milliseconds
+    const now = Date.now();
+    return (expiryTime - now) < bufferMs;
+  },
+  
+  // Get current session
+  getSession() {
+    try {
+      const session = JSON.parse(localStorage.getItem(this.TOKEN_KEY) || '{}');
+      return session.token ? session : null;
+    } catch (e) {
+      return null;
+    }
+  },
+  
+  // Save session
+  saveSession(token, user) {
+    const session = { token, user, timestamp: Date.now() };
+    localStorage.setItem(this.TOKEN_KEY, JSON.stringify(session));
+  },
+  
+  // Refresh access token using refresh token
+  async refreshToken() {
+    try {
+      const response = await fetch(`${AppConfig.apiBase}/refresh`, {
+        method: 'POST',
+        credentials: 'include', // Send cookies
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.token) {
+          const session = this.getSession();
+          if (session) {
+            this.saveSession(data.token, session.user);
+            return data.token;
+          }
+        }
+      }
+      return null;
+    } catch (e) {
+      console.error('Token refresh failed:', e);
+      return null;
+    }
+  },
+  
+  // Start automatic token refresh monitoring
+  startRefreshMonitoring() {
+    if (this._refreshTimer) clearInterval(this._refreshTimer);
+    
+    this._refreshTimer = setInterval(async () => {
+      const session = this.getSession();
+      if (!session || !session.token) return;
+      
+      if (this.isTokenExpired(session.token)) {
+        const newToken = await this.refreshToken();
+        if (!newToken) {
+          // Refresh failed - redirect to login
+          console.warn('Token refresh failed, session expired');
+          clearInterval(this._refreshTimer);
+          // Optionally trigger logout
+        }
+      }
+    }, this.REFRESH_CHECK_INTERVAL);
+  },
+  
+  // Stop refresh monitoring
+  stopRefreshMonitoring() {
+    if (this._refreshTimer) {
+      clearInterval(this._refreshTimer);
+      this._refreshTimer = null;
+    }
+  },
+  
+  // Fetch wrapper that automatically handles token refresh
+  async fetchWithAuth(url, options = {}) {
+    const session = this.getSession();
+    if (!session || !session.token) {
+      throw new Error('No authentication token available');
+    }
+    
+    // Check if token needs refresh
+    if (this.isTokenExpired(session.token)) {
+      const newToken = await this.refreshToken();
+      if (!newToken) {
+        throw new Error('Token refresh failed');
+      }
+      session.token = newToken;
+    }
+    
+    // Add Authorization header
+    options.headers = {
+      ...options.headers,
+      'Authorization': `Bearer ${session.token}`,
+      'Content-Type': 'application/json'
+    };
+    
+    const response = await fetch(url, options);
+    
+    // Handle 401 - try to refresh once
+    if (response.status === 401) {
+      const newToken = await this.refreshToken();
+      if (newToken) {
+        options.headers['Authorization'] = `Bearer ${newToken}`;
+        return fetch(url, options);
+      }
+    }
+    
+    return response;
+  }
+};
+
+// Validator - Data validation utility for forms
+const Validator = {
+  // Phone validation (Indian format: 10 digits)
+  phone(value) {
+    const cleaned = (value || '').replace(/\D/g, '');
+    if (cleaned.length !== 10) {
+      return { valid: false, error: 'Phone must be 10 digits' };
+    }
+    if (!/^[6-9]/.test(cleaned)) {
+      return { valid: false, error: 'Phone must start with 6, 7, 8, or 9' };
+    }
+    return { valid: true, value: cleaned };
+  },
+  
+  // Email validation
+  email(value) {
+    const trimmed = (value || '').trim();
+    if (!trimmed) {
+      return { valid: false, error: 'Email is required' };
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmed)) {
+      return { valid: false, error: 'Invalid email format' };
+    }
+    return { valid: true, value: trimmed };
+  },
+  
+  // Amount validation (must be positive number)
+  amount(value, min = 0, max = Infinity) {
+    const num = parseFloat(value);
+    if (isNaN(num)) {
+      return { valid: false, error: 'Amount must be a number' };
+    }
+    if (num < min) {
+      return { valid: false, error: `Amount must be at least ₹${min}` };
+    }
+    if (num > max) {
+      return { valid: false, error: `Amount cannot exceed ₹${max}` };
+    }
+    return { valid: true, value: num };
+  },
+  
+  // Interest rate validation (0.1% to 50%)
+  interestRate(value) {
+    const num = parseFloat(value);
+    if (isNaN(num)) {
+      return { valid: false, error: 'Interest rate must be a number' };
+    }
+    if (num < 0.1 || num > 50) {
+      return { valid: false, error: 'Interest rate must be between 0.1% and 50%' };
+    }
+    return { valid: true, value: num };
+  },
+  
+  // Name validation (2-50 characters, letters and spaces)
+  name(value) {
+    const trimmed = (value || '').trim();
+    if (!trimmed) {
+      return { valid: false, error: 'Name is required' };
+    }
+    if (trimmed.length < 2) {
+      return { valid: false, error: 'Name must be at least 2 characters' };
+    }
+    if (trimmed.length > 50) {
+      return { valid: false, error: 'Name cannot exceed 50 characters' };
+    }
+    return { valid: true, value: trimmed };
+  },
+  
+  // Date validation (not in future for most cases)
+  date(value, allowFuture = false) {
+    if (!value) {
+      return { valid: false, error: 'Date is required' };
+    }
+    const date = new Date(value);
+    if (isNaN(date.getTime())) {
+      return { valid: false, error: 'Invalid date format' };
+    }
+    if (!allowFuture && date > new Date()) {
+      return { valid: false, error: 'Date cannot be in the future' };
+    }
+    return { valid: true, value: value };
+  },
+  
+  // Required field validation
+  required(value, fieldName = 'Field') {
+    const trimmed = (value || '').toString().trim();
+    if (!trimmed) {
+      return { valid: false, error: `${fieldName} is required` };
+    }
+    return { valid: true, value: trimmed };
+  },
+  
+  // Show validation error on input
+  showError(inputElement, errorMessage) {
+    if (!inputElement) return;
+    
+    inputElement.classList.add('is-invalid');
+    inputElement.classList.remove('is-valid');
+    
+    // Find or create error element
+    let errorEl = inputElement.nextElementSibling;
+    if (!errorEl || !errorEl.classList.contains('invalid-feedback')) {
+      errorEl = document.createElement('div');
+      errorEl.className = 'invalid-feedback';
+      inputElement.parentNode.insertBefore(errorEl, inputElement.nextSibling);
+    }
+    errorEl.textContent = errorMessage;
+    errorEl.style.display = 'block';
+  },
+  
+  // Show validation success on input
+  showSuccess(inputElement) {
+    if (!inputElement) return;
+    
+    inputElement.classList.remove('is-invalid');
+    inputElement.classList.add('is-valid');
+    
+    const errorEl = inputElement.nextElementSibling;
+    if (errorEl && errorEl.classList.contains('invalid-feedback')) {
+      errorEl.style.display = 'none';
+    }
+  },
+  
+  // Clear validation state
+  clearValidation(inputElement) {
+    if (!inputElement) return;
+    
+    inputElement.classList.remove('is-invalid', 'is-valid');
+    
+    const errorEl = inputElement.nextElementSibling;
+    if (errorEl && errorEl.classList.contains('invalid-feedback')) {
+      errorEl.style.display = 'none';
+    }
+  }
+};
+
+// BackupManager - Manual and automatic backup/restore
+const BackupManager = {
+  BACKUP_KEY: 'kf_backup_history',
+  MAX_BACKUPS: 5,
+  
+  // Create backup with timestamp
+  createBackup(description = 'Manual backup') {
+    const backup = {
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString(),
+      description: description,
+      data: {
+        clients: Store.clients(),
+        loans: Store.loans(),
+        payments: Store.payments(),
+        settings: Store.settings()
+      }
+    };
+    
+    // Save to history
+    this.saveToHistory(backup);
+    
+    return backup;
+  },
+  
+  // Save backup to history
+  saveToHistory(backup) {
+    const history = this.getHistory();
+    history.unshift(backup);
+    
+    // Keep only last MAX_BACKUPS
+    if (history.length > this.MAX_BACKUPS) {
+      history.splice(this.MAX_BACKUPS);
+    }
+    
+    localStorage.setItem(this.BACKUP_KEY, JSON.stringify(history));
+  },
+  
+  // Get backup history
+  getHistory() {
+    try {
+      return JSON.parse(localStorage.getItem(this.BACKUP_KEY) || '[]');
+    } catch (e) {
+      return [];
+    }
+  },
+  
+  // Restore from backup
+  restoreBackup(backupId) {
+    const history = this.getHistory();
+    const backup = history.find(b => b.id === backupId);
+    
+    if (!backup) {
+      throw new Error('Backup not found');
+    }
+    
+    // Create backup before restore (safety)
+    this.createBackup('Auto-backup before restore');
+    
+    // Restore data
+    Store.saveClients(backup.data.clients || []);
+    Store.saveLoans(backup.data.loans || []);
+    Store.savePayments(backup.data.payments || []);
+    Store.saveSettings(backup.data.settings || {});
+    
+    return backup;
+  },
+  
+  // Download backup as JSON file
+  downloadBackup(backup) {
+    const dataStr = JSON.stringify(backup, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `kaasflow-backup-${backup.id}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  },
+  
+  // Import backup from file
+  async importBackup(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        try {
+          const backup = JSON.parse(e.target.result);
+          
+          // Validate backup structure
+          if (!backup.data || !backup.timestamp) {
+            reject(new Error('Invalid backup file format'));
+            return;
+          }
+          
+          resolve(backup);
+        } catch (err) {
+          reject(new Error('Failed to parse backup file'));
+        }
+      };
+      
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsText(file);
+    });
+  },
+  
+  // Auto-backup before destructive operations
+  autoBackup(operation) {
+    this.createBackup(`Auto-backup before ${operation}`);
+  },
+  
+  // Delete backup from history
+  deleteBackup(backupId) {
+    const history = this.getHistory();
+    const filtered = history.filter(b => b.id !== backupId);
+    localStorage.setItem(this.BACKUP_KEY, JSON.stringify(filtered));
+  }
+};
+
+// ConnectionMonitor - Online/offline status tracking
+const ConnectionMonitor = {
+  _isOnline: navigator.onLine,
+  _listeners: [],
+  _healthCheckInterval: null,
+  _lastHealthCheck: null,
+  HEALTH_CHECK_INTERVAL: 30000, // 30 seconds
+  
+  // Initialize monitoring
+  init() {
+    // Listen to browser online/offline events
+    window.addEventListener('online', () => this._handleOnline());
+    window.addEventListener('offline', () => this._handleOffline());
+    
+    // Start periodic health checks
+    this.startHealthChecks();
+    
+    // Initial check
+    this.checkConnection();
+  },
+  
+  // Start periodic backend health checks
+  startHealthChecks() {
+    if (this._healthCheckInterval) return;
+    
+    this._healthCheckInterval = setInterval(() => {
+      this.checkConnection();
+    }, this.HEALTH_CHECK_INTERVAL);
+  },
+  
+  // Stop health checks
+  stopHealthChecks() {
+    if (this._healthCheckInterval) {
+      clearInterval(this._healthCheckInterval);
+      this._healthCheckInterval = null;
+    }
+  },
+  
+  // Check backend connection
+  async checkConnection() {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
+      const response = await fetch(`${AppConfig.apiBase.replace('/api', '')}/health`, {
+        method: 'GET',
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      const wasOnline = this._isOnline;
+      this._isOnline = response.ok;
+      this._lastHealthCheck = Date.now();
+      
+      if (!wasOnline && this._isOnline) {
+        this._notifyListeners('online');
+      }
+      
+      return this._isOnline;
+    } catch (e) {
+      const wasOnline = this._isOnline;
+      this._isOnline = false;
+      this._lastHealthCheck = Date.now();
+      
+      if (wasOnline) {
+        this._notifyListeners('offline');
+      }
+      
+      return false;
+    }
+  },
+  
+  // Handle browser online event
+  _handleOnline() {
+    this._isOnline = true;
+    this._notifyListeners('online');
+    this.checkConnection(); // Verify backend is also reachable
+  },
+  
+  // Handle browser offline event
+  _handleOffline() {
+    this._isOnline = false;
+    this._notifyListeners('offline');
+  },
+  
+  // Add listener for connection changes
+  addListener(callback) {
+    this._listeners.push(callback);
+  },
+  
+  // Remove listener
+  removeListener(callback) {
+    this._listeners = this._listeners.filter(cb => cb !== callback);
+  },
+  
+  // Notify all listeners
+  _notifyListeners(status) {
+    this._listeners.forEach(callback => {
+      try {
+        callback(status, this._isOnline);
+      } catch (e) {
+        console.error('ConnectionMonitor listener error:', e);
+      }
+    });
+  },
+  
+  // Get current status
+  isOnline() {
+    return this._isOnline;
+  },
+  
+  // Get last health check time
+  getLastHealthCheck() {
+    return this._lastHealthCheck;
+  }
+};
+
+// ErrorHandler - Centralized error handling and logging
+const ErrorHandler = {
+  _errors: [],
+  MAX_ERRORS: 50,
+  
+  // Handle error with context
+  handle(error, context = '', showToUser = true) {
+    const errorObj = {
+      message: error.message || String(error),
+      context: context,
+      stack: error.stack,
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent
+    };
+    
+    // Store error
+    this._errors.push(errorObj);
+    if (this._errors.length > this.MAX_ERRORS) {
+      this._errors.shift();
+    }
+    
+    // Log to console
+    console.error(`[${context}]`, error);
+    
+    // Show user-friendly message
+    if (showToUser) {
+      this.showUserError(error, context);
+    }
+    
+    // Could send to backend logging service here
+    // this.logToBackend(errorObj);
+    
+    return errorObj;
+  },
+  
+  // Show user-friendly error message
+  showUserError(error, context) {
+    let message = 'An error occurred. Please try again.';
+    let recovery = '';
+    
+    // Network errors
+    if (error.message?.includes('fetch') || error.message?.includes('network')) {
+      message = 'Network error. Please check your connection.';
+      recovery = 'Try again when online.';
+    }
+    
+    // Auth errors
+    else if (error.message?.includes('auth') || error.message?.includes('token')) {
+      message = 'Authentication error. Please log in again.';
+      recovery = 'You may need to refresh the page.';
+    }
+    
+    // Storage errors
+    else if (error.message?.includes('localStorage') || error.message?.includes('quota')) {
+      message = 'Storage limit reached. Please clear some data.';
+      recovery = 'Try exporting and clearing old records.';
+    }
+    
+    // Validation errors
+    else if (context.includes('validation')) {
+      message = error.message || 'Invalid input. Please check your data.';
+      recovery = '';
+    }
+    
+    const fullMessage = recovery ? `${message} ${recovery}` : message;
+    showToast(fullMessage, 'error');
+  },
+  
+  // Wrap async function with error handling
+  async wrap(fn, context = '') {
+    try {
+      return await fn();
+    } catch (error) {
+      this.handle(error, context);
+      throw error;
+    }
+  },
+  
+  // Get recent errors
+  getErrors(limit = 10) {
+    return this._errors.slice(-limit);
+  },
+  
+  // Clear error log
+  clearErrors() {
+    this._errors = [];
+  },
+  
+  // Log to backend (placeholder)
+  async logToBackend(errorObj) {
+    try {
+      await fetch(`${AppConfig.apiBase}/logs/error`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(errorObj)
+      });
+    } catch (e) {
+      // Silently fail - don't want logging errors to crash app
+      console.warn('Failed to log error to backend:', e);
+    }
+  }
+};
+
+// Debouncer - Delay function execution until after wait time
+const Debouncer = {
+  _timers: {},
+  
+  debounce(key, fn, wait = 300) {
+    if (this._timers[key]) {
+      clearTimeout(this._timers[key]);
+    }
+    
+    this._timers[key] = setTimeout(() => {
+      fn();
+      delete this._timers[key];
+    }, wait);
+  },
+  
+  cancel(key) {
+    if (this._timers[key]) {
+      clearTimeout(this._timers[key]);
+      delete this._timers[key];
+    }
+  }
+};
+
+// Throttle - Limit function execution to once per wait time
+const Throttle = {
+  _lastRun: {},
+  
+  throttle(key, fn, wait = 300) {
+    const now = Date.now();
+    const lastRun = this._lastRun[key] || 0;
+    
+    if (now - lastRun >= wait) {
+      fn();
+      this._lastRun[key] = now;
+      return true;
+    }
+    return false;
+  },
+  
+  reset(key) {
+    delete this._lastRun[key];
+  }
+};
+
+// LoadingUI - Centralized loading spinner management
+const LoadingUI = {
+  _activeLoaders: new Set(),
+  
+  // Show loading overlay
+  show(message = 'Loading...', id = 'default') {
+    this._activeLoaders.add(id);
+    
+    let overlay = $('#loading-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'loading-overlay';
+      overlay.className = 'loading-overlay';
+      overlay.innerHTML = `
+        <div class="loading-spinner">
+          <div class="spinner-border text-primary-kf" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="loading-message mt-3"></p>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+    }
+    
+    const messageEl = overlay.querySelector('.loading-message');
+    if (messageEl) messageEl.textContent = message;
+    
+    overlay.style.display = 'flex';
+  },
+  
+  // Hide loading overlay
+  hide(id = 'default') {
+    this._activeLoaders.delete(id);
+    
+    // Only hide if no other loaders are active
+    if (this._activeLoaders.size === 0) {
+      const overlay = $('#loading-overlay');
+      if (overlay) overlay.style.display = 'none';
+    }
+  },
+  
+  // Show button loading state
+  showButton(button, text = 'Loading...') {
+    if (!button) return;
+    
+    button.disabled = true;
+    button.dataset.originalText = button.innerHTML;
+    button.innerHTML = `
+      <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+      ${text}
+    `;
+  },
+  
+  // Hide button loading state
+  hideButton(button) {
+    if (!button) return;
+    
+    button.disabled = false;
+    if (button.dataset.originalText) {
+      button.innerHTML = button.dataset.originalText;
+      delete button.dataset.originalText;
+    }
+  },
+  
+  // Wrap async operation with loading indicator
+  async withLoading(fn, message = 'Loading...', id = 'default') {
+    this.show(message, id);
+    try {
+      const result = await fn();
+      return result;
+    } finally {
+      this.hide(id);
+    }
+  }
+};
 
 // ── PLAN UPGRADE STATE ──────────────────────────────────────
 const PLAN_PRICES = {
@@ -380,11 +1329,106 @@ function daysDiff(a, b) {
 }
 
 // ── LOCAL STORAGE ─────────────────────────────────────────────
-const Store = {
-  get: key => { try { return JSON.parse(localStorage.getItem(LS[key])) || []; } catch { return []; } },
-  getObj: key => { try { return JSON.parse(localStorage.getItem(LS[key])) || {}; } catch { return {}; } },
-  set: (key, val) => {
-    localStorage.setItem(LS[key], JSON.stringify(val));
+// SecureStore - Encrypted localStorage wrapper with backward compatibility
+const SecureStore = {
+  _cache: {},
+  _encryptionEnabled: false,
+  _encryptionKey: null,
+  
+  async initialize(pin) {
+    if (!pin) {
+      this._encryptionEnabled = false;
+      return;
+    }
+    
+    try {
+      // Derive encryption key from PIN + device fingerprint
+      const deviceId = CryptoUtil.getDeviceFingerprint();
+      const keyMaterial = pin + ':' + deviceId;
+      this._encryptionKey = keyMaterial;
+      this._encryptionEnabled = true;
+      
+      // Load and decrypt all data into cache
+      await this._loadAllToCache();
+    } catch (e) {
+      console.error('Failed to initialize SecureStore:', e);
+      this._encryptionEnabled = false;
+    }
+  },
+  
+  async _loadAllToCache() {
+    const keys = ['clients', 'loans', 'payments', 'recycleBin', 'settings'];
+    for (const key of keys) {
+      const rawData = localStorage.getItem(LS[key]);
+      if (!rawData) continue;
+      
+      try {
+        // Try to decrypt - if it fails, it's unencrypted data
+        const decrypted = await CryptoUtil.decrypt(rawData, this._encryptionKey);
+        if (decrypted) {
+          this._cache[key] = JSON.parse(decrypted);
+        } else {
+          // Unencrypted legacy data - parse and migrate
+          this._cache[key] = JSON.parse(rawData);
+        }
+      } catch (e) {
+        // Definitely unencrypted - just parse it
+        try {
+          this._cache[key] = JSON.parse(rawData);
+        } catch (parseErr) {
+          console.error(`Failed to parse ${key}:`, parseErr);
+          this._cache[key] = key === 'settings' ? {} : [];
+        }
+      }
+    }
+  },
+  
+  async _writeEncrypted(key, data) {
+    if (!this._encryptionEnabled || !this._encryptionKey) {
+      localStorage.setItem(LS[key], JSON.stringify(data));
+      return;
+    }
+    
+    try {
+      const encrypted = await CryptoUtil.encrypt(JSON.stringify(data), this._encryptionKey);
+      localStorage.setItem(LS[key], encrypted);
+    } catch (e) {
+      console.error('Encryption failed, storing unencrypted:', e);
+      localStorage.setItem(LS[key], JSON.stringify(data));
+    }
+  },
+  
+  get(key) {
+    if (this._encryptionEnabled && this._cache[key] !== undefined) {
+      return this._cache[key];
+    }
+    try {
+      return JSON.parse(localStorage.getItem(LS[key])) || [];
+    } catch {
+      return [];
+    }
+  },
+  
+  getObj(key) {
+    if (this._encryptionEnabled && this._cache[key] !== undefined) {
+      return this._cache[key];
+    }
+    try {
+      return JSON.parse(localStorage.getItem(LS[key])) || {};
+    } catch {
+      return {};
+    }
+  },
+  
+  set(key, val) {
+    if (this._encryptionEnabled) {
+      this._cache[key] = val;
+      this._writeEncrypted(key, val);
+    } else {
+      localStorage.setItem(LS[key], JSON.stringify(val));
+    }
+    
+    // Trigger cloud sync
     if (window.KFSync && LS[key] !== 'kf_session') {
       clearTimeout(window._kfSyncTimer);
       window._kfSyncTimer = setTimeout(() => KFSync.backup(true), 2000);
@@ -395,11 +1439,16 @@ const Store = {
         SecondarySupabase.syncAll(Store.clients(), Store.loans(), Store.payments());
       }, 2000);
     }
-  },
+  }
+};
+
+const Store = {
+  get: key => SecureStore.get(key),
+  getObj: key => SecureStore.getObj(key),
+  set: (key, val) => SecureStore.set(key, val),
   clients: () => Store.get('clients'),
   loans: () => Store.get('loans'),
   payments: () => Store.get('payments'),
-  // [NEW] Recycle Bin
   recycleBin: () => Store.get('recycleBin'),
   settings: () => Store.getObj('settings'),
   session: () => Store.getObj('session'),
@@ -415,7 +1464,6 @@ const Store = {
   saveLoans: v => Store.set('loans', v),
   savePayments: v => Store.set('payments', v),
   saveRecycleBin: v => Store.set('recycleBin', v),
-  // [NEW] Recycle Bin
   saveSettings: v => Store.set('settings', v),
   saveSession: v => Store.set('session', v),
 };
@@ -713,12 +1761,14 @@ function isLoggedIn() {
 
 function hasPin() {
   const s = Store.settings();
-  return !!(s && s.appPin && s.appPin.length === 4);
+  return !!(s && (s.appPinHash || s.appPin) && (s.appPinHash || s.appPin.length === 4));
 }
 
 function getPin() {
   const s = Store.settings();
+  // Return legacy PIN if it exists (for backward compatibility)
   return s.appPin || null;
+}
 }
 
 async function logout() {
@@ -2572,14 +3622,17 @@ create table if not exists payments (
   });
 
   $('#btn-logout').addEventListener('click', () => {
-    state.deleteCallback = () => {
-      logout();
-    };
-    $('#confirm-delete-msg').textContent = 'Are you sure you want to logout?';
-    $('#confirm-delete-btn').textContent = 'Logout';
-    const titleEl = $('#confirmDeleteModal .modal-title');
-    if (titleEl) titleEl.textContent = 'Confirm Logout';
-    new bootstrap.Modal($('#confirmDeleteModal')).show();
+    // Require PIN before logout
+    requirePinToProceed('Logout Confirmation', () => {
+      state.deleteCallback = () => {
+        logout();
+      };
+      $('#confirm-delete-msg').textContent = 'Are you sure you want to logout?';
+      $('#confirm-delete-btn').textContent = 'Logout';
+      const titleEl = $('#confirmDeleteModal .modal-title');
+      if (titleEl) titleEl.textContent = 'Confirm Logout';
+      new bootstrap.Modal($('#confirmDeleteModal')).show();
+    });
   });
 
   $('#btn-delete-account')?.addEventListener('click', () => {
@@ -2601,17 +3654,123 @@ create table if not exists payments (
 // ── PIN AUTHENTICATION HELPER ─────────────────────────────────
 function requirePinToProceed(actionMsg, callback) {
   const s = Store.settings();
-  if (!s.appPin) {
+  const pinHash = s.appPinHash || null;
+  const legacyPin = s.appPin || null;
+  
+  if (!pinHash && !legacyPin) {
     callback();
     return;
   }
-  const pin = prompt(`Enter your 4-digit PIN to confirm ${actionMsg}:`);
-  if (pin === null) return; // User pressed cancel
-  if (pin === s.appPin) {
-    callback();
-  } else {
-    showToast('Incorrect PIN. Action cancelled.', 'error');
+  
+  // Check if locked out
+  if (PINManager.isLockedOut()) {
+    const remaining = PINManager.getLockoutTimeRemaining();
+    const minutes = Math.floor(remaining / 60);
+    const seconds = remaining % 60;
+    showToast(`Too many attempts. Try again in ${minutes}m ${seconds}s`, 'error');
+    return;
   }
+  
+  showPinVerificationModal(actionMsg, async (enteredPin) => {
+    // Verify PIN
+    const enteredHash = await simpleHash(enteredPin);
+    const isValid = pinHash ? (enteredHash === pinHash) : (enteredPin === legacyPin);
+    
+    if (isValid) {
+      PINManager.clearAttempts();
+      callback();
+    } else {
+      const lockedOut = PINManager.recordFailedAttempt();
+      if (lockedOut) {
+        showToast('Too many attempts. Locked for 5 minutes.', 'error');
+      } else {
+        const remaining = PINManager.getAttemptsRemaining();
+        showToast(`Incorrect PIN. ${remaining} attempt(s) remaining.`, 'error');
+      }
+    }
+  });
+}
+
+// Show PIN Verification Modal
+function showPinVerificationModal(actionMsg, onSuccess) {
+  const modalEl = document.createElement('div');
+  modalEl.className = 'modal fade';
+  modalEl.id = 'pinVerificationModal';
+  modalEl.innerHTML = `
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content kf-card">
+        <div class="modal-body text-center p-4">
+          <div class="mb-3">
+            <i class="fa-solid fa-shield-halved text-primary-kf" style="font-size: 3rem;"></i>
+          </div>
+          <h5 class="mb-2">PIN Verification Required</h5>
+          <p class="text-muted-kf mb-4">Enter your 4-digit PIN to confirm: <strong>${actionMsg}</strong></p>
+          
+          <div class="d-flex justify-content-center gap-2 mb-3" id="pin-verify-inputs">
+            <input type="password" inputmode="numeric" maxlength="1" class="pin-digit-input" style="width:50px;height:50px;text-align:center;font-size:1.5rem;border-radius:8px;border:2px solid var(--kf-card-border);" />
+            <input type="password" inputmode="numeric" maxlength="1" class="pin-digit-input" style="width:50px;height:50px;text-align:center;font-size:1.5rem;border-radius:8px;border:2px solid var(--kf-card-border);" />
+            <input type="password" inputmode="numeric" maxlength="1" class="pin-digit-input" style="width:50px;height:50px;text-align:center;font-size:1.5rem;border-radius:8px;border:2px solid var(--kf-card-border);" />
+            <input type="password" inputmode="numeric" maxlength="1" class="pin-digit-input" style="width:50px;height:50px;text-align:center;font-size:1.5rem;border-radius:8px;border:2px solid var(--kf-card-border);" />
+          </div>
+          
+          <p class="text-muted-kf fs-sm mb-4" id="pin-verify-attempts"></p>
+          
+          <div class="d-flex gap-2">
+            <button class="btn-kf-outline flex-fill" data-bs-dismiss="modal">Cancel</button>
+            <button class="btn-kf-primary flex-fill" id="btn-verify-pin">Verify</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modalEl);
+  const modal = new bootstrap.Modal(modalEl);
+  
+  // Update attempts counter
+  const updateAttempts = () => {
+    const remaining = PINManager.getAttemptsRemaining();
+    const attemptsEl = modalEl.querySelector('#pin-verify-attempts');
+    if (attemptsEl) {
+      attemptsEl.textContent = `${remaining} attempt(s) remaining`;
+    }
+  };
+  updateAttempts();
+  
+  // Setup PIN input behavior
+  setupPinInputBehavior('#pin-verify-inputs');
+  
+  // Focus first input
+  modal._element.addEventListener('shown.bs.modal', () => {
+    const firstInput = modalEl.querySelector('.pin-digit-input');
+    if (firstInput) firstInput.focus();
+  });
+  
+  // Verify button handler
+  modalEl.querySelector('#btn-verify-pin').addEventListener('click', () => {
+    const inputs = modalEl.querySelectorAll('.pin-digit-input');
+    const pin = Array.from(inputs).map(i => i.value).join('');
+    
+    if (pin.length !== 4) {
+      // Shake animation
+      const container = modalEl.querySelector('#pin-verify-inputs');
+      container.classList.add('shake');
+      setTimeout(() => container.classList.remove('shake'), 500);
+      showToast('Please enter all 4 digits', 'error');
+      return;
+    }
+    
+    modal.hide();
+    onSuccess(pin);
+    modalEl.remove();
+  });
+  
+  // Cleanup on modal hide
+  modalEl.addEventListener('hidden.bs.modal', () => {
+    modalEl.remove();
+  });
+  
+  modal.show();
 }
 
 // ── PAYMENT MODAL ─────────────────────────────────────────────
@@ -3616,11 +4775,12 @@ function bindGlobal() {
   setupPinInputBehavior('#pin-setup-inputs');
   setupPinInputBehavior('#pin-lock-inputs');
 
-  // Confirm PIN (setup)
-  $('#btn-confirm-pin')?.addEventListener('click', () => {
+  // Confirm PIN (setup) - Enhanced with SHA-256 hashing and weak PIN validation
+  $('#btn-confirm-pin')?.addEventListener('click', async () => {
     const inputs = $$('#pin-setup-inputs .pin-digit-input');
     const pin = inputs.map(i => i.value).join('');
     const errEl = $('#pin-setup-error');
+    
     if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
       errEl.textContent = 'Enter a valid 4-digit PIN';
       errEl.classList.remove('d-none');
@@ -3628,12 +4788,30 @@ function bindGlobal() {
       setTimeout(() => inputs.forEach(i => i.classList.remove('shake')), 500);
       return;
     }
-    // Save PIN
+    
+    // Check for weak PIN
+    if (PINManager.isWeakPIN(pin)) {
+      errEl.textContent = 'Weak PIN! Avoid 1234, 0000, sequential or repeating digits';
+      errEl.classList.remove('d-none');
+      inputs.forEach(i => i.classList.add('shake'));
+      setTimeout(() => inputs.forEach(i => i.classList.remove('shake')), 500);
+      return;
+    }
+    
+    // Hash the PIN before storing
+    const pinHash = await simpleHash(pin);
+    
+    // Save hashed PIN
     const s = Store.settings();
-    s.appPin = pin;
+    s.appPinHash = pinHash;
+    // Remove legacy appPin
+    delete s.appPin;
     Store.saveSettings(s);
     
-    // Sync to backend (or Supabase directly)
+    // Initialize SecureStore with encryption
+    await SecureStore.initialize(pin);
+    
+    // Sync to backend
     const sessionUser = getSession()?.user;
     if (sessionUser && sessionUser.email) {
       apiAuth('set-pin', { email: sessionUser.email, pin: pin }).catch(e => console.error(e));
@@ -3648,26 +4826,61 @@ function bindGlobal() {
     setTimeout(() => showApp(), 600);
   });
 
-  // Unlock PIN (lock screen)
-  $('#btn-unlock-pin')?.addEventListener('click', () => {
+  // Unlock PIN (lock screen) - Enhanced with SHA-256 verification and lockout system
+  $('#btn-unlock-pin')?.addEventListener('click', async () => {
     const inputs = $$('#pin-lock-inputs .pin-digit-input');
     const pin = inputs.map(i => i.value).join('');
     const errEl = $('#pin-lock-error');
-    const savedPin = getPin();
+    const s = Store.settings();
+    const savedPinHash = s.appPinHash;
+    const savedPin = s.appPin; // Legacy support
+    
     if (pin.length !== 4) {
       errEl.textContent = 'Enter your 4-digit PIN';
       errEl.classList.remove('d-none');
       return;
     }
-    if (pin !== savedPin) {
-      errEl.textContent = 'Incorrect PIN. Try again.';
+    
+    // Check lockout
+    if (PINManager.isLockedOut()) {
+      const remaining = PINManager.getLockoutTimeRemaining();
+      const minutes = Math.floor(remaining / 60);
+      const seconds = remaining % 60;
+      errEl.textContent = `Locked. Try again in ${minutes}m ${seconds}s`;
       errEl.classList.remove('d-none');
-      inputs.forEach(i => { i.classList.add('shake'); i.value = ''; });
-      setTimeout(() => { inputs.forEach(i => i.classList.remove('shake')); inputs[0]?.focus(); }, 500);
       return;
     }
+    
+    // Verify PIN (hash or legacy)
+    let isCorrect = false;
+    if (savedPinHash) {
+      const enteredHash = await simpleHash(pin);
+      isCorrect = (enteredHash === savedPinHash);
+    } else if (savedPin) {
+      isCorrect = (pin === savedPin);
+    }
+    
+    if (!isCorrect) {
+      const lockedOut = PINManager.recordFailedAttempt();
+      if (lockedOut) {
+        errEl.textContent = 'Too many attempts. Locked for 5 minutes.';
+      } else {
+        const remaining = PINManager.getAttemptsRemaining();
+        errEl.textContent = `Incorrect PIN. ${remaining} attempt(s) remaining`;
+      }
+      errEl.classList.remove('d-none');
+      inputs.forEach(i => { i.classList.add('shake'); i.value = ''; });
+      setTimeout(() => { inputs.forEach(i => i.classList.remove('shake')); if (inputs[0]) inputs[0].focus(); }, 500);
+      return;
+    }
+    
     // PIN correct!
+    PINManager.clearAttempts();
     errEl.classList.add('d-none');
+    
+    // Initialize SecureStore with encryption
+    await SecureStore.initialize(pin);
+    
     inputs.forEach(i => i.classList.add('success'));
     setTimeout(() => showApp(), 400);
   });

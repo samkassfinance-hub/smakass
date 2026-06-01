@@ -1,101 +1,66 @@
 import Map "mo:core/Map";
 import Types "../types/auth";
+import Principal "mo:base/Principal";
 
 module {
-  public type UserMap = Map.Map<Text, Types.UserAccount>;
+  public type UserMap = Map.Map<Principal.Principal, Types.UserAccount>;
 
-  /// Register a new user. Returns #err if phone already exists.
+  /// Register a new user. Returns #err if caller is already registered.
   public func register(
     users : UserMap,
-    phone : Text,
-    hashedPin : Text,
+    caller : Principal.Principal,
+    email : Text,
     financierName : Text,
     businessName : Text,
     role : Types.UserRole,
     now : Int,
   ) : Types.SimpleResult {
-    if (users.containsKey(phone)) {
-      return #err("Phone number already registered");
+    if (Principal.isAnonymous(caller)) {
+      return #err("Anonymous principal cannot register");
+    };
+    if (users.containsKey(caller)) {
+      return #err("User already registered");
     };
     let account : Types.UserAccount = {
-      phone;
-      hashedPin;
+      email;
+      owner = caller;
       financierName;
       businessName;
       role;
       createdAt = now;
     };
-    users.add(phone, account);
+    users.add(caller, account);
     #ok;
   };
 
-  /// Authenticate a user by phone + hashedPin. Returns profile on success.
+  /// Authenticate a user by caller principal. Returns profile on success.
   public func login(
     users : UserMap,
-    phone : Text,
-    hashedPin : Text,
+    caller : Principal.Principal,
   ) : Types.AuthResult {
-    switch (users.get(phone)) {
-      case null { #err("Invalid credentials") };
+    switch (users.get(caller)) {
+      case null { #err("User not registered") };
       case (?account) {
-        if (account.hashedPin == hashedPin) {
-          #ok({
-            phone = account.phone;
-            financierName = account.financierName;
-            businessName = account.businessName;
-            role = account.role;
-          });
-        } else {
-          #err("Invalid credentials");
-        };
+        #ok({
+          email = account.email;
+          financierName = account.financierName;
+          businessName = account.businessName;
+          role = account.role;
+        });
       };
     };
   };
 
-  /// Reset PIN for an existing account (verify phone exists first).
-  public func resetPin(
-    users : UserMap,
-    phone : Text,
-    newHashedPin : Text,
-  ) : Types.SimpleResult {
-    switch (users.get(phone)) {
-      case null { #err("Phone number not found") };
-      case (?account) {
-        users.add(phone, { account with hashedPin = newHashedPin });
-        #ok;
-      };
-    };
-  };
-
-  /// Change PIN atomically: verify current PIN then set new PIN.
-  public func changePin(
-    users : UserMap,
-    phone : Text,
-    currentHashedPin : Text,
-    newHashedPin : Text,
-  ) : Types.SimpleResult {
-    switch (users.get(phone)) {
-      case null { #err("Phone number not found") };
-      case (?account) {
-        if (account.hashedPin != currentHashedPin) {
-          return #err("Invalid current PIN");
-        };
-        users.add(phone, { account with hashedPin = newHashedPin });
-        #ok;
-      };
-    };
-  };
-
-  /// Retrieve public profile by phone number.
+  /// Retrieve public profile by principal.
   public func getProfile(
     users : UserMap,
-    phone : Text,
+    caller : Principal.Principal,
   ) : ?Types.UserProfile {
-    switch (users.get(phone)) {
+    switch (users.get(caller)) {
       case null { null };
       case (?account) {
         ?{
-          phone = account.phone;
+          email = account.email;
           financierName = account.financierName;
           businessName = account.businessName;
           role = account.role;
@@ -104,11 +69,11 @@ module {
     };
   };
 
-  /// Check whether a phone number is already registered.
-  public func phoneExists(
+  /// Check whether a principal is already registered.
+  public func exists(
     users : UserMap,
-    phone : Text,
+    caller : Principal.Principal,
   ) : Bool {
-    users.containsKey(phone);
+    users.containsKey(caller);
   };
 };
