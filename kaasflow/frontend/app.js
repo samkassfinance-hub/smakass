@@ -1769,7 +1769,6 @@ function getPin() {
   // Return legacy PIN if it exists (for backward compatibility)
   return s.appPin || null;
 }
-}
 
 async function logout() {
   try {
