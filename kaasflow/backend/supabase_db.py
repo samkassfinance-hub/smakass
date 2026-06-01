@@ -9,21 +9,30 @@ import os
 import requests
 from functools import lru_cache
 
-SUPABASE_URL = os.getenv("SUPABASE_URL", "")          # e.g. https://xxxx.supabase.co
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")  # Service Role Key
+
+def _get_url():
+    """Read SUPABASE_URL at call time so .env / Vercel runtime values are picked up."""
+    return os.getenv("SUPABASE_URL", "")
+
+
+def _get_key():
+    """Read service-role key at call time (try both common env-var names)."""
+    return os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
 
 
 def _headers():
+    key = _get_key()
     return {
-        "apikey":        SUPABASE_KEY,
-        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "apikey":        key,
+        "Authorization": f"Bearer {key}",
         "Content-Type":  "application/json",
         "Prefer":        "return=representation",
     }
 
 
 def _url(table: str) -> str:
-    return f"{SUPABASE_URL}/rest/v1/{table}"
+    return f"{_get_url()}/rest/v1/{table}"
+
 
 
 # ─── Generic helpers ────────────────────────────────────────────

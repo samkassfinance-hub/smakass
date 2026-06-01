@@ -389,19 +389,6 @@ def reset_password():
     except Exception as e:
         print(f"Error resetting password: {e}")
         return jsonify({'error': 'Failed to reset password'}), 500
-    else:
-        is_local = any(local in request.host_url for local in ['localhost', '127.0.0.1', '5500'])
-        if is_local:
-            return jsonify({
-                'success': False,
-                'message': 'Email service not configured. For development, here is your link:',
-                'link': magic_link
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'message': 'Email service is currently unavailable. Please verify configuration or try again later.'
-            }), 500
 
 
 @auth_bp.route('/magic-link/verify', methods=['GET'])
