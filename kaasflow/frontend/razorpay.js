@@ -471,4 +471,5 @@ if (document.readyState === 'loading') {
   RazorpayPayment.init();
 }
 
+window.RazorpayPayment = RazorpayPayment;
 console.log('✅ razorpay.js loaded');

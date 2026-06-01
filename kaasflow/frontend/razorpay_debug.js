@@ -297,3 +297,4 @@ const RazorpayPayment = {
 
 console.log('🔧 razorpay_debug.js loaded');
 console.log('📦 RazorpayPayment object:', RazorpayPayment);
+window.RazorpayPayment = RazorpayPayment;
