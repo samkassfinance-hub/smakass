@@ -425,8 +425,27 @@ def send_forgot_pin_otp():
     </div>
     """
     
-    if send_email(email, subject, body):
+    email_sent = send_email(email, subject, body)
+    
+    # TEMPORARY: Always return success with OTP for testing until domain is verified
+    # TODO: Remove this after Resend domain verification is complete
+    if email_sent:
         return jsonify({'success': True, 'message': 'OTP sent to your email'})
+    else:
+        # Log OTP to backend console for testing
+        print(f"⚠️  EMAIL FAILED - OTP for {email}: {otp}")
+        print(f"⚠️  Verify your domain at https://resend.com/domains")
+        
+        # Return success anyway for testing (user can get OTP from backend logs)
+        return jsonify({
+            'success': True,
+            'message': 'OTP generated. Check backend console or verify Resend domain.',
+            'otp': otp,  # Return OTP in response for testing
+            'note': 'Email delivery failed. Please verify domain at https://resend.com/domains'
+        })
+    
+    # Old code below (won't reach here)
+    """
     else:
         is_local = any(local in request.host_url for local in ['localhost', '127.0.0.1', '5500'])
         if is_local:

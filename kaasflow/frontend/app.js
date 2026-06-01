@@ -4963,7 +4963,20 @@ function bindGlobal() {
     try {
       const res = await apiAuth('forgot-pin/send-otp', { email: resetPinEmail });
       if (res && res.success) {
-        showToast('OTP sent successfully to your email.', 'success');
+        // Show success message
+        let message = 'OTP sent successfully to your email.';
+        
+        // TEMPORARY: If OTP is in response (domain not verified), show it
+        if (res.otp) {
+          message = `⚠️ Email failed. Your OTP is: ${res.otp}`;
+          console.log(`🔢 OTP for testing: ${res.otp}`);
+          
+          // Show a more detailed toast
+          showToast(`OTP: ${res.otp} (Email delivery failed - check domain verification)`, 'warning', 8000);
+        } else {
+          showToast(message, 'success');
+        }
+        
         $('#forgot-pin-step-1').style.display = 'none';
         $('#forgot-pin-step-2').style.display = 'block';
         setTimeout(() => $$('.reset-otp-input')[0]?.focus(), 100);
