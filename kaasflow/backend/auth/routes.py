@@ -554,22 +554,6 @@ def send_forgot_pin_otp():
             'otp': otp,  # Return OTP in response for testing
             'note': 'Email delivery failed. Please verify domain at https://resend.com/domains'
         })
-    
-    # Old code below (won't reach here)
-    """
-    else:
-        is_local = any(local in request.host_url for local in ['localhost', '127.0.0.1', '5500'])
-        if is_local:
-            return jsonify({
-                'success': True,
-                'message': 'Email service not configured. For development, here is your OTP:',
-                'otp': otp
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': 'Failed to send OTP email. Please try again later.'
-            }), 500
 
 @auth_bp.route('/forgot-pin/verify-otp', methods=['POST'])
 def verify_forgot_pin_otp():
