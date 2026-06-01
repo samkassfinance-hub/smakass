@@ -248,36 +248,147 @@ def login():
 
 @auth_bp.route('/magic-link/request', methods=['POST'])
 def magic_link_request():
+    """Legacy magic link - deprecated, use /forgot-password/send-otp instead"""
     email = request.json.get('email')
     if not email:
         return jsonify({'error': 'Email required'}), 400
         
-    token = generate_magic_link_token(email)
-    # In production, use your actual domain
-    base_url = request.host_url.rstrip('/')
-    magic_link = f"{base_url}/auth/magic-link/verify?token={token}"
+    # Redirect to new OTP-based flow
+    return forgot_password_send_otp()
+
+# ── FORGOT PASSWORD FLOW (OTP-based) ────────────────────────────────────────
+
+# In-memory store for password reset OTPs (email -> {'otp': '123456', 'expires_at': datetime})
+password_reset_otps = {}
+
+@auth_bp.route('/forgot-password/send-otp', methods=['POST'])
+def forgot_password_send_otp():
+    email = request.json.get('email')
+    if not email:
+        return jsonify({'error': 'Email required'}), 400
+        
+    # Check if user exists
+    conn = get_db_connection()
+    user = conn.execute('SELECT * FROM pro_users WHERE email = ?', (email,)).fetchone()
+    conn.close()
+    
+    if not user:
+        # For security, don't reveal if email exists or not
+        return jsonify({'success': True, 'message': 'If this email is registered, you will receive an OTP'})
+    
+    # Generate 6-digit OTP
+    import random, datetime
+    otp = str(random.randint(100000, 999999))
+    
+    # Store OTP with 10-minute expiration
+    password_reset_otps[email] = {
+        'otp': otp,
+        'expires_at': datetime.datetime.now() + datetime.timedelta(minutes=10)
+    }
     
     subject = "Reset your KaasFlow Password 🔒"
     body = f"""
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff; color: #1e293b;">
         <div style="text-align: center; margin-bottom: 24px;">
             <h1 style="color: #10b981; margin: 0; font-size: 28px;">Password Reset Request</h1>
-            <p style="color: #64748b; font-size: 16px; margin-top: 8px;">Retrieve access to your KaasFlow Account</p>
+            <p style="color: #64748b; font-size: 16px; margin-top: 8px;">Your verification code</p>
         </div>
         <p>Hello,</p>
-        <p>We received a request to log in and reset the password for your KaasFlow account. Click the button below to sign in automatically and secure your account:</p>
+        <p>We received a request to reset your KaasFlow account password. Use the OTP below to proceed:</p>
         <div style="text-align: center; margin: 30px 0;">
-            <a href="{magic_link}" style="background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 8px; display: inline-block; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);">Reset Password & Sign In</a>
+            <div style="background-color: #f1f5f9; border: 2px dashed #cbd5e1; color: #334155; padding: 15px; font-size: 32px; font-weight: bold; letter-spacing: 5px; border-radius: 8px; display: inline-block;">
+                {otp}
+            </div>
         </div>
-        <p style="font-size: 14px; color: #64748b;">This link will expire in 15 minutes. If you did not request this, you can safely ignore this email.</p>
+        <p style="font-size: 14px; color: #64748b;">This OTP will expire in 10 minutes. If you did not request this, you can safely ignore this email.</p>
         <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
         <p style="font-size: 14px; color: #64748b; text-align: center; margin-bottom: 0;">
             <strong>— The KaasFlow Team</strong>
         </p>
     </div>
     """
-    if send_email(email, subject, body):
-        return jsonify({'success': True, 'message': 'Password reset link sent to your email'})
+    
+    email_sent = send_email(email, subject, body)
+    
+    if email_sent:
+        return jsonify({'success': True, 'message': 'OTP sent to your email'})
+    else:
+        # Log OTP to backend console for testing
+        print(f"⚠️  PASSWORD RESET - EMAIL FAILED - OTP for {email}: {otp}")
+        print(f"⚠️  Verify your domain at https://resend.com/domains")
+        
+        # Return success with OTP for testing
+        return jsonify({
+            'success': True,
+            'message': 'OTP generated. Check backend console or verify Resend domain.',
+            'otp': otp,
+            'note': 'Email delivery failed. Please verify domain at https://resend.com/domains'
+        })
+
+@auth_bp.route('/forgot-password/verify-otp', methods=['POST'])
+def forgot_password_verify_otp():
+    email = request.json.get('email')
+    user_otp = request.json.get('otp')
+    
+    if not email or not user_otp:
+        return jsonify({'error': 'Email and OTP required'}), 400
+        
+    stored_data = password_reset_otps.get(email)
+    
+    import datetime
+    if not stored_data:
+        return jsonify({'error': 'No OTP request found for this email'}), 404
+        
+    if datetime.datetime.now() > stored_data['expires_at']:
+        del password_reset_otps[email]
+        return jsonify({'error': 'OTP has expired'}), 400
+        
+    if stored_data['otp'] != str(user_otp).strip():
+        return jsonify({'error': 'Invalid OTP'}), 400
+        
+    # OTP verified successfully - generate reset token
+    reset_token = generate_magic_link_token(email)
+    
+    # Clear the OTP
+    del password_reset_otps[email]
+    
+    return jsonify({
+        'success': True, 
+        'message': 'OTP verified successfully',
+        'reset_token': reset_token
+    })
+
+@auth_bp.route('/reset-password', methods=['POST'])
+def reset_password():
+    """Reset password using verified token"""
+    reset_token = request.json.get('reset_token')
+    new_password = request.json.get('new_password')
+    
+    if not reset_token or not new_password:
+        return jsonify({'error': 'Reset token and new password required'}), 400
+        
+    # Verify the reset token
+    email = verify_magic_link_token(reset_token)
+    if not email:
+        return jsonify({'error': 'Invalid or expired reset token'}), 401
+        
+    # Update password
+    pw_hash = hash_password(new_password)
+    
+    try:
+        conn = get_db_connection()
+        conn.execute('UPDATE pro_users SET password_hash = ? WHERE email = ?', (pw_hash, email))
+        conn.commit()
+        
+        # Get updated user
+        user = conn.execute('SELECT * FROM pro_users WHERE email = ?', (email,)).fetchone()
+        conn.close()
+        
+        # Log them in automatically
+        return create_auth_response(user)
+    except Exception as e:
+        print(f"Error resetting password: {e}")
+        return jsonify({'error': 'Failed to reset password'}), 500
     else:
         is_local = any(local in request.host_url for local in ['localhost', '127.0.0.1', '5500'])
         if is_local:

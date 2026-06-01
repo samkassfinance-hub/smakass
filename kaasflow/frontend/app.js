@@ -4719,11 +4719,23 @@ function bindGlobal() {
     updateAuthHeader('Log in or sign up', 'Manage loans, collections and customer payments smarter with SamKass.');
   });
 
-  // Forgot password
+  // Forgot password - Open modal
   $('#show-forgot-password')?.addEventListener('click', (e) => {
     e.preventDefault();
-    showFormSection('#forgot-password-wrapper');
-    updateAuthHeader('Reset password', 'We will email you a secure magic link to access your account.');
+    
+    // Reset steps
+    $('#forgot-password-step-1').style.display = 'block';
+    $('#forgot-password-step-2').style.display = 'none';
+    $('#forgot-password-step-3').style.display = 'none';
+    
+    // Clear inputs
+    $('#forgot-password-email').value = '';
+    $$('.reset-password-otp-input').forEach(i => i.value = '');
+    $('#reset-new-password').value = '';
+    $('#reset-confirm-password').value = '';
+    
+    // Show modal
+    new bootstrap.Modal(document.getElementById('forgotPasswordModal')).show();
   });
 
   $('#show-login-from-forgot')?.addEventListener('click', () => {

@@ -1777,6 +1777,81 @@
     </div>
   </div>
 
+  <!-- Forgot Password Modal (OTP-based) -->
+  <div class="modal fade" id="forgotPasswordModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content kf-modal">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="fa-solid fa-lock me-2 text-primary-kf"></i>Reset Password</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" style="padding:1.5rem">
+          
+          <!-- Step 1: Enter Email & Send OTP -->
+          <div id="forgot-password-step-1">
+            <p class="text-muted-kf" style="font-size:0.875rem; margin-bottom:1rem;">
+              We will send a 6-digit OTP to your email to verify your identity.
+            </p>
+            <div class="mb-3">
+              <label class="form-label text-muted-kf" style="font-size:0.75rem">Email Address</label>
+              <input type="email" id="forgot-password-email" class="form-control" placeholder="your@email.com" />
+            </div>
+            <button type="button" class="btn-kf-primary w-100" id="btn-send-password-otp">
+              Send OTP <i class="fa-solid fa-paper-plane ms-1"></i>
+            </button>
+          </div>
+
+          <!-- Step 2: Verify OTP -->
+          <div id="forgot-password-step-2" style="display:none;">
+            <p class="text-muted-kf" style="font-size:0.875rem; margin-bottom:1rem; text-align:center;">
+              Enter the 6-digit code sent to your email.
+            </p>
+            <div style="display:flex; justify-content:center; gap:0.5rem; margin-bottom:1.5rem">
+              <input type="text" maxlength="1" class="pin-digit-input reset-password-otp-input" data-idx="0" inputmode="numeric" pattern="[0-9]" />
+              <input type="text" maxlength="1" class="pin-digit-input reset-password-otp-input" data-idx="1" inputmode="numeric" pattern="[0-9]" />
+              <input type="text" maxlength="1" class="pin-digit-input reset-password-otp-input" data-idx="2" inputmode="numeric" pattern="[0-9]" />
+              <input type="text" maxlength="1" class="pin-digit-input reset-password-otp-input" data-idx="3" inputmode="numeric" pattern="[0-9]" />
+              <input type="text" maxlength="1" class="pin-digit-input reset-password-otp-input" data-idx="4" inputmode="numeric" pattern="[0-9]" />
+              <input type="text" maxlength="1" class="pin-digit-input reset-password-otp-input" data-idx="5" inputmode="numeric" pattern="[0-9]" />
+            </div>
+            <button type="button" class="btn-kf-primary w-100" id="btn-verify-password-otp">
+              Verify OTP <i class="fa-solid fa-check ms-1"></i>
+            </button>
+          </div>
+
+          <!-- Step 3: Set New Password -->
+          <div id="forgot-password-step-3" style="display:none;">
+            <p class="text-muted-kf" style="font-size:0.875rem; margin-bottom:1rem; text-align:center;">
+              Create your new password.
+            </p>
+            <div class="mb-3">
+              <label class="form-label text-muted-kf" style="font-size:0.75rem">New Password</label>
+              <div class="input-group">
+                <input type="password" id="reset-new-password" class="form-control" placeholder="Enter new password" />
+                <button class="btn btn-outline-secondary btn-toggle-pw" type="button" data-target="reset-new-password">
+                  <i class="fa-solid fa-eye"></i>
+                </button>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label text-muted-kf" style="font-size:0.75rem">Confirm Password</label>
+              <div class="input-group">
+                <input type="password" id="reset-confirm-password" class="form-control" placeholder="Confirm new password" />
+                <button class="btn btn-outline-secondary btn-toggle-pw" type="button" data-target="reset-confirm-password">
+                  <i class="fa-solid fa-eye"></i>
+                </button>
+              </div>
+            </div>
+            <button type="button" class="btn-kf-primary w-100" id="btn-save-new-password">
+              Reset Password <i class="fa-solid fa-check ms-1"></i>
+            </button>
+          </div>
+          
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Bootstrap 5.3 JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -1800,6 +1875,9 @@
 
   <!-- App Script -->
   <script src="app.js?v=10"></script>
+
+  <!-- Forgot Password OTP -->
+  <script src="forgot-password-otp.js"></script>
 
   <!-- Phase 3: Advanced Features -->
   <script src="utilities-phase3.js"></script>
