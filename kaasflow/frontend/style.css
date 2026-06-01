@@ -663,12 +663,14 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Tamil text in bottom nav */
 body.tamil-text .nav-tab span {
-  font-size: 0.55rem;
+  font-size: 0.65rem;
   font-weight: 700;
-  line-height: 1.1;
+  line-height: 1.2;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
+  text-overflow: clip;
+  display: block;
+  margin-top: 2px;
 }
 
 .nav-tab.active { color: var(--color-primary); }
