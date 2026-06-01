@@ -13,7 +13,7 @@
 (function (global) {
   'use strict';
 
-  const API_BASE = '/api/sync';
+  const API_BASE = 'https://backend-inky-xi-82.vercel.app/api/sync';
   const LAST_SYNC_KEY = 'kf_last_sync';
 
   // ─── Helper: Get Current User ────────────────────────────────

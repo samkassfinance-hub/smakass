@@ -1,13 +1,14 @@
 // KaasFlow Auth Logic — with strict per-user data isolation
 
-let API_BASE = 'https://www.samkass.site/api';
-if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    API_BASE = 'http://127.0.0.1:5000/api';
-} else if (window.location.port === '5500') {
-    API_BASE = `http://${window.location.hostname}:5000/api`;
-} else if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
-    API_BASE = window.location.origin + '/api';
-}
+let API_BASE = 'https://backend-inky-xi-82.vercel.app/api';
+// Always use Vercel backend - no localhost detection
+// if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+//     API_BASE = 'http://127.0.0.1:5000/api';
+// } else if (window.location.port === '5500') {
+//     API_BASE = `http://${window.location.hostname}:5000/api`;
+// } else if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+//     API_BASE = window.location.origin + '/api';
+// }
 
 /**
  * USER-SCOPED DATA ISOLATION
