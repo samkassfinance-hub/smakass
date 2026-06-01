@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Check Supabase Sync Status</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+        .box { background: white; padding: 20px; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .warning { color: #ffc107; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056b3; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Supabase Sync Diagnostic</h1>
+    
+    <div class="box">
+        <h2>Step 1: Check Backend</h2>
+        <button onclick="checkBackend()">Check Backend Status</button>
+        <div id="backend-status"></div>
+    </div>
+
+    <div class="box">
+        <h2>Step 2: Check Local Data</h2>
+        <button onclick="checkLocalData()">Check localStorage Data</button>
+        <div id="local-data"></div>
+    </div>
+
+    <div class="box">
+        <h2>Step 3: Test Manual Sync</h2>
+        <button onclick="testManualSync()">Test Sync to Supabase</button>
+        <div id="sync-result"></div>
+    </div>
+
+    <div class="box">
+        <h2>Step 4: Check Supabase Tables</h2>
+        <button onclick="checkSupabaseTables()">Check Supabase Data</button>
+        <div id="supabase-data"></div>
+    </div>
+
+    <script>
+        async function checkBackend() {
+            const div = document.getElementById('backend-status');
+            div.innerHTML = 'Checking...';
+            
+            try {
+                const response = await fetch('http://localhost:5000/health');
+                if (response.ok) {
+                    div.innerHTML = '<p class="success">✅ Backend is running!</p>';
+                    
+                    // Check sync status
+                    const syncResponse = await fetch('http://localhost:5000/api/sync/status');
+                    const syncData = await syncResponse.json();
+                    div.innerHTML += `<pre>${JSON.stringify(syncData, null, 2)}</pre>`;
+                } else {
+                    div.innerHTML = '<p class="error">❌ Backend not responding properly</p>';
+                }
+            } catch (e) {
+                div.innerHTML = `<p class="error">❌ Backend is NOT running!<br>Start it with: cd kaasflow/backend && python app.py</p>`;
+            }
+        }
+
+        function checkLocalData() {
+            const div = document.getElementById('local-data');
+            
+            const session = localStorage.getItem('kf_session');
+            const clients = localStorage.getItem('kf_clients');
+            const loans = localStorage.getItem('kf_loans');
+            const payments = localStorage.getItem('kf_payments');
+            const settings = localStorage.getItem('kf_settings');
+            
+            let html = '';
+            
+            if (!session) {
+                html += '<p class="error">❌ NOT LOGGED IN - You need to login to the app first!</p>';
+            } else {
+                const sessionData = JSON.parse(session);
+                html += `<p class="success">✅ Logged in as: ${sessionData.user?.email || 'Unknown'}</p>`;
+            }
+            
+            const clientCount = clients ? JSON.parse(clients).length : 0;
+            const loanCount = loans ? JSON.parse(loans).length : 0;
+            const paymentCount = payments ? JSON.parse(payments).length : 0;
+            
+            html += `<p>Clients: <strong>${clientCount}</strong></p>`;
+            html += `<p>Loans: <strong>${loanCount}</strong></p>`;
+            html += `<p>Payments: <strong>${paymentCount}</strong></p>`;
+            
+            if (clientCount === 0 && loanCount === 0 && paymentCount === 0) {
+                html += '<p class="warning">⚠️ NO DATA IN APP - Add some clients/loans first!</p>';
+            }
+            
+            div.innerHTML = html;
+        }
+
+        async function testManualSync() {
+            const div = document.getElementById('sync-result');
+            div.innerHTML = 'Testing sync...';
+            
+            const session = localStorage.getItem('kf_session');
+            if (!session) {
+                div.innerHTML = '<p class="error">❌ Please login to the app first!</p>';
+                return;
+            }
+            
+            const sessionData = JSON.parse(session);
+            const token = sessionData.token;
+            
+            if (!token) {
+                div.innerHTML = '<p class="error">❌ No auth token found. Please login again.</p>';
+                return;
+            }
+            
+            const userId = sessionData.user?.email || 'local_user';
+            const clients = JSON.parse(localStorage.getItem('kf_clients') || '[]');
+            const loans = JSON.parse(localStorage.getItem('kf_loans') || '[]');
+            const payments = JSON.parse(localStorage.getItem('kf_payments') || '[]');
+            const settings = JSON.parse(localStorage.getItem('kf_settings') || '{}');
+            
+            const payload = {
+                clients: clients,
+                loans: loans,
+                payments: payments,
+                settings: settings
+            };
+            
+            try {
+                const response = await fetch('http://localhost:5000/api/sync/backup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    div.innerHTML = `<p class="success">✅ Sync successful!</p><pre>${JSON.stringify(result, null, 2)}</pre>`;
+                } else {
+                    div.innerHTML = `<p class="error">❌ Sync failed!</p><pre>${JSON.stringify(result, null, 2)}</pre>`;
+                }
+            } catch (e) {
+                div.innerHTML = `<p class="error">❌ Error: ${e.message}</p>`;
+            }
+        }
+
+        async function checkSupabaseTables() {
+            const div = document.getElementById('supabase-data');
+            div.innerHTML = 'Checking Supabase...';
+            
+            const SUPABASE_URL = 'https://eahyuwpejwbqzzolajzr.supabase.co';
+            const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhaHl1d3BlandicXp6b2xhanpyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTA5MjI0NCwiZXhwIjoyMDk0NjY4MjQ0fQ.Mm4eOTioL1FpasqsqJPBeNdRP_BBW0_50ucBsf5Uoxs';
+            
+            const tables = ['kf_users', 'kf_clients', 'kf_loans', 'kf_payments', 'kf_settings'];
+            let html = '<h3>Table Data:</h3>';
+            
+            for (const table of tables) {
+                try {
+                    const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*`, {
+                        headers: {
+                            'apikey': SUPABASE_KEY,
+                            'Authorization': `Bearer ${SUPABASE_KEY}`
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        html += `<p><strong>${table}:</strong> ${data.length} records</p>`;
+                        if (data.length > 0) {
+                            html += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                        }
+                    } else {
+                        html += `<p class="error">❌ ${table}: Error ${response.status}</p>`;
+                    }
+                } catch (e) {
+                    html += `<p class="error">❌ ${table}: ${e.message}</p>`;
+                }
+            }
+            
+            div.innerHTML = html;
+        }
+
+        // Auto-check on load
+        window.onload = function() {
+            checkBackend();
+            checkLocalData();
+        };
+    </script>
+</body>
+</html>

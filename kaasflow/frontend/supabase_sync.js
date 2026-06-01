@@ -198,6 +198,20 @@ async function restore() {
     }
   }
 
+  // ─── Last sync label helper ─────────────────────────────────
+  function lastSyncLabel() {
+    const lastSync = localStorage.getItem(LAST_SYNC_KEY);
+    if (!lastSync) return 'Never synced';
+    const date = new Date(lastSync);
+    return `Last sync: ${date.toLocaleString()}`;
+  }
+
+  // ─── Track login helper ─────────────────────────────────────
+  function trackLogin() {
+    // Placeholder for login tracking if needed
+    console.log('[KFSync] User session tracked');
+  }
+
   // ─── Expose globally ─────────────────────────────────────────
   global.KFSync = { backup, restore, status, lastSyncLabel, trackLogin };
 
