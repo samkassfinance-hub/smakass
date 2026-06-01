@@ -4,15 +4,32 @@
     {
       "src": "kaasflow/backend/app.py",
       "use": "@vercel/python"
-    }
-  ],
-  "routes": [
+    },
     {
-      "src": "/(.*)",
-      "dest": "kaasflow/backend/app.py"
+      "src": "kaasflow/frontend/**",
+      "use": "@vercel/static"
     }
   ],
   "env": {
-    "FLASK_ENV": "production"
-  }
+    "RAZORPAY_KEY_ID": "rzp_live_SuharfZYrJBbHj",
+    "RAZORPAY_KEY_SECRET": "FsmmZywk4NGiI1PxIS4UWb0e"
+  },
+  "routes": [
+    {
+      "src": "/auth/(.*)",
+      "dest": "/kaasflow/backend/app.py"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/kaasflow/backend/app.py"
+    },
+    {
+      "src": "/",
+      "dest": "/kaasflow/frontend/index.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/kaasflow/frontend/$1"
+    }
+  ]
 }
