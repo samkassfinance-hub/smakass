@@ -1,237 +1,102 @@
 #!/usr/bin/env python3
 """
-Test Supabase Connection and Create Tables if Needed
+KaasFlow - Test Supabase Connection and Table Status
+====================================================
+This script directly tests your Supabase connection using the API keys
+and checks which tables exist.
 """
 
 import os
 import requests
-import json
+from dotenv import load_dotenv
 
-# Your Supabase credentials
-SUPABASE_URL = "https://eahyuwpejwbqzzolajzr.supabase.co"
-SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhaHl1d3BlandicXp6b2xhanpyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwOTIyNDQsImV4cCI6MjA5NDY2ODI0NH0.S98_O8nYZoiVj9-xq153R8VorNhehy8m46FoYIjUzvY"
-SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhaHl1d3BlandicXp6b2xhanpyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTA5MjI0NCwiZXhwIjoyMDk0NjY4MjQ0fQ.Mm4eOTioL1FpasqsqJPBeNdRP_BBW0_50ucBsf5Uoxs"
+# Load environment variables
+load_dotenv('kaasflow/backend/.env')
+
+SUPABASE_URL = os.getenv('SUPABASE_URL')
+SUPABASE_SERVICE_KEY = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
+
+TABLES = ['kf_users', 'kf_settings', 'kf_clients', 'kf_loans', 'kf_payments']
 
 def test_connection():
-    """Test basic Supabase connection"""
-    print("=" * 60)
-    print("TESTING SUPABASE CONNECTION")
-    print("=" * 60)
-    print(f"URL: {SUPABASE_URL}")
-    print(f"Anon Key: {SUPABASE_ANON_KEY[:20]}...")
-    print(f"Service Key: {SUPABASE_SERVICE_KEY[:20]}...")
-    print()
+    """Test if Supabase is reachable and which tables exist."""
+    print("\n" + "=" * 60)
+    print("  KaasFlow - Supabase Connection Test")
+    print("=" * 60 + "\n")
     
-    # Test with service role key
+    print(f"URL: {SUPABASE_URL}")
+    print(f"Service Key: {SUPABASE_SERVICE_KEY[:10]}...{SUPABASE_SERVICE_KEY[-4:]}\n")
+    
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        print("❌ ERROR: Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY")
+        return False
+    
     headers = {
-        "apikey": SUPABASE_SERVICE_KEY,
-        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-        "Content-Type": "application/json"
+        'apikey': SUPABASE_SERVICE_KEY,
+        'Authorization': f'Bearer {SUPABASE_SERVICE_KEY}',
+        'Content-Type': 'application/json'
     }
     
-    print("🔍 Checking which tables exist...")
-    print()
+    all_exist = True
+    table_status = {}
     
-    tables_to_check = ['kf_users', 'kf_clients', 'kf_loans', 'kf_payments', 'kf_settings']
-    existing_tables = []
-    missing_tables = []
-    
-    for table in tables_to_check:
+    print("Checking tables:\n")
+    for table in TABLES:
         try:
             url = f"{SUPABASE_URL}/rest/v1/{table}?limit=1"
-            response = requests.get(url, headers=headers, timeout=5)
+            response = requests.get(url, headers=headers, timeout=10)
             
             if response.status_code == 200:
-                print(f"✅ Table '{table}' EXISTS")
-                existing_tables.append(table)
+                print(f"  ✅ {table:<20} EXISTS")
                 
-                # Show count
-                count_response = requests.get(
-                    f"{SUPABASE_URL}/rest/v1/{table}?select=count",
-                    headers={**headers, "Prefer": "count=exact"},
-                    timeout=5
-                )
-                if count_response.status_code == 200:
-                    count = count_response.headers.get('Content-Range', '0-0/0').split('/')[-1]
-                    print(f"   📊 Records: {count}")
+                # Get count
+                count_url = f"{SUPABASE_URL}/rest/v1/{table}?select=count"
+                headers_with_prefer = {**headers, 'Prefer': 'count=exact'}
+                count_response = requests.get(count_url, headers=headers_with_prefer, timeout=10)
+                
+                if count_response.ok:
+                    range_header = count_response.headers.get('content-range', '0-0/0')
+                    count = range_header.split('/')[-1] if '/' in range_header else '0'
+                    print(f"      📊 Records: {count}")
+                    table_status[table] = {'exists': True, 'count': count}
+                else:
+                    table_status[table] = {'exists': True, 'count': 'unknown'}
+                    
+            elif response.status_code == 404 or response.status_code == 406:
+                print(f"  ❌ {table:<20} NOT FOUND")
+                table_status[table] = {'exists': False}
+                all_exist = False
             else:
-                print(f"❌ Table '{table}' NOT FOUND (Status: {response.status_code})")
-                print(f"   Error: {response.text[:100]}")
-                missing_tables.append(table)
+                print(f"  ⚠️  {table:<20} ERROR: {response.status_code}")
+                print(f"      Response: {response.text[:100]}")
+                table_status[table] = {'exists': False, 'error': response.status_code}
+                all_exist = False
+                
         except Exception as e:
-            print(f"❌ Table '{table}' ERROR: {e}")
-            missing_tables.append(table)
-        print()
+            print(f"  ❌ {table:<20} EXCEPTION: {str(e)}")
+            table_status[table] = {'exists': False, 'error': str(e)}
+            all_exist = False
     
-    print("=" * 60)
-    print("SUMMARY")
-    print("=" * 60)
-    print(f"✅ Existing tables: {len(existing_tables)}")
-    print(f"❌ Missing tables: {len(missing_tables)}")
-    print()
-    
-    if missing_tables:
-        print("⚠️  TABLES MISSING! You need to create them.")
-        print()
-        print("📋 Run this SQL in Supabase SQL Editor:")
-        print("=" * 60)
-        print(get_create_tables_sql())
-        print("=" * 60)
-        return False
+    print("\n" + "=" * 60)
+    if all_exist:
+        print("✅ SUCCESS: All tables exist! Supabase is ready to use.")
+        print("\nYou can now:")
+        print("  1. Start your backend: cd kaasflow/backend && python app.py")
+        print("  2. Start your frontend: cd kaasflow/frontend && python app.py")
+        print("  3. Login and add data - it will auto-sync to Supabase!")
     else:
-        print("✅ ALL TABLES EXIST! Supabase is ready to use.")
-        return True
-
-def get_create_tables_sql():
-    """Return SQL to create all required tables"""
-    return """
--- KaasFlow Primary Supabase Schema
--- Copy and paste this into Supabase SQL Editor
-
--- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- 1. Users Table
-CREATE TABLE IF NOT EXISTS kf_users (
-    id TEXT PRIMARY KEY,
-    email TEXT UNIQUE NOT NULL,
-    financier_name TEXT,
-    business_name TEXT,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- 2. Settings Table
-CREATE TABLE IF NOT EXISTS kf_settings (
-    user_id TEXT PRIMARY KEY REFERENCES kf_users(id) ON DELETE CASCADE,
-    financier_name TEXT,
-    business_name TEXT,
-    theme TEXT DEFAULT 'dark',
-    lang TEXT DEFAULT 'en',
-    extra_clients INTEGER DEFAULT 0,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- 3. Clients Table
-CREATE TABLE IF NOT EXISTS kf_clients (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL REFERENCES kf_users(id) ON DELETE CASCADE,
-    name TEXT NOT NULL,
-    phone TEXT,
-    address TEXT,
-    id_num TEXT,
-    occupation TEXT,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_kf_clients_user_id ON kf_clients(user_id);
-
--- 4. Loans Table
-CREATE TABLE IF NOT EXISTS kf_loans (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL REFERENCES kf_users(id) ON DELETE CASCADE,
-    client_id TEXT NOT NULL REFERENCES kf_clients(id) ON DELETE CASCADE,
-    principal NUMERIC(15, 2) NOT NULL DEFAULT 0,
-    interest_rate NUMERIC(5, 2) DEFAULT 0,
-    duration INTEGER DEFAULT 0,
-    type TEXT DEFAULT 'monthly',
-    start_date DATE,
-    status TEXT DEFAULT 'active',
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_kf_loans_user_id ON kf_loans(user_id);
-CREATE INDEX IF NOT EXISTS idx_kf_loans_client_id ON kf_loans(client_id);
-
--- 5. Payments Table
-CREATE TABLE IF NOT EXISTS kf_payments (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL REFERENCES kf_users(id) ON DELETE CASCADE,
-    loan_id TEXT NOT NULL REFERENCES kf_loans(id) ON DELETE CASCADE,
-    amount NUMERIC(15, 2) NOT NULL DEFAULT 0,
-    date DATE NOT NULL,
-    note TEXT,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_kf_payments_user_id ON kf_payments(user_id);
-CREATE INDEX IF NOT EXISTS idx_kf_payments_loan_id ON kf_payments(loan_id);
-
--- Enable Row Level Security
-ALTER TABLE kf_users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE kf_settings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE kf_clients ENABLE ROW LEVEL SECURITY;
-ALTER TABLE kf_loans ENABLE ROW LEVEL SECURITY;
-ALTER TABLE kf_payments ENABLE ROW LEVEL SECURITY;
-
--- Policies (service role has full access)
-CREATE POLICY "Service role full access users" ON kf_users FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Service role full access settings" ON kf_settings FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Service role full access clients" ON kf_clients FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Service role full access loans" ON kf_loans FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Service role full access payments" ON kf_payments FOR ALL USING (true) WITH CHECK (true);
-
-SELECT 'KaasFlow tables created successfully!' AS message;
-"""
-
-def test_insert_data():
-    """Test inserting sample data"""
-    print("\n" + "=" * 60)
-    print("TESTING DATA INSERT")
-    print("=" * 60)
+        print("❌ ISSUE: Some tables are missing!")
+        print("\nTo fix this:")
+        print("  1. Go to: https://supabase.com/dashboard")
+        print("  2. Select your project: eahyuwpejwbqzzolajzr")
+        print("  3. Click 'SQL Editor' → 'New Query'")
+        print("  4. Copy SQL from: HOW_TO_FIX_SUPABASE.md")
+        print("  5. Paste and click 'RUN'")
+        print("\nOr open test_supabase.html in your browser for guided setup.")
     
-    headers = {
-        "apikey": SUPABASE_SERVICE_KEY,
-        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-        "Content-Type": "application/json",
-        "Prefer": "return=representation"
-    }
-    
-    # Test insert user
-    test_user = {
-        "id": "test-user-123",
-        "email": "test@example.com",
-        "financier_name": "Test User",
-        "business_name": "Test Business"
-    }
-    
-    try:
-        response = requests.post(
-            f"{SUPABASE_URL}/rest/v1/kf_users",
-            headers=headers,
-            json=test_user,
-            timeout=5
-        )
-        
-        if response.status_code in [200, 201]:
-            print("✅ Test user inserted successfully")
-            print(f"   Response: {response.json()}")
-        else:
-            print(f"❌ Failed to insert user: {response.status_code}")
-            print(f"   Error: {response.text}")
-    except Exception as e:
-        print(f"❌ Error inserting user: {e}")
+    print("=" * 60 + "\n")
+    return all_exist
 
-if __name__ == "__main__":
-    print("""
-╔═══════════════════════════════════════════════════════════╗
-║   KAASFLOW - SUPABASE CONNECTION TEST                    ║
-╚═══════════════════════════════════════════════════════════╝
-    """)
-    
-    # Test connection
-    tables_exist = test_connection()
-    
-    if tables_exist:
-        # Test data insert
-        test_insert = input("\n📝 Test data insert? (y/n): ").strip().lower()
-        if test_insert == 'y':
-            test_insert_data()
-    
-    print("\n" + "=" * 60)
-    print("TEST COMPLETE")
-    print("=" * 60)
+
+if __name__ == '__main__':
+    test_connection()
