@@ -4,38 +4,15 @@
     {
       "src": "kaasflow/backend/app.py",
       "use": "@vercel/python"
-    },
+    }
+  ],
+  "routes": [
     {
-      "src": "kaasflow/frontend/**",
-      "use": "@vercel/static"
+      "src": "/(.*)",
+      "dest": "kaasflow/backend/app.py"
     }
   ],
   "env": {
-    "SUPABASE_URL": "https://eahyuwpejwbqzzolajzr.supabase.co",
-    "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhaHl1d3BlandicXp6b2xhanpyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTA5MjI0NCwiZXhwIjoyMDk0NjY4MjQ0fQ.Mm4eOTioL1FpasqsqJPBeNdRP_BBW0_50ucBsf5Uoxs",
-    "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhaHl1d3BlandicXp6b2xhanpyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwOTIyNDQsImV4cCI6MjA5NDY2ODI0NH0.S98_O8nYZoiVj9-xq153R8VorNhehy8m46FoYIjUzvY",
-    "RESEND_API_KEY": "re_DxueLnyr_JpRSratcdi8f7xvvriXdwQtF",
-    "RESEND_FROM_EMAIL": "SamKass <welcome@samkass.site>",
-    "RAZORPAY_KEY_ID": "rzp_live_SuharfZYrJBbHj",
-    "RAZORPAY_KEY_SECRET": "FsmmZywk4NGiI1PxIS4UWb0e",
-    "JWT_SECRET": "a-different-secret-for-tokens"
-  },
-  "routes": [
-    {
-      "src": "/auth/(.*)",
-      "dest": "/kaasflow/backend/app.py"
-    },
-    {
-      "src": "/api/(.*)",
-      "dest": "/kaasflow/backend/app.py"
-    },
-    {
-      "src": "/",
-      "dest": "/kaasflow/frontend/index.html"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/kaasflow/frontend/$1"
-    }
-  ]
+    "FLASK_ENV": "production"
+  }
 }

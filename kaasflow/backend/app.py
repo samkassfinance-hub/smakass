@@ -33,9 +33,10 @@ from auth.routes import auth_bp
 from routes.sync import sync_bp
 from razorpay_integration import payment_routes
 
-
+import os
 from supabase import create_client, Client
-from flask import jsonify
+from auth.jwt_handler import decode_token
+from flask import request, jsonify
 
 # Initialize Supabase Client
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
@@ -49,7 +50,6 @@ if SUPABASE_URL and SUPABASE_KEY:
     except Exception as e:
         print(f"Warning: Failed to initialize Supabase client: {e}")
         supabase = None
-
 app.register_blueprint(auth_bp, url_prefix='/api')
 app.register_blueprint(sync_bp, url_prefix='/api/sync')
 
