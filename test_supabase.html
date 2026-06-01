@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase Connection Test - KaasFlow</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            transition: all 0.3s;
+        }
+        button:hover { background: #5568d3; transform: translateY(-2px); }
+        button:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+        .table-status {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .table-card {
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #ddd;
+        }
+        .table-card.exists { border-color: #28a745; background: #f0f9f4; }
+        .table-card.missing { border-color: #dc3545; background: #fff0f0; }
+        .table-card h3 { margin-bottom: 10px; font-size: 16px; }
+        .table-card p { margin: 5px 0; font-size: 14px; }
+        .sql-box {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 20px 0;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+        }
+        .copy-btn {
+            background: #28a745;
+            font-size: 14px;
+            padding: 8px 16px;
+        }
+        .copy-btn:hover { background: #218838; }
+        #log {
+            background: #000;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 13px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Supabase Connection Test</h1>
+        
+        <div class="status info">
+            <strong>URL:</strong> https://eahyuwpejwbqzzolajzr.supabase.co<br>
+            <strong>Status:</strong> <span id="connection-status">Not tested yet</span>
+        </div>
+
+        <div style="text-align: center; margin: 20px 0;">
+            <button onclick="testConnection()">🔌 Test Connection</button>
+            <button onclick="createTables()" id="createBtn" style="display:none;">📋 Create Tables</button>
+            <button onclick="testInsert()" id="insertBtn" style="display:none;">✍️ Test Insert</button>
+        </div>
+
+        <div id="tableStatus" class="table-status"></div>
+
+        <div id="log"></div>
+
+        <div id="sqlSection" style="display:none;">
+            <h3>📋 SQL to Run in Supabase Dashboard</h3>
+            <p style="margin: 10px 0; color: #666;">Copy this SQL and run it in: <strong>Supabase Dashboard → SQL Editor → New Query</strong></p>
+            <button class="copy-btn" onclick="copySQL()">📋 Copy SQL</button>
+            <div class="sql-box" id="sqlBox"></div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://eahyuwpejwbqzzolajzr.supabase.co';
+        const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhaHl1d3BlandicXp6b2xhenpyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTA5MjI0NCwiZXhwIjoyMDk0NjY4MjQ0fQ.Mm4eOTioL1FpasqsqJPBeNdRP_BBW0_50ucBsf5Uoxs';
+
+        const tables = ['kf_users', 'kf_clients', 'kf_loans', 'kf_payments', 'kf_settings'];
+        let tableResults = {};
+
+        function log(message, type = 'info') {
+            const logEl = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#ff6b6b' : type === 'success' ? '#51cf66' : '#0f0';
+            logEl.innerHTML += `<div style="color: ${color}">[${time}] ${message}</div>`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        async function testConnection() {
+            document.getElementById('log').innerHTML = '';
+            log('🔍 Testing Supabase connection...', 'info');
+            log(`URL: ${SUPABASE_URL}`, 'info');
+            
+            const statusEl = document.getElementById('connection-status');
+            const tableStatusEl = document.getElementById('tableStatus');
+            tableStatusEl.innerHTML = '';
+            tableResults = {};
+
+            let allExist = true;
+
+            for (const table of tables) {
+                try {
+                    log(`Checking table: ${table}`, 'info');
+                    
+                    const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}?limit=1`, {
+                        headers: {
+                            'apikey': SUPABASE_SERVICE_KEY,
+                            'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`
+                        }
+                    });
+
+                    if (response.ok) {
+                        log(`✅ Table '${table}' EXISTS`, 'success');
+                        tableResults[table] = { exists: true, count: 0 };
+                        
+                        // Get count
+                        const countResponse = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=count`, {
+                            headers: {
+                                'apikey': SUPABASE_SERVICE_KEY,
+                                'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+                                'Prefer': 'count=exact'
+                            }
+                        });
+                        
+                        if (countResponse.ok) {
+                            const range = countResponse.headers.get('content-range') || '0-0/0';
+                            const count = range.split('/')[1] || '0';
+                            tableResults[table].count = count;
+                            log(`   📊 Records in '${table}': ${count}`, 'info');
+                        }
+                    } else {
+                        log(`❌ Table '${table}' NOT FOUND (${response.status})`, 'error');
+                        tableResults[table] = { exists: false };
+                        allExist = false;
+                    }
+                } catch (error) {
+                    log(`❌ Error checking '${table}': ${error.message}`, 'error');
+                    tableResults[table] = { exists: false, error: error.message };
+                    allExist = false;
+                }
+
+                // Update UI
+                const card = document.createElement('div');
+                card.className = `table-card ${tableResults[table].exists ? 'exists' : 'missing'}`;
+                card.innerHTML = `
+                    <h3>${tableResults[table].exists ? '✅' : '❌'} ${table}</h3>
+                    <p><strong>Status:</strong> ${tableResults[table].exists ? 'Exists' : 'Missing'}</p>
+                    ${tableResults[table].exists ? `<p><strong>Records:</strong> ${tableResults[table].count}</p>` : ''}
+                `;
+                tableStatusEl.appendChild(card);
+            }
+
+            if (allExist) {
+                statusEl.innerHTML = '<span style="color: #28a745;">✅ Connected & All tables exist!</span>';
+                log('\n✅ SUCCESS! All tables exist. Supabase is ready!', 'success');
+                document.getElementById('insertBtn').style.display = 'inline-block';
+            } else {
+                statusEl.innerHTML = '<span style="color: #dc3545;">❌ Connected but tables missing!</span>';
+                log('\n⚠️  Some tables are missing. You need to create them.', 'error');
+                document.getElementById('sqlSection').style.display = 'block';
+                document.getElementById('sqlBox').textContent = getCreateTablesSQL();
+            }
+        }
+
+        async function testInsert() {
+            log('\n📝 Testing data insert...', 'info');
+            
+            const testUser = {
+                id: 'test-' + Date.now(),
+                email: 'test@example.com',
+                financier_name: 'Test User',
+                business_name: 'Test Business'
+            };
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/kf_users`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_SERVICE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify(testUser)
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    log('✅ Test user inserted successfully!', 'success');
+                    log(`   Data: ${JSON.stringify(data)}`, 'success');
+                } else {
+                    const error = await response.text();
+                    log(`❌ Failed to insert user: ${response.status}`, 'error');
+                    log(`   Error: ${error}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Error inserting user: ${error.message}`, 'error');
+            }
+        }
+
+        function copySQL() {
+            const sql = getCreateTablesSQL();
+            navigator.clipboard.writeText(sql).then(() => {
+                alert('✅ SQL copied to clipboard! Now paste it in Supabase SQL Editor.');
+            });
+        }
+
+        function getCreateTablesSQL() {
+            return `-- KaasFlow Primary Supabase Schema
+-- Copy and paste this into: Supabase Dashboard → SQL Editor → New Query → Run
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- 1. Users Table
+CREATE TABLE IF NOT EXISTS kf_users (
+    id TEXT PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL,
+    financier_name TEXT,
+    business_name TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- 2. Settings Table
+CREATE TABLE IF NOT EXISTS kf_settings (
+    user_id TEXT PRIMARY KEY REFERENCES kf_users(id) ON DELETE CASCADE,
+    financier_name TEXT,
+    business_name TEXT,
+    theme TEXT DEFAULT 'dark',
+    lang TEXT DEFAULT 'en',
+    extra_clients INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- 3. Clients Table
+CREATE TABLE IF NOT EXISTS kf_clients (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES kf_users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    phone TEXT,
+    address TEXT,
+    id_num TEXT,
+    occupation TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_kf_clients_user_id ON kf_clients(user_id);
+
+-- 4. Loans Table
+CREATE TABLE IF NOT EXISTS kf_loans (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES kf_users(id) ON DELETE CASCADE,
+    client_id TEXT NOT NULL REFERENCES kf_clients(id) ON DELETE CASCADE,
+    principal NUMERIC(15, 2) NOT NULL DEFAULT 0,
+    interest_rate NUMERIC(5, 2) DEFAULT 0,
+    duration INTEGER DEFAULT 0,
+    type TEXT DEFAULT 'monthly',
+    start_date DATE,
+    status TEXT DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_kf_loans_user_id ON kf_loans(user_id);
+CREATE INDEX IF NOT EXISTS idx_kf_loans_client_id ON kf_loans(client_id);
+
+-- 5. Payments Table
+CREATE TABLE IF NOT EXISTS kf_payments (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES kf_users(id) ON DELETE CASCADE,
+    loan_id TEXT NOT NULL REFERENCES kf_loans(id) ON DELETE CASCADE,
+    amount NUMERIC(15, 2) NOT NULL DEFAULT 0,
+    date DATE NOT NULL,
+    note TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_kf_payments_user_id ON kf_payments(user_id);
+CREATE INDEX IF NOT EXISTS idx_kf_payments_loan_id ON kf_payments(loan_id);
+
+-- Enable Row Level Security
+ALTER TABLE kf_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE kf_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE kf_clients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE kf_loans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE kf_payments ENABLE ROW LEVEL SECURITY;
+
+-- Policies (service role has full access)
+CREATE POLICY "Service role full access" ON kf_users FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Service role full access" ON kf_settings FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Service role full access" ON kf_clients FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Service role full access" ON kf_loans FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Service role full access" ON kf_payments FOR ALL USING (true) WITH CHECK (true);
+
+SELECT 'KaasFlow tables created successfully! ✅' AS message;`;
+        }
+
+        // Auto-run test on load
+        window.addEventListener('load', () => {
+            setTimeout(() => testConnection(), 500);
+        });
+    </script>
+</body>
+</html>
