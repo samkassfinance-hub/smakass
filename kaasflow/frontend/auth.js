@@ -231,21 +231,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const installBubble = document.getElementById('installBubble');
     
     if (installBubble) {
-        // Hide bubble if app is already installed or PWA not supported
-        if (!deferredPrompt) {
-            installBubble.classList.add('hidden');
-        }
+        // Show bubble by default (it animates up from bottom)
+        installBubble.classList.remove('hidden');
 
         // Click handler for install bubble
         installBubble.addEventListener('click', async () => {
-            if (!deferredPrompt) return;
-
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
-            
-            if (outcome === 'accepted') {
-                deferredPrompt = null;
-                installBubble.classList.add('hidden');
+            // If PWA install prompt is available, use it
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                
+                if (outcome === 'accepted') {
+                    deferredPrompt = null;
+                    installBubble.classList.add('hidden');
+                }
+            } else {
+                // Fallback: show alert or attempt to trigger install manually
+                alert('Install this app:\n\n1. Click the browser menu (⋮)\n2. Select "Install app"\n3. Confirm installation');
             }
         });
     }

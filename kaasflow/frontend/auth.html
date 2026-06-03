@@ -219,42 +219,45 @@
         }
 
         .install-bubble {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            width: 70px;
-            height: 70px;
+            position: absolute;
+            bottom: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90px;
+            height: 90px;
             border-radius: 50%;
             background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
-            transition: all 0.3s ease;
+            box-shadow: 0 12px 40px rgba(99, 102, 241, 0.5);
+            transition: all 0.4s ease;
             z-index: 1000;
-            animation: bubblePulse 2s ease-in-out infinite;
+            animation: floatingBubble 3s ease-in-out infinite;
         }
 
         .install-bubble:hover {
-            transform: scale(1.1);
-            box-shadow: 0 12px 35px rgba(99, 102, 241, 0.6);
+            transform: translateX(-50%) scale(1.15);
+            box-shadow: 0 16px 50px rgba(99, 102, 241, 0.8);
         }
 
         .install-bubble img {
-            width: 50px;
-            height: 50px;
+            width: 70px;
+            height: 70px;
             border-radius: 50%;
             object-fit: cover;
-            border: 2px solid white;
+            border: 3px solid white;
         }
 
-        @keyframes bubblePulse {
+        @keyframes floatingBubble {
             0%, 100% {
-                transform: scale(1);
+                bottom: -100px;
+                opacity: 0;
             }
-            50% {
-                transform: scale(1.05);
+            20%, 80% {
+                bottom: 20px;
+                opacity: 1;
             }
         }
 
@@ -329,6 +332,10 @@
                      data-size="large"
                      data-logo_alignment="left">
                 </div>
+            </div>
+
+            <div class="install-bubble" id="installBubble">
+                <img src="../../../samkaslogo.jpeg" alt="Install SamKass App">
             </div>
         </div>
     </div>
