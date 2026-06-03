@@ -1,20 +1,39 @@
 {
   "name": "SamKass – Finance Manager",
   "short_name": "SamKass",
-  "description": "Manage loans, track EMIs, and automate payment reminders.",
+  "description": "Manage loans, track EMIs, and automate payment reminders for small-scale financiers.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0a0d1a",
-  "theme_color": "#d4a017",
+  "background_color": "#f4f7f4",
+  "theme_color": "#7ed321",
   "icons": [
     {
-      "src": "samkaslogo.jpeg",
+      "src": "logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "logo.png",
       "sizes": "512x512",
-      "type": "image/jpeg",
-      "purpose": "any maskable"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
-  "categories": ["finance", "business"]
+  "categories": ["finance", "business", "productivity"],
+  "screenshots": []
 }
