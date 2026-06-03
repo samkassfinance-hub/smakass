@@ -2212,8 +2212,8 @@ function renderSettings(container) {
         </div>
       </div>
 
-      <div class="mt-4 mb-2 d-flex gap-2">
-        <button class="btn-kf-primary w-100" style="min-height:48px; font-weight: 700; display: none;" id="btn-install-app" data-ocid="settings.install_app_button">
+      <div class="mt-4 mb-2">
+        <button class="btn-kf-primary w-100" style="min-height:48px; font-weight: 700;" id="btn-install-app" data-ocid="settings.install_app_button">
           <i class="fa-solid fa-download me-2"></i>Install App
         </button>
       </div>
@@ -2616,13 +2616,14 @@ create table if not exists payments (
     e.preventDefault();
     deferredPrompt = e;
     if (installBtn) {
-      installBtn.style.display = 'block';
+      installBtn.innerHTML = '<i class="fa-solid fa-download me-2"></i>Install App';
     }
   });
 
   installBtn?.addEventListener('click', async () => {
     if (!deferredPrompt) {
-      showToast('App is already installed or not available for installation', 'info');
+      // If beforeinstallprompt not available, show manual install instructions
+      showToast('To install: Tap browser menu (⋮) → "Add to Home screen" or "Install app"', 'info');
       return;
     }
     
@@ -2630,8 +2631,12 @@ create table if not exists payments (
     const { outcome } = await deferredPrompt.userChoice;
     
     if (outcome === 'accepted') {
-      showToast('App installed successfully! You can now access it from your home screen.', 'success');
-      installBtn.style.display = 'none';
+      showToast('App installed successfully! Check your home screen.', 'success');
+      if (installBtn) {
+        installBtn.innerHTML = '<i class="fa-solid fa-check me-2"></i>App Installed';
+        installBtn.disabled = true;
+        installBtn.style.opacity = '0.6';
+      }
     } else {
       showToast('Installation cancelled', 'info');
     }
@@ -2640,11 +2645,22 @@ create table if not exists payments (
   });
 
   window.addEventListener('appinstalled', () => {
-    if (installBtn) {
-      installBtn.style.display = 'none';
-    }
     showToast('SamKass installed successfully!', 'success');
+    if (installBtn) {
+      installBtn.innerHTML = '<i class="fa-solid fa-check me-2"></i>App Installed';
+      installBtn.disabled = true;
+      installBtn.style.opacity = '0.6';
+    }
   });
+
+  // Check if already installed (standalone mode)
+  if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+    if (installBtn) {
+      installBtn.innerHTML = '<i class="fa-solid fa-check me-2"></i>App Installed';
+      installBtn.disabled = true;
+      installBtn.style.opacity = '0.6';
+    }
+  }
 }
 
 // ── PIN AUTHENTICATION HELPER ─────────────────────────────────
