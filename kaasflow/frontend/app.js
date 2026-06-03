@@ -2611,53 +2611,53 @@ create table if not exists payments (
     new bootstrap.Modal($('#confirmDeleteModal')).show();
   });
 
-  // PWA Install App Button
-  let deferredPrompt;
-  const installBtn = $('#btn-install-app');
-  
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    if (installBtn) {
-      installBtn.innerHTML = '<i class="fa-solid fa-download me-2"></i>Install App';
-    }
-  });
-
-  installBtn?.addEventListener('click', async () => {
-    if (!deferredPrompt) {
-      // If beforeinstallprompt not available, show manual install instructions
-      showToast('To install: Tap browser menu (⋮) → "Add to Home screen" or "Install app"', 'info');
-      return;
-    }
+  // PWA Install App Button - Attach after DOM is ready
+  setTimeout(() => {
+    const installBtn = $('#btn-install-app');
     
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
+    if (!installBtn) return;
     
-    if (outcome === 'accepted') {
-      showToast('App installed successfully! Check your home screen.', 'success');
-      if (installBtn) {
-        installBtn.innerHTML = '<i class="fa-solid fa-check me-2"></i>App Installed';
-        installBtn.disabled = true;
-        installBtn.style.opacity = '0.6';
-      }
-    } else {
-      showToast('Installation cancelled', 'info');
-    }
-    
-    deferredPrompt = null;
-  });
-
-  window.addEventListener('appinstalled', () => {
-    showToast('SamKass installed successfully!', 'success');
-    if (installBtn) {
+    // Check if already installed (standalone mode)
+    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+      console.log('✅ App already running in standalone mode');
       installBtn.innerHTML = '<i class="fa-solid fa-check me-2"></i>App Installed';
       installBtn.disabled = true;
       installBtn.style.opacity = '0.6';
+      return;
     }
-  });
-
-  // Check if already installed (standalone mode)
-  if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+    
+    installBtn.addEventListener('click', async () => {
+      console.log('🔘 Install button clicked');
+      console.log('📦 deferredPrompt:', window.deferredPrompt);
+      
+      if (!window.deferredPrompt) {
+        // If beforeinstallprompt not available, show manual install instructions
+        showToast('To install: Tap browser menu (⋮) → "Add to Home screen" or "Install app"', 'info');
+        return;
+      }
+      
+      try {
+        window.deferredPrompt.prompt();
+        const { outcome } = await window.deferredPrompt.userChoice;
+        console.log('👤 User choice:', outcome);
+        
+        if (outcome === 'accepted') {
+          showToast('App installed successfully! Check your home screen.', 'success');
+          installBtn.innerHTML = '<i class="fa-solid fa-check me-2"></i>App Installed';
+          installBtn.disabled = true;
+          installBtn.style.opacity = '0.6';
+        } else {
+          showToast('Installation cancelled', 'info');
+        }
+      } catch (err) {
+        console.error('❌ Install prompt error:', err);
+        showToast('To install: Tap browser menu (⋮) → "Add to Home screen"', 'info');
+      }
+      
+      window.deferredPrompt = null;
+    });
+  }, 100);
+}
     if (installBtn) {
       installBtn.innerHTML = '<i class="fa-solid fa-check me-2"></i>App Installed';
       installBtn.disabled = true;
@@ -4289,6 +4289,25 @@ window.closeContactOnOverlay = function(e) {
     closeModal('contactModal');
   }
 }
+
+// ── PWA INSTALL HANDLER (Must be before DOMContentLoaded) ────────
+window.deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  console.log('✅ PWA: beforeinstallprompt event captured');
+  e.preventDefault();
+  window.deferredPrompt = e;
+});
+
+window.addEventListener('appinstalled', () => {
+  console.log('✅ PWA: App installed successfully');
+  showToast('SamKass installed successfully!', 'success');
+  const installBtn = $('#btn-install-app');
+  if (installBtn) {
+    installBtn.innerHTML = '<i class="fa-solid fa-check me-2"></i>App Installed';
+    installBtn.disabled = true;
+    installBtn.style.opacity = '0.6';
+  }
+});
 
 // ── BOOT ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
