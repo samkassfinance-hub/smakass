@@ -11,31 +11,9 @@ const KEYS = {
   pendingEmail: "kf_pending_email",
 } as const;
 
-let activeEmail: string | null = null;
-
-export function setActiveEmail(email: string | null) {
-  activeEmail = email;
-}
-
-export function getActiveEmail(): string | null {
-  return activeEmail;
-}
-
-function getScopedKey(baseKey: string): string {
-  // Global keys not scoped by email
-  if (
-    baseKey === KEYS.session ||
-    baseKey === KEYS.auth ||
-    baseKey === KEYS.pendingEmail
-  ) {
-    return baseKey;
-  }
-  return activeEmail ? `${baseKey}_${activeEmail}` : baseKey;
-}
-
 function parseJSON<T>(key: string, fallback: T): T {
   try {
-    const raw = localStorage.getItem(getScopedKey(key));
+    const raw = localStorage.getItem(key);
     if (raw === null) return fallback;
     return JSON.parse(raw) as T;
   } catch {
@@ -44,7 +22,7 @@ function parseJSON<T>(key: string, fallback: T): T {
 }
 
 function setJSON<T>(key: string, value: T): void {
-  localStorage.setItem(getScopedKey(key), JSON.stringify(value));
+  localStorage.setItem(key, JSON.stringify(value));
 }
 
 // ---------- Clients ----------
@@ -144,27 +122,21 @@ export function saveAuth(auth: AuthData): void {
 }
 
 // ---------- Session ----------
-export interface SessionData {
+export function getSession(): { loggedIn: boolean; loginTime: string } | null {
+  return parseJSON<{ loggedIn: boolean; loginTime: string } | null>(
+    KEYS.session,
+    null,
+  );
+}
+export function saveSession(session: {
   loggedIn: boolean;
   loginTime: string;
-  email?: string;
-}
-
-export function getSession(): SessionData | null {
-  return parseJSON<SessionData | null>(KEYS.session, null);
-}
-
-export function saveSession(session: SessionData): void {
+}): void {
   setJSON(KEYS.session, session);
-  if (session.email) {
-    setActiveEmail(session.email);
-  }
 }
-
 export function clearSession(): void {
   localStorage.removeItem(KEYS.session);
   localStorage.removeItem(KEYS.auth);
-  setActiveEmail(null);
 }
 
 // ---------- Navigation Helpers ----------

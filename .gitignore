@@ -23,3 +23,6 @@ dist/
 
 # Databases
 *.db
+
+# Vercel
+.vercel

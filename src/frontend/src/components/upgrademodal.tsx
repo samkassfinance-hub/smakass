@@ -234,26 +234,21 @@ function PlanCard({
         type="button"
         data-ocid={`upgrade.choose_${planType}_button`}
         onClick={onSelect}
-        className="hover-lift"
         style={{
           width: "100%",
-          padding: "24px 32px",
-          borderRadius: "16px",
-          border: highlighted ? "none" : "2px solid var(--kf-amber)",
+          padding: "12px 16px",
+          borderRadius: "12px",
+          border: highlighted ? "none" : "1px solid var(--kf-amber)",
           background: highlighted
             ? "linear-gradient(135deg, var(--kf-amber), var(--kf-amber-dark))"
             : "transparent",
           color: highlighted ? "#0a0e1a" : "var(--kf-amber)",
           fontWeight: 800,
-          fontSize: "1.4rem",
+          fontSize: "0.875rem",
           cursor: "pointer",
           fontFamily: "'Space Grotesk', sans-serif",
           transition: "all 0.2s",
           marginTop: "auto",
-          boxShadow: highlighted
-            ? "0 6px 20px rgba(245,158,11,0.35)"
-            : "0 2px 8px rgba(245,158,11,0.1)",
-          letterSpacing: "-0.01em",
         }}
         onMouseEnter={(e) => {
           if (!highlighted) {
@@ -269,15 +264,15 @@ function PlanCard({
       >
         {isTamil
           ? planType === "monthly"
-            ? "மாதாந்திரக்கு மேம்படுத்து"
+            ? "மாதாந்திர தேர்வு"
             : planType === "quarterly"
-              ? "காலாண்டுக்கு மேம்படுத்து"
-              : "ஆண்டுக்கு மேம்படுத்து"
+              ? "காலாண்டு தேர்வு"
+              : "ஆண்டு தேர்வு"
           : planType === "monthly"
-            ? "Upgrade to Monthly"
+            ? "Choose Monthly"
             : planType === "quarterly"
-              ? "Upgrade to Quarterly"
-              : "Upgrade to Yearly"}
+              ? "Choose Quarterly"
+              : "Choose Yearly"}
       </button>
     </div>
   );
