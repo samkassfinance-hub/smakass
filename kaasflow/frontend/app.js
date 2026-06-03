@@ -41,7 +41,7 @@ let pendingPaymentAmount = 0;
 // ── TRANSLATIONS ─────────────────────────────────────────────
 const T = {
   en: {
-    dashboard: 'Dashboard', clients: 'Clients', loans: 'Loans',
+    home: 'Home', clients: 'Clients', loans: 'Loans',
     collect: 'Collect', reports: 'Reports', settings: 'Settings',
     totalClients: 'Total Clients', loanGiven: 'Loan Given',
     collected: 'Collected', pending: 'Pending',
@@ -115,7 +115,7 @@ const T = {
     extraClients: 'Extra Clients'
   },
   ta: {
-    dashboard: 'டாஷ்போர்டு', clients: 'வாடிக்கையாளர்கள்',
+    home: 'முகப்பு', clients: 'வாடிக்கையாளர்கள்',
     loans: 'கடன்கள்', collect: 'வசூல்', reports: 'அறிக்கைகள்',
     settings: 'அமைப்புகள்',
     totalClients: 'மொத்த வாடிக்கையாளர்கள்', loanGiven: 'கொடுத்த கடன்',
@@ -195,37 +195,37 @@ const T = {
 
 const INDIAN_LANGS = {
   as: {
-    dashboard: 'ড্যাশবৰ্ড', clients: 'গ্ৰাহকসকল', loans: 'ঋণসমূহ',
+    home: 'গৃহ', clients: 'গ্ৰাহকসকল', loans: 'ঋণসমূহ',
     collect: 'সংগ্ৰহ', reports: 'প্ৰতিবেদন', settings: 'ছেটিংছ',
     logout: 'লগ আউট', language: 'ভাষা', cancel: 'বাতিল',
     saveClient: 'গ্ৰাহক সংৰক্ষণ', saveLoan: 'ঋণ সংৰক্ষণ', clearData: 'তথ্য মচি পেলাওক'
   },
   bn: {
-    dashboard: 'ড্যাশবোর্ড', clients: 'গ্রাহক', loans: 'ঋণ',
+    home: 'হোম', clients: 'গ্রাহক', loans: 'ঋণ',
     collect: 'সংগ্রহ', reports: 'রিপোর্ট', settings: 'সেটিংস',
     logout: 'লগ আউট', language: 'ভাষা', cancel: 'বাতিল',
     saveClient: 'গ্রাহক সংরক্ষণ', saveLoan: 'ঋণ সংরক্ষণ', clearData: 'সব তথ্য মুছুন'
   },
   brx: {
-    dashboard: 'ড্যাশবোৰ্ড', clients: 'গ্রাহকশিং', loans: 'শেন্থোংশিং',
+    home: 'হোম', clients: 'গ্রাহকশিং', loans: 'শেন্থোংশিং',
     collect: 'খোমজিনবা', reports: 'রিপোর্তশিং', settings: 'সেতিংস',
     logout: 'লগ আউত', language: 'লোন', cancel: 'তোকপা',
     saveClient: 'গ্রাহক থমজিনবা', saveLoan: 'শেন্থোং থমজিনবা', clearData: 'অপুম্বা দেতা লৌথোকপা'
   },
   doi: {
-    dashboard: 'डैशबोर्ड', clients: 'ग्राहक', loans: 'कर्ज',
+    home: 'घर', clients: 'ग्राहक', loans: 'कर्ज',
     collect: 'इकट्ठा', reports: 'रिपोर्ट', settings: 'सैटिंग्स',
     logout: 'लॉगआउट', language: 'बोली', cancel: 'रद्द',
     saveClient: 'ग्राहक बचाओ', saveLoan: 'कर्ज बचाओ', clearData: 'सारे डेटा साफ करो'
   },
   gu: {
-    dashboard: 'ડેશબોર્ડ', clients: 'ગ્રાહકો', loans: 'લોન',
+    home: 'હોમ', clients: 'ગ્રાહકો', loans: 'લોન',
     collect: 'એકત્રિત કરો', reports: 'અહેવાલો', settings: 'સેટિંગ્સ',
     logout: 'લોગ આઉટ', language: 'ભાષા', cancel: 'રદ કરો',
     saveClient: 'ગ્રાહક સાચવો', saveLoan: 'લોન સાચવો', clearData: 'બધો ડેટા સાફ કરો'
   },
   hi: {
-    dashboard: 'डैशबोर्ड', clients: 'ग्राहक', loans: 'ऋण',
+    home: 'होम', clients: 'ग्राहक', loans: 'ऋण',
     collect: 'संग्रह', reports: 'रिपोर्ट', settings: 'सेटिंग्स',
     logout: 'लॉग आउट', language: 'भाषा', cancel: 'रद्द करें',
     saveClient: 'ग्राहक सहेजें', saveLoan: 'ऋण सहेजें', clearData: 'सभी डेटा मिटाएं',
@@ -233,92 +233,92 @@ const INDIAN_LANGS = {
     dueToday: 'आज देय', recordPayment: 'भुगतान दर्ज करें', changePin: 'पिन बदलें'
   },
   kn: {
-    dashboard: 'ಡ್ಯಾಶ್‌ಬೋರ್ಡ್', clients: 'ಗ್ರಾಹಕರು', loans: 'ಸಾಲಗಳು',
+    home: 'ಮನೆ', clients: 'ಗ್ರಾಹಕರು', loans: 'ಸಾಲಗಳು',
     collect: 'ಸಂಗ್ರಹಿಸಿ', reports: 'ವರದಿಗಳು', settings: 'ಸೆಟ್ಟಿಂಗ್‌ಗಳು',
     logout: 'ಲಾಗ್ ಔಟ್', language: 'ಭಾಷೆ', cancel: 'ರದ್ದುಗೊಳಿಸु',
     saveClient: 'ಗ್ರಾಹಕರನ್ನು ಉಳಿಸು', saveLoan: 'ಸಾಲವನ್ನು ಉಳಿಸು', clearData: 'ಎಲ್ಲಾ ಡೇಟಾವನ್ನು ಅಳಿಸು'
   },
   ks: {
-    dashboard: 'ڈیش بورڈ', clients: 'خریدار', loans: 'قرضہ',
+    home: '', clients: 'خریدار', loans: 'قرضہ',
     collect: 'جمع کَرُن', reports: 'رپوٹ', settings: 'سیٹنگ',
     logout: 'لاگ آؤٹ', language: 'زبان', cancel: 'منسوخ',
     saveClient: 'خریدار تھاوُن', saveLoan: 'قرضہ تھاوُن', clearData: 'ساری ڈیٹا صاف کَرُن'
   },
   kok: {
-    dashboard: 'डॅशबोर्ड', clients: 'गिऱ्हाईक', loans: 'ऋण',
+    home: '', clients: 'गिऱ्हाईक', loans: 'ऋण',
     collect: 'एकठा करप', reports: 'अहवाल', settings: 'मांडणी',
     logout: 'भायर सरप', language: 'भास', cancel: 'रद्द करप',
     saveClient: 'गिऱ्हाईक सांबाळप', saveLoan: 'ऋण सांबाळप', clearData: 'सगळी म्हायती काडून उडोवप'
   },
   mai: {
-    dashboard: 'डैशबोर्ड', clients: 'ग्राहक', loans: 'ऋण',
+    home: '', clients: 'ग्राहक', loans: 'ऋण',
     collect: 'संग्रह', reports: 'रिपोर्ट', settings: 'सेटिंग्स',
     logout: 'लॉगआउट', language: 'भाषा', cancel: 'रद्द करू',
     saveClient: 'ग्राहक बचाउ', saveLoan: 'ऋण बचाउ', clearData: 'सभ डेटा साफ करू'
   },
   ml: {
-    dashboard: 'ഡാഷ്‌ബോർഡ്', clients: 'ഇടപാടുകാർ', loans: 'വായ്പകൾ',
+    home: '', clients: 'ഇടപാടുകാർ', loans: 'വായ്പകൾ',
     collect: 'ശേഖരിക്കുക', reports: 'റിപ്പോർട്ടുകൾ', settings: 'ക്രമീകരണങ്ങൾ',
     logout: 'ലോഗ് ഔട്ട്', language: 'ഭാഷ', cancel: 'റദ്ദാക്കുക',
     saveClient: 'ഇടപാടുകാരനെ സംരക്ഷിക്കുക', saveLoan: 'വായ്പ സംരക്ഷിക്കുക', clearData: 'എല്ലാ ഡാറ്റയും മായ്ക്കുക'
   },
   mni: {
-    dashboard: 'ডেশবোর্দ', clients: 'গ্রাহকশিং', loans: 'শেন্থোংশিং',
+    home: '', clients: 'গ্রাহকশিং', loans: 'শেন্থোংশিং',
     collect: 'খোমজিনবা', reports: 'রিপোর্তশিং', settings: 'সেতিংস',
     logout: 'লোগ আউত', language: 'লোন', cancel: 'তোকপা',
     saveClient: 'গ্রাহক থমজিনবা', saveLoan: 'শেন্থোং থমজিনবা', clearData: 'অপুম্বা দেতা লৌথোকপা'
   },
   mr: {
-    dashboard: 'डॅशबोर्ड', clients: 'ग्राहक', loans: 'कर्ज',
+    home: '', clients: 'ग्राहक', loans: 'कर्ज',
     collect: 'वसुली', reports: 'अहवाल', settings: 'सेटिंग्ज',
     logout: 'बाहेर पडा', language: 'भाषा', cancel: 'रद्द करा',
     saveClient: 'ग्राहक जतन करा', saveLoan: 'कर्ज जतन करा', clearData: 'सर्व डेटा मिटवा',
     totalClients: 'एकूण ग्राहक', loanGiven: 'दिलेले कर्ज', collected: 'वसुली केलेले', pending: 'प्रलंबित'
   },
   ne: {
-    dashboard: 'ड्यासबोर्ड', clients: 'ग्राहकहरू', loans: 'ऋणहरू',
+    home: '', clients: 'ग्राहकहरू', loans: 'ऋणहरू',
     collect: 'संकलन', reports: 'रिपोर्टहरू', settings: 'सेटिङहरू',
     logout: 'लग आउट', language: 'भाषा', cancel: 'रद्द गर्नुहोस्',
     saveClient: 'ग्राहक सुरक्षित गर्नुहोस्', saveLoan: 'ऋण सुरक्षित गर्नुहोस्', clearData: 'सबै डाटा मेटाउनुहोस्'
   },
   or: {
-    dashboard: 'ଡ୍ୟାସବୋର୍ଡ', clients: 'ଗ୍ରାହକ', loans: 'ଋଣ',
+    home: '', clients: 'ଗ୍ରାହକ', loans: 'ଋଣ',
     collect: 'ସଂଗ୍ରହ', reports: 'ରିପୋର୍ଟ', settings: 'ସେଟିଂସ',
     logout: 'ଲଗ ଆଉଟ', language: 'ଭାଷା', cancel: 'ବାତିล କରନ୍ତୁ',
     saveClient: 'ଗ୍ରାହକ ସଞ୍ચୟ କରନ୍ତୁ', saveLoan: 'ଋଣ ସଞ୍ଚୟ କରନ୍ତು', clearData: 'ସବୁ ଡାଟା ଲିଭାନ୍ତୁ'
   },
   pa: {
-    dashboard: 'ਡੈਸ਼ਬੋਰਡ', clients: 'ਗਾਹਕ', loans: 'ਕਰਜ਼ੇ',
+    home: '', clients: 'ਗਾਹਕ', loans: 'ਕਰਜ਼ੇ',
     collect: 'ਇਕੱਠਾ ਕਰੋ', reports: 'ਰਿਪੋਰਟਾਂ', settings: 'ਸੈਟਿੰਗਾਂ',
     logout: 'ਲੌਗ ਆਉਟ', language: 'ਭਾਸ਼ਾ', cancel: 'ਰੱਦ ਕਰੋ',
     saveClient: 'ਗਾਹਕ ਸੰਭਾਲੋ', saveLoan: 'ਕਰਜ਼ਾ ਸੰਭਾਲੋ', clearData: 'ਸਾਰਾ ਡੇਟਾ ਸਾਫ਼ ਕਰੋ'
   },
   sa: {
-    dashboard: 'पट्टिका', clients: 'ग्राहकाः', loans: 'ऋणानि',
+    home: '', clients: 'ग्राहकाः', loans: 'ऋणानि',
     collect: 'संग्रहः', reports: 'विवरणानि', settings: 'समायोजनानि',
     logout: 'बहिर्गमनम्', language: 'भाषा', cancel: 'प्रत्याहारः',
     saveClient: 'ग्राहकं रक्षतु', saveLoan: 'ऋणं रक्षतु', clearData: 'सर्वाणि विवरणानि निष्कासयतु'
   },
   sat: {
-    dashboard: 'ড্যাশবোর্ড', clients: 'গ্রাহককো', loans: 'ঋণকো',
+    home: '', clients: 'গ্রাহককো', loans: 'ঋণকো',
     collect: 'তুমাল', reports: 'রিপোর্টকো', settings: 'সেটিংস',
     logout: 'লগআউট', language: 'পারসি', cancel: 'বাতিল',
     saveClient: 'গ্রাহক সাঁচাও', saveLoan: 'ঋণ সাঁচাও', clearData: 'সাঁচাও ডাটা মেটাও'
   },
   sd: {
-    dashboard: 'ڊيش بورڊ', clients: 'گراهڪ', loans: 'قرضا',
+    home: '', clients: 'گراهڪ', loans: 'قرضا',
     collect: 'گڏ ڪرڻ', reports: 'رپورتون', settings: 'سيٽنگون',
     logout: 'لاگ آئوٽ', language: 'ٻولي', cancel: 'رد ڪرڻ',
     saveClient: 'گراهڪ بچايو', saveLoan: 'قرضو بچايو', clearData: 'سڄو ڊيٽا ختم ڪريو'
   },
   te: {
-    dashboard: 'డాష్‌బోర్డ్', clients: 'కస్టమర్లు', loans: 'రుణాలు',
+    home: '', clients: 'కస్టమర్లు', loans: 'రుణాలు',
     collect: 'వసూలు', reports: 'నివేదికలు', settings: 'సెట్టింగ్స్',
     logout: 'లాగ్ అవుట్', language: 'భాష', cancel: 'రద్దు చేయి',
     saveClient: 'కస్టమర్ సేవ్ చేయి', saveLoan: 'రుణం సేవ్ చేయి', clearData: 'మొత్తం డేటా తుడిచివేయి'
   },
   ur: {
-    dashboard: 'ڈیش بورڈ', clients: 'گراہک', loans: 'قرضے',
+    home: '', clients: 'گراہک', loans: 'قرضے',
     collect: 'وصولی', reports: 'رپورٹیں', settings: 'سیٹنگز',
     logout: 'لاگ آؤట్', language: 'زبان', cancel: 'منسوخ کریں',
     saveClient: 'گراہک محفوظ کریں', saveLoan: 'قرضہ محفوظ کریں', clearData: 'تمام डेटा साफ करें'
@@ -329,7 +329,7 @@ Object.assign(T, INDIAN_LANGS);
 
 // ── STATE ─────────────────────────────────────────────────────
 const state = {
-  page: 'dashboard',
+  page: 'home',
   lang: 'en',
   theme: 'light',
   session: null,
@@ -1022,7 +1022,7 @@ function navigateTo(page) {
   destroyCharts();
 
   const pages = {
-    dashboard: renderDashboard,
+    home: renderHome,
     clients:   renderClients,
     loans:     renderLoans,
     collection: renderCollection,
@@ -1264,8 +1264,8 @@ function calcNextDue(loan, payments = null) {
   return null;
 }
 
-// ── DASHBOARD ─────────────────────────────────────────────────
-function renderDashboard(container) {
+// ── HOME ─────────────────────────────────────────────────
+function renderHome(container) {
   const clients = Store.clients();
   const loans = Store.loans();
   const payments = Store.payments();
@@ -1285,36 +1285,36 @@ function renderDashboard(container) {
   const recentPayments = [...payments].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
 
   container.innerHTML = `
-    <div class="page-section" data-ocid="dashboard.page">
+    <div class="page-section" data-ocid="home.page">
       <div class="kpi-grid stagger-children">
-        <div class="kpi-card" data-ocid="dashboard.total_clients_card">
+        <div class="kpi-card" data-ocid="home.total_clients_card">
           <div class="kpi-label">${t('totalClients')}</div>
           <div class="kpi-value">${clients.length}</div>
           <i class="fa-solid fa-users kpi-icon"></i>
         </div>
-        <div class="kpi-card" data-ocid="dashboard.loan_given_card">
+        <div class="kpi-card" data-ocid="home.loan_given_card">
           <div class="kpi-label">${t('loanGiven')}</div>
           <div class="kpi-value">${fmtCur(totalLoanGiven)}</div>
           <i class="fa-solid fa-money-bill kpi-icon"></i>
         </div>
-        <div class="kpi-card success" data-ocid="dashboard.collected_card">
+        <div class="kpi-card success" data-ocid="home.collected_card">
           <div class="kpi-label">${t('collected')}</div>
           <div class="kpi-value">${fmtCur(totalCollected)}</div>
           <i class="fa-solid fa-circle-check kpi-icon"></i>
         </div>
-        <div class="kpi-card danger" data-ocid="dashboard.pending_card">
+        <div class="kpi-card danger" data-ocid="home.pending_card">
           <div class="kpi-label">${t('pending')}</div>
           <div class="kpi-value">${fmtCur(pending)}</div>
           <i class="fa-solid fa-clock kpi-icon"></i>
         </div>
       </div>
 
-      <div class="kf-card" data-ocid="dashboard.due_today_card">
+      <div class="kf-card" data-ocid="home.due_today_card">
         <div class="section-title"><i class="fa-solid fa-calendar-day"></i>${t('dueToday')} (${dueToday.length})</div>
         <div class="stagger-children">${dueToday.length === 0
           ? `<p class="text-muted-kf" style="font-size:.875rem;margin:0">${t('noDueToday')}</p>`
           : dueToday.slice(0, 6).map(({ loan, stats, client }, i) => `
-            <div class="due-today-item" data-ocid="dashboard.due_today.item.${i + 1}">
+            <div class="due-today-item" data-ocid="home.due_today.item.${i + 1}">
               <div>
                 <div class="due-today-name">${client ? client.name : 'Unknown'}</div>
                 <div class="due-today-meta">${t(loan.type)} EMI · ${stats.isOverdue ? `<span style="color:var(--color-danger)">${stats.daysOverdue}d overdue</span>` : 'Due today'}</div>
@@ -1324,21 +1324,21 @@ function renderDashboard(container) {
         }
         </div></div>
 
-      <div class="kf-card" data-ocid="dashboard.monthly_chart_card">
+      <div class="kf-card" data-ocid="home.monthly_chart_card">
         <div class="section-title"><i class="fa-solid fa-chart-bar"></i>${t('monthlyCollection')}</div>
         <div class="chart-wrapper">
           <canvas id="dash-chart" class="chart-canvas"></canvas>
         </div>
       </div>
 
-      <div class="kf-card" data-ocid="dashboard.recent_payments_card">
+      <div class="kf-card" data-ocid="home.recent_payments_card">
         <div class="section-title"><i class="fa-solid fa-receipt"></i>${t('recentPayments')}</div>
         <div class="stagger-children">${recentPayments.length === 0
           ? `<p class="text-muted-kf" style="font-size:.875rem;margin:0">${t('noPayments')}</p>`
           : recentPayments.map((p, i) => {
               const loan = loans.find(l => l.id === p.loanId);
               const client = loan ? clients.find(c => c.id === loan.clientId) : null;
-              return `<div class="payment-row" data-ocid="dashboard.payment.item.${i + 1}">
+              return `<div class="payment-row" data-ocid="home.payment.item.${i + 1}">
                 <div>
                   <div style="font-weight:700">${client ? client.name : 'Unknown'}</div>
                   <div class="payment-row-date">${fmtDate(p.date)}${p.note ? ' · ' + p.note : ''}</div>
@@ -4400,3 +4400,4 @@ document.addEventListener('visibilitychange', () => {
     });
   }
 });
+
