@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#0a0d1a" />
+  <meta name="theme-color" content="#f4f7f4" />
   <title>SamKass – Finance Manager</title>
   <meta name="description"
     content="SamKass – Manage loans, track EMIs, and automate payment reminders for small-scale financiers." />
@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="../../../samkaslogo.jpeg" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="SamKass" />
 
 
@@ -24,6 +24,51 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+Tamil:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
   <style>
+    /* Loading indicator - show before JS loads */
+    #app-loading {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #f4f7f4;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    #app-loading .loader {
+      text-align: center;
+    }
+    #app-loading h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2rem;
+      font-weight: 800;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, #7ed321, #4caf1a);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    #app-loading .dots {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+    #app-loading .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #7ed321;
+      animation: bounce 0.6s ease-in-out infinite;
+    }
+    #app-loading .dot:nth-child(2) { animation-delay: 0.1s; }
+    #app-loading .dot:nth-child(3) { animation-delay: 0.2s; }
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0.7); opacity: 0.5; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+
     /* UI/UX VARIABLES */
     :root, :root[data-theme="dark"] {
       /* Backgrounds */
@@ -783,8 +828,20 @@
 
 <body id="app-body">
 
+  <!-- ==== MOBILE LOADING INDICATOR ==== -->
+  <div id="app-loading">
+    <div class="loader">
+      <h1>SamKass</h1>
+      <div class="dots">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ==== LOADING SCREEN ==== -->
-  <div id="loading-screen">
+  <div id="loading-screen" style="display:none;">
     <div class="loading-content">
       <div class="loading-logo" style="margin-bottom: 1.5rem; text-align: center; display: flex; flex-direction: column; align-items: center;">
         <div style="width: 120px; height: 120px; border-radius: 50%; box-shadow: 0 0 25px var(--green-glow); margin-bottom: 16px; border: 2px solid var(--border-default); display: flex; align-items: center; justify-content: center; overflow: hidden; background: white;">
@@ -1643,6 +1700,19 @@
     </div>
     <div class="info-modal-body" id="privacyContent">
       <p><strong>Effective Date:</strong> [Insert Date]</p>
+      
+      <h4>Founder</h4>
+      <p><strong>Mohanakannan S</strong> is the Founder of <strong>SAMKASS Finance Web App</strong>, a SAAS web app developer focused on technology innovation, AI-powered solutions, finance systems, and modern web development.</p>
+      
+      <p>He is a student at <strong>Karpagam Institute of Technology</strong>, pursuing a degree in <strong>Electrical and Electronics Engineering</strong> in the software batch. He is passionate about the IT sector and actively engages in various projects, including building browser games, AI-powered platforms, SaaS web applications, and full-stack development projects.</p>
+      
+      <p>Mohanakannan has programming knowledge in <strong>Java, C, and Python</strong>, along with experience in modern web technologies and software development. He is also a member of the <strong>AWS Club</strong>, where he focuses on cloud technologies, programming skills, and modern computing solutions.</p>
+      
+      <p>He has completed several certifications in networking, data science, and related technical fields, reflecting his commitment to mastering technology and contributing to meaningful and innovative projects.</p>
+      
+      <p>Mohanakannan is interested in <strong>Artificial Intelligence, cloud computing, startup development, and future technologies</strong>. Through his platforms and projects, he aims to build impactful digital solutions that combine software, electronics, AI, and finance systems for real-world applications.</p>
+      
+      <p>His vision is to become a successful technology entrepreneur and contribute meaningful innovations to the global tech industry.</p>
       
       <h4>1. Introduction</h4>
       <p>Welcome to SamKass ("we," "our," or "us"). We are committed to protecting your privacy and ensuring that your personal and business data is handled securely. This Privacy Policy explains how we collect, use, and protect your information when you use the SamKass Finance Manager web application.</p>

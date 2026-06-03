@@ -747,6 +747,12 @@ async function logout() {
 
 // ── INIT ──────────────────────────────────────────────────────
 function init() {
+  // Hide mobile loading indicator
+  const mobileLoader = document.getElementById('app-loading');
+  if (mobileLoader) {
+    mobileLoader.style.display = 'none';
+  }
+
   // Check if token and email are in query parameters (from magic link redirect)
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.has('token')) {
@@ -759,6 +765,7 @@ function init() {
   }
 
   const settings = Store.settings();
+  // Default to light mode for better mobile compatibility
   applyTheme(settings.theme || 'light');
   applyLang(settings.lang || 'en');
 
