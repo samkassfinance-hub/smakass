@@ -2701,13 +2701,6 @@ create table if not exists payments (
     });
   }, 100);
 }
-    if (installBtn) {
-      installBtn.innerHTML = '<i class="fa-solid fa-check me-2"></i>App Installed';
-      installBtn.disabled = true;
-      installBtn.style.opacity = '0.6';
-    }
-  }
-}
 
 // ── PIN AUTHENTICATION HELPER ─────────────────────────────────
 function requirePinToProceed(actionMsg, callback) {
