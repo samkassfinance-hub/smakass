@@ -747,15 +747,21 @@ async function logout() {
 
 // ── INIT ──────────────────────────────────────────────────────
 function init() {
+  console.log('🚀 INIT: Starting app initialization...');
+  
   // Hide mobile loading indicator
   const mobileLoader = document.getElementById('app-loading');
   if (mobileLoader) {
+    console.log('✅ INIT: Hiding mobile loader');
     mobileLoader.style.display = 'none';
+  } else {
+    console.warn('⚠️ INIT: Mobile loader element not found');
   }
 
   // Check if token and email are in query parameters (from magic link redirect)
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.has('token')) {
+    console.log('🔑 INIT: Token found in URL parameters');
     const token = urlParams.get('token');
     const email = urlParams.get('email') || '';
     const user = { email: email, name: email.split('@')[0] };
@@ -765,14 +771,20 @@ function init() {
   }
 
   const settings = Store.settings();
+  console.log('⚙️ INIT: Settings loaded:', settings);
+  
   // Default to light mode for better mobile compatibility
   applyTheme(settings.theme || 'light');
   applyLang(settings.lang || 'en');
+  
+  console.log('🎨 INIT: Theme and language applied');
 
   // ── Register Service Worker for notification action buttons ──
   if ('serviceWorker' in navigator) {
+    console.log('📡 INIT: Registering service worker...');
     navigator.serviceWorker.register('./sw.js', { scope: './' })
       .then(() => {
+        console.log('✅ INIT: Service worker registered');
         // Listen for messages from SW (Paid / Pending button taps)
         navigator.serviceWorker.addEventListener('message', e => {
           const msg = e.data || {};
@@ -781,22 +793,36 @@ function init() {
           else if (msg.type === 'NOTIF_OPEN_COLLECTION') navigateTo('collection');
         });
       })
-      .catch(() => {}); // non-critical
+      .catch((err) => {
+        console.warn('⚠️ INIT: Service worker registration failed:', err);
+      });
   }
 
+  console.log('🔐 INIT: Checking login status...');
   if (isLoggedIn()) {
+    console.log('✅ INIT: User is logged in');
     state.session = getSession();
+    console.log('👤 INIT: Session:', state.session);
+    
     if (hasPin()) {
+      console.log('🔒 INIT: PIN exists, showing PIN lock');
       showPinLock();
     } else {
+      console.log('🆕 INIT: No PIN, showing PIN setup');
       showPinSetup();
     }
   } else {
+    console.log('👋 INIT: User not logged in, showing auth screen');
     showAuth();
   }
 
+  console.log('🔗 INIT: Binding global events');
   bindGlobal();
+  
+  console.log('⏰ INIT: Scheduling notifications');
   scheduleNotifications();
+  
+  console.log('✅ INIT: Initialization complete!');
 }
 
 // ── Notification action: ✅ Paid ──────────────────────────────
@@ -4311,12 +4337,21 @@ window.addEventListener('appinstalled', () => {
 
 // ── BOOT ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  console.log('🎬 BOOT: DOMContentLoaded event fired');
+  
   if (typeof RazorpayPayment !== 'undefined') {
+    console.log('💳 BOOT: Initializing Razorpay...');
     RazorpayPayment.init();
+  } else {
+    console.warn('⚠️ BOOT: RazorpayPayment not found');
   }
   
   // Brief loading screen delay for smooth UX
-  setTimeout(() => init(), 400); // Keep the UX delay
+  console.log('⏳ BOOT: Waiting 400ms before calling init()...');
+  setTimeout(() => {
+    console.log('▶️ BOOT: Calling init() now');
+    init();
+  }, 400); // Keep the UX delay
 });
 
 // Auto-Sync when returning to the app from the background (Cross-device real-time sync)
