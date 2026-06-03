@@ -1853,23 +1853,15 @@
   <!-- Supabase JS SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <!-- Supabase Cloud Sync -->
-  <script src="supabase_sync.js?v=3"></script>
+  <!-- App Script - MUST LOAD FIRST -->
+  <script src="app.js?v=14"></script>
 
-  <!-- Secondary Supabase Sync -->
-  <script src="secondary_supabase.js"></script>
-
-  <!-- Razorpay Integration -->
-  <script src="razorpay.js"></script>
-
-  <!-- Subscription & Plan Management -->
-  <script src="subscription.js?v=3"></script>
-
-  <!-- Client Limit Enforcement -->
-  <script src="client-limit-enforcement.js"></script>
-
-  <!-- App Script -->
-  <script src="app.js?v=13"></script>
+  <!-- Feature Scripts - Load after app.js -->
+  <script src="supabase_sync.js?v=3" defer></script>
+  <script src="secondary_supabase.js" defer></script>
+  <script src="razorpay.js" defer></script>
+  <script src="subscription.js?v=3" defer></script>
+  <script src="client-limit-enforcement.js" defer></script>
 </body>
 
 </html>
