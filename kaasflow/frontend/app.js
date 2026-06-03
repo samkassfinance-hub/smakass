@@ -2212,13 +2212,16 @@ function renderSettings(container) {
         </div>
       </div>
 
-      <div class="mt-4 mb-2">
-        <button class="btn-kf-primary w-100" style="min-height:48px; font-weight: 700;" id="btn-install-app" data-ocid="settings.install_app_button">
+      <!-- Install App Section -->
+      <div class="kf-card pro-card mt-3" data-ocid="settings.install_app_card">
+        <div class="section-title"><i class="fa-solid fa-mobile-screen-button"></i>Install Application</div>
+        <p class="text-muted-kf fs-sm mb-3">Install SamKass on your device for quick access and offline functionality.</p>
+        <button class="btn-kf-primary w-100" style="min-height:52px; font-weight: 700; font-size: 1rem;" id="btn-install-app" data-ocid="settings.install_app_button">
           <i class="fa-solid fa-download me-2"></i>Install App
         </button>
       </div>
 
-      <div class="mt-2 mb-4 d-flex gap-2">
+      <div class="mt-3 mb-4 d-flex gap-2">
         <button class="btn-kf-outline flex-grow-1" style="color:var(--color-danger); border-color:var(--color-danger); min-height:48px;" id="btn-delete-account">
           <i class="fa-solid fa-user-xmark me-2"></i>Delete Account
         </button>
