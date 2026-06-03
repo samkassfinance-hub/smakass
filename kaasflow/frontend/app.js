@@ -2212,7 +2212,13 @@ function renderSettings(container) {
         </div>
       </div>
 
-      <div class="mt-4 mb-4 d-flex gap-2">
+      <div class="mt-4 mb-2 d-flex gap-2">
+        <button class="btn-kf-primary w-100" style="min-height:48px; font-weight: 700; display: none;" id="btn-install-app" data-ocid="settings.install_app_button">
+          <i class="fa-solid fa-download me-2"></i>Install App
+        </button>
+      </div>
+
+      <div class="mt-2 mb-4 d-flex gap-2">
         <button class="btn-kf-outline flex-grow-1" style="color:var(--color-danger); border-color:var(--color-danger); min-height:48px;" id="btn-delete-account">
           <i class="fa-solid fa-user-xmark me-2"></i>Delete Account
         </button>
@@ -2600,6 +2606,44 @@ create table if not exists payments (
     const titleEl = $('#confirmDeleteModal .modal-title');
     if (titleEl) titleEl.textContent = 'Confirm Deletion';
     new bootstrap.Modal($('#confirmDeleteModal')).show();
+  });
+
+  // PWA Install App Button
+  let deferredPrompt;
+  const installBtn = $('#btn-install-app');
+  
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    if (installBtn) {
+      installBtn.style.display = 'block';
+    }
+  });
+
+  installBtn?.addEventListener('click', async () => {
+    if (!deferredPrompt) {
+      showToast('App is already installed or not available for installation', 'info');
+      return;
+    }
+    
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    
+    if (outcome === 'accepted') {
+      showToast('App installed successfully! You can now access it from your home screen.', 'success');
+      installBtn.style.display = 'none';
+    } else {
+      showToast('Installation cancelled', 'info');
+    }
+    
+    deferredPrompt = null;
+  });
+
+  window.addEventListener('appinstalled', () => {
+    if (installBtn) {
+      installBtn.style.display = 'none';
+    }
+    showToast('SamKass installed successfully!', 'success');
   });
 }
 
