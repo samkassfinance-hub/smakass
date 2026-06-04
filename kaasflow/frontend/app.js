@@ -630,167 +630,45 @@ function saveSessionIsolated(token, user) {
   localStorage.setItem('kf_session', JSON.stringify({ token, user }));
 }
 
-// ── SIMPLE GOOGLE LOGIN FUNCTIONS ──────────────────────────────
-
-// Function called by "Continue with Google" button
-window.startGoogleLogin = function() {
-  console.log('🔘 Simple Google login initiated');
-  
-  // Add loading state to button
-  const googleBtn = document.querySelector('.btn-google-simple');
-  if (googleBtn) {
-    googleBtn.style.pointerEvents = 'none';
-    googleBtn.innerHTML = '<div style="width: 20px; height: 20px; border: 2px solid #f3f3f3; border-top: 2px solid #4285F4; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px;"></div>Connecting...';
-  }
-  
-  if (typeof google !== 'undefined' && google.accounts) {
-    try {
-      console.log('✅ Google available, triggering sign-in');
-      google.accounts.id.prompt((notification) => {
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          console.log('⚠️ Google prompt failed, showing error');
-          restoreGoogleButton();
-          showToast('Google Sign-In temporarily unavailable. Please use email login.', 'error');
-          // Auto-show email login as fallback
-          setTimeout(() => showEmailLogin(), 1000);
-        }
-      });
-    } catch (error) {
-      console.error('❌ Google login error:', error);
-      restoreGoogleButton();
-      showToast('Google Sign-In failed. Please use email login.', 'error');
-      // Auto-show email login as fallback
-      setTimeout(() => showEmailLogin(), 1000);
-    }
-  } else {
-    console.warn('⚠️ Google not available, showing email login');
-    restoreGoogleButton();
-    showToast('Google Sign-In not available. Using email login.', 'info');
-    // Auto-show email login as fallback
-    setTimeout(() => showEmailLogin(), 1000);
-  }
-};
-
-// Helper function to restore Google button state
-function restoreGoogleButton() {
-  const googleBtn = document.querySelector('.btn-google-simple');
-  if (googleBtn) {
-    googleBtn.style.pointerEvents = 'auto';
-    googleBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" style="margin-right: 8px;">
-      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-    </svg>Continue with Google`;
-  }
-}
-
-// Function called by "Try another way" button
-window.showEmailLogin = function() {
-  console.log('📧 Switching to email login');
-  
-  // Slide to Step 2 (email login screen)
-  const slider = $('#auth-slider-container');
-  if (slider) {
-    slider.classList.add('slide-to-step-2');
-    console.log('✅ Slider moved to step 2');
-  } else {
-    console.error('❌ Slider container not found!');
-  }
-  
-  // Show login form
-  showFormSection('#login-form-wrapper');
-  updateAuthHeader('Log in or sign up', 'Manage loans, collections and customer payments smarter with SamKass.');
-  
-  // Focus email input
-  setTimeout(() => {
-    const emailInput = $('#login-email');
-    if (emailInput) {
-      emailInput.focus();
-      console.log('✅ Email input focused');
-    }
-  }, 300);
-  
-  // Show success message to user
-  showToast('Email login ready - enter your credentials', 'info');
-};
+// Google Sign-In is initialized via HTML (g_id_onload) and handled by handleGoogleLogin below
 
 // Google Login Callback
 window.handleGoogleLogin = async function(response) {
-  console.log('🔐 Google login initiated');
-  
-  if (!response || !response.credential) {
-    console.error('❌ Invalid Google response:', response);
-    showToast('Google login failed - invalid response', 'error');
-    return;
+  // Remove loading state from buttons
+  const btns = document.querySelectorAll('.btn-google-signin');
+  btns.forEach(b => b.classList.remove('loading'));
+
+  // Decode the JWT credential to extract user info
+  let googleUser = {};
+  try {
+    const payload = JSON.parse(atob(response.credential.split('.')[1]));
+    googleUser = {
+      email: payload.email,
+      name: payload.name || payload.email.split('@')[0],
+      picture: payload.picture || '',
+      sub: payload.sub
+    };
+  } catch (e) {
+    googleUser = { email: 'google-user@gmail.com', name: 'Google User' };
   }
 
-  // Remove loading state from buttons
-  const btns = document.querySelectorAll('.btn-google-signin, .g_id_signin, .btn-google-simple');
-  btns.forEach(b => {
-    b.classList.remove('loading');
-    b.style.pointerEvents = 'auto';
-  });
+  // Try backend first
+  const res = await apiAuth('google', { token: response.credential });
 
-  try {
-    // Decode the JWT credential to extract user info
-    let googleUser = {};
-    try {
-      const payload = JSON.parse(atob(response.credential.split('.')[1]));
-      googleUser = {
-        email: payload.email,
-        name: payload.name || payload.email.split('@')[0],
-        picture: payload.picture || '',
-        sub: payload.sub
-      };
-      console.log('✅ Google user info decoded:', { email: googleUser.email, name: googleUser.name });
-    } catch (e) {
-      console.error('❌ Failed to decode Google credential:', e);
-      googleUser = { email: 'google-user@gmail.com', name: 'Google User' };
-    }
-
-    // Show loading message
-    showToast('Connecting with Google...', 'info');
-
-    // Try backend first, with quick timeout for offline scenarios
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-      
-      const res = await apiAuth('google', { token: response.credential });
-      clearTimeout(timeoutId);
-      
-      console.log('🔄 Backend Google auth response:', res);
-
-      if (res.success) {
-        console.log('✅ Backend Google auth successful');
-        const token = res.token || ('google-session:' + encodeURIComponent(res.user?.email || googleUser.email) + ':' + Date.now());
-        saveSessionIsolated(token, res.user);
-        const s = Store.settings();
-        if (res.user?.name && !s.financierName) { s.financierName = res.user.name; Store.saveSettings(s); }
-        if (res.user?.appPin) { s.appPin = res.user.appPin; Store.saveSettings(s); }
-        state.session = getSession();
-        
-        // Crucial: Restore from cloud BEFORE checking PIN
-        if (window.KFSync) await KFSync.restore();
-        
-        showToast('Welcome back, ' + (res.user?.name || googleUser.name) + '!', 'success');
-        
-        if (hasPin()) { 
-          console.log('📱 User has PIN, showing PIN lock');
-          showPinLock(); 
-        } else { 
-          console.log('🆕 No PIN found, showing PIN setup');
-          showPinSetup(); 
-        }
-        return;
-      }
-    } catch (fetchError) {
-      console.log('🔄 Backend unavailable, using offline mode:', fetchError.message);
-    }
-
-    // Fallback to offline mode
-    console.log('🔄 Using offline Google auth');
+  if (res.success) {
+    const token = res.token || ('google-session:' + encodeURIComponent(res.user?.email || googleUser.email) + ':' + Date.now());
+    saveSessionIsolated(token, res.user);
+    const s = Store.settings();
+    if (res.user?.name && !s.financierName) { s.financierName = res.user.name; Store.saveSettings(s); }
+    if (res.user?.appPin) { s.appPin = res.user.appPin; Store.saveSettings(s); }
+    state.session = getSession();
+    
+    // Crucial: Restore from cloud BEFORE checking PIN
+    // so we don't overwrite data for an existing user logging into a new device
+    if (window.KFSync) await KFSync.restore();
+    if (hasPin()) { showPinLock(); } else { showPinSetup(); }
+  } else if (res.offline) {
+    // Backend offline — create local session from Google credential
     const user = {
       email: googleUser.email,
       name: googleUser.name,
@@ -798,7 +676,6 @@ window.handleGoogleLogin = async function(response) {
       picture: googleUser.picture
     };
     saveSessionIsolated('google-session:' + encodeURIComponent(user.email) + ':' + Date.now(), user);
-    
     // Save to local users list for consistency
     const users = getLocalUsers();
     if (!users.find(u => u.email.toLowerCase() === googleUser.email.toLowerCase())) {
@@ -813,7 +690,6 @@ window.handleGoogleLogin = async function(response) {
       });
       saveLocalUsers(users);
     }
-    
     const s = Store.settings();
     if (!s.financierName) { s.financierName = googleUser.name; Store.saveSettings(s); }
     state.session = getSession();
@@ -821,23 +697,11 @@ window.handleGoogleLogin = async function(response) {
     // Crucial: Restore from cloud BEFORE checking PIN
     if (window.KFSync) await KFSync.restore();
     
-    showToast('Welcome, ' + googleUser.name + '! (Offline mode)', 'success');
-    
-    if (hasPin()) { 
-      console.log('📱 User has PIN, showing PIN lock');
-      showPinLock(); 
-    } else { 
-      console.log('🆕 No PIN found, showing PIN setup');
-      showPinSetup(); 
-    }
-
-  } catch (error) {
-    console.error('❌ Google login error:', error);
-    showToast('Google login failed - ' + error.message, 'error');
-    
+    if (hasPin()) { showPinLock(); } else { showPinSetup(); }
+  } else {
     const errEl = $('#login-error');
     if (errEl) {
-      errEl.textContent = 'Google login failed: ' + error.message;
+      errEl.textContent = res.error || 'Google login failed';
       errEl.classList.remove('d-none');
     }
   }
@@ -1018,31 +882,15 @@ function handleNotifMarkPending(loanId) {
 
 
 function showFormSection(selector) {
-  console.log('📋 Showing form section:', selector);
-  
   const sections = $$('#auth-slide-2 .auth-form-section');
   sections.forEach(s => {
     s.classList.remove('active');
     s.style.display = 'none';
   });
-  
   const target = $(selector);
   if (target) {
     target.classList.add('active');
     target.style.display = 'block';
-    
-    // Clear any error states when switching forms
-    target.querySelectorAll('.alert').forEach(alert => {
-      alert.classList.add('d-none');
-    });
-    
-    target.querySelectorAll('.is-invalid').forEach(field => {
-      field.classList.remove('is-invalid');
-    });
-    
-    console.log('✅ Form section shown:', selector);
-  } else {
-    console.error('❌ Form section not found:', selector);
   }
 }
 
@@ -3747,184 +3595,78 @@ function renderNotifDropdown() {
 // ── GLOBAL EVENT BINDINGS ──────────────────────────────────────
 function bindGlobal() {
   // Auth form handlers
-  const loginForm = $('#login-form');
-  if (loginForm) {
-    loginForm.addEventListener('submit', async e => {
-      e.preventDefault();
-      console.log('📧 Login form submitted');
-      
-      const email = $('#login-email').value.trim();
-      const password = $('#login-password').value.trim();
-      const errEl = $('#login-error');
-      errEl.classList.add('d-none');
-      
-      if (!email || !email.includes('@')) {
-        errEl.textContent = 'Enter a valid email address'; 
-        errEl.classList.remove('d-none'); 
-        $('#login-email').focus();
-        return;
+  $('#login-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const email = $('#login-email').value.trim();
+    const password = $('#login-password').value.trim();
+    const errEl = $('#login-error');
+    errEl.classList.add('d-none');
+    if (!email || !email.includes('@')) {
+      errEl.textContent = 'Enter a valid email address'; errEl.classList.remove('d-none'); return;
+    }
+    if (!password) { errEl.textContent = 'Enter your password'; errEl.classList.remove('d-none'); return; }
+    const res = await apiAuth('login', { email, password });
+    if (res.success) {
+      const token = res.token || ('session:' + encodeURIComponent(res.user?.email || email) + ':' + Date.now());
+      saveSessionIsolated(token, res.user || { email });
+      // Also save financierName into settings if available
+      if (res.user) {
+        const s = Store.settings();
+        if (res.user.financierName && !s.financierName) { s.financierName = res.user.financierName; Store.saveSettings(s); }
+        if (res.user.businessName && !s.businessName) { s.businessName = res.user.businessName; Store.saveSettings(s); }
+        if (res.user.appPin) { s.appPin = res.user.appPin; Store.saveSettings(s); }
       }
-      if (!password) { 
-        errEl.textContent = 'Enter your password'; 
-        errEl.classList.remove('d-none'); 
-        $('#login-password').focus();
-        return; 
-      }
-      
-      // Show loading state
-      const submitBtn = loginForm.querySelector('button[type="submit"]');
-      const originalText = submitBtn.innerHTML;
-      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Logging in...';
-      submitBtn.disabled = true;
-      
-      try {
-        const res = await apiAuth('login', { email, password });
-        
-        if (res.success) {
-          console.log('✅ Email login successful');
-          const token = res.token || ('session:' + encodeURIComponent(res.user?.email || email) + ':' + Date.now());
-          saveSessionIsolated(token, res.user || { email });
-          
-          // Also save financierName into settings if available
-          if (res.user) {
-            const s = Store.settings();
-            if (res.user.financierName && !s.financierName) { s.financierName = res.user.financierName; Store.saveSettings(s); }
-            if (res.user.businessName && !s.businessName) { s.businessName = res.user.businessName; Store.saveSettings(s); }
-            if (res.user.appPin) { s.appPin = res.user.appPin; Store.saveSettings(s); }
-          }
-          
-          state.session = getSession();
-          if (window.KFSync) await KFSync.restore();
-          
-          if (hasPin()) { 
-            showPinLock(); 
-          } else { 
-            showPinSetup(); 
-          }
-        } else {
-          console.error('❌ Email login failed:', res.error);
-          errEl.textContent = res.error || res.message || 'Login failed'; 
-          errEl.classList.remove('d-none');
-        }
-      } catch (error) {
-        console.error('❌ Login error:', error);
-        errEl.textContent = 'Login failed - ' + error.message;
-        errEl.classList.remove('d-none');
-      } finally {
-        // Restore button state
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
-      }
-    });
-  }
+      state.session = getSession();
+      if (window.KFSync) await KFSync.restore();
+      if (hasPin()) { showPinLock(); } else { showPinSetup(); }
+    } else {
+      errEl.textContent = res.error || res.message || 'Login failed'; errEl.classList.remove('d-none');
+    }
+  });
 
-  const registerForm = $('#register-form');
-  if (registerForm) {
-    registerForm.addEventListener('submit', async e => {
-      e.preventDefault();
-      console.log('📝 Register form submitted');
-      
-      const name = $('#reg-name').value.trim();
-      const email = $('#reg-email').value.trim();
-      const password = $('#reg-password').value.trim();
-      const business = $('#reg-business').value.trim();
-      const errEl = $('#register-error');
-      errEl.classList.add('d-none');
-      
-      if (!name) { 
-        errEl.textContent = 'Enter your name'; 
-        errEl.classList.remove('d-none'); 
-        $('#reg-name').focus();
-        return; 
-      }
-      if (!email || !email.includes('@')) { 
-        errEl.textContent = 'Enter valid email'; 
-        errEl.classList.remove('d-none'); 
-        $('#reg-email').focus();
-        return; 
-      }
-      if (!password || password.length < 6) { 
-        errEl.textContent = 'Password must be at least 6 characters'; 
-        errEl.classList.remove('d-none'); 
-        $('#reg-password').focus();
-        return; 
-      }
-      
-      // Show loading state
-      const submitBtn = registerForm.querySelector('button[type="submit"]');
-      const originalText = submitBtn.innerHTML;
-      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Creating account...';
-      submitBtn.disabled = true;
-      
-      try {
-        const res = await apiAuth('register', { email, password, financier_name: name, business_name: business });
-        
-        if (res.success) {
-          console.log('✅ Registration successful');
-          const token = res.token || ('session:' + encodeURIComponent(res.user?.email || email) + ':' + Date.now());
-          saveSessionIsolated(token, res.user || { email });
-          
-          // Save user info into settings
-          const s = Store.settings();
-          if (name) s.financierName = name;
-          if (business) s.businessName = business;
-          if (res.user?.appPin) { s.appPin = res.user.appPin; }
-          Store.saveSettings(s);
-          
-          state.session = getSession();
-          showPinSetup(); // New users always set PIN
-        } else {
-          console.error('❌ Registration failed:', res.error);
-          errEl.textContent = res.error || res.message || 'Registration failed'; 
-          errEl.classList.remove('d-none');
-        }
-      } catch (error) {
-        console.error('❌ Registration error:', error);
-        errEl.textContent = 'Registration failed - ' + error.message;
-        errEl.classList.remove('d-none');
-      } finally {
-        // Restore button state
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
-      }
-    });
-  }
+  $('#register-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const name = $('#reg-name').value.trim();
+    const email = $('#reg-email').value.trim();
+    const password = $('#reg-password').value.trim();
+    const business = $('#reg-business').value.trim();
+    const errEl = $('#register-error');
+    errEl.classList.add('d-none');
+    if (!name) { errEl.textContent = 'Enter your name'; errEl.classList.remove('d-none'); return; }
+    if (!email || !email.includes('@')) { errEl.textContent = 'Enter valid email'; errEl.classList.remove('d-none'); return; }
+    if (!password || password.length < 6) { errEl.textContent = 'Password must be at least 6 characters'; errEl.classList.remove('d-none'); return; }
+    const res = await apiAuth('register', { email, password, financier_name: name, business_name: business });
+    if (res.success) {
+      const token = res.token || ('session:' + encodeURIComponent(res.user?.email || email) + ':' + Date.now());
+      saveSessionIsolated(token, res.user || { email });
+      // Save user info into settings
+      const s = Store.settings();
+      if (name) s.financierName = name;
+      if (business) s.businessName = business;
+      if (res.user?.appPin) { s.appPin = res.user.appPin; }
+      Store.saveSettings(s);
+      state.session = getSession();
+      // Data generation removed
+      showPinSetup(); // New users always set PIN
+    } else {
+      errEl.textContent = res.error || res.message || 'Registration failed'; errEl.classList.remove('d-none');
+    }
+  });
 
   // --- ONBOARDING SLIDER TRANSITIONS & ALTERNATIVE AUTH METHODS ---
-  
-  // Google login button - add multiple fallbacks
-  const googleBtn = document.querySelector('.btn-google-simple');
-  if (googleBtn) {
-    googleBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      console.log('🔘 Google button clicked');
-      startGoogleLogin();
-    });
-    // Add onclick as fallback
-    googleBtn.onclick = () => startGoogleLogin();
-  }
-
-  // Try another way button - add multiple fallbacks  
-  const tryAnotherBtn = document.querySelector('.btn-try-another');
-  if (tryAnotherBtn) {
-    tryAnotherBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      console.log('📧 Try another way clicked');
-      showEmailLogin();
-    });
-    // Add onclick as fallback
-    tryAnotherBtn.onclick = () => showEmailLogin();
-  }
+  // Try another way (Welcome slide -> Slide 2)
+  $('#btn-try-another')?.addEventListener('click', () => {
+    const slider = $('#auth-slider-container');
+    if (slider) slider.classList.add('slide-to-step-2');
+    showFormSection('#login-form-wrapper');
+    updateAuthHeader('Log in or sign up', 'Manage loans, collections and customer payments smarter with SamKass.');
+  });
 
   // Back button (Slide 2 -> Slide 1)
-  const backBtn = $('#btn-back-to-step-1');
-  if (backBtn) {
-    backBtn.addEventListener('click', () => {
-      console.log('⬅️ Back to step 1');
-      const slider = $('#auth-slider-container');
-      if (slider) slider.classList.remove('slide-to-step-2');
-    });
-  }
+  $('#btn-back-to-step-1')?.addEventListener('click', () => {
+    const slider = $('#auth-slider-container');
+    if (slider) slider.classList.remove('slide-to-step-2');
+  });
 
   // Back to email buttons
   $$('.btn-back-to-email').forEach(btn => {
@@ -3935,94 +3677,66 @@ function bindGlobal() {
   });
 
   // Toggle between forms (Register/Login)
-  const showRegisterBtn = $('#show-register');
-  if (showRegisterBtn) {
-    showRegisterBtn.addEventListener('click', () => {
-      console.log('📝 Showing register form');
-      showFormSection('#register-form-wrapper');
-      updateAuthHeader('Create account', 'Get started with SamKass to simplify your book keeping.');
-    });
-  }
+  $('#show-register')?.addEventListener('click', () => {
+    showFormSection('#register-form-wrapper');
+    updateAuthHeader('Create account', 'Get started with SamKass to simplify your book keeping.');
+  });
 
-  const showLoginBtn = $('#show-login');
-  if (showLoginBtn) {
-    showLoginBtn.addEventListener('click', () => {
-      console.log('🔑 Showing login form');
-      showFormSection('#login-form-wrapper');
-      updateAuthHeader('Log in or sign up', 'Manage loans, collections and customer payments smarter with SamKass.');
-    });
-  }
+  $('#show-login')?.addEventListener('click', () => {
+    showFormSection('#login-form-wrapper');
+    updateAuthHeader('Log in or sign up', 'Manage loans, collections and customer payments smarter with SamKass.');
+  });
 
   // Forgot password
-  const forgotBtn = $('#show-forgot-password');
-  if (forgotBtn) {
-    forgotBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      console.log('🔒 Showing forgot password form');
-      showFormSection('#forgot-password-wrapper');
-      updateAuthHeader('Reset password', 'We will email you a secure magic link to access your account.');
-    });
-  }
+  $('#show-forgot-password')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    showFormSection('#forgot-password-wrapper');
+    updateAuthHeader('Reset password', 'We will email you a secure magic link to access your account.');
+  });
 
-  const backToLoginBtn = $('#show-login-from-forgot');
-  if (backToLoginBtn) {
-    backToLoginBtn.addEventListener('click', () => {
-      console.log('⬅️ Back to login from forgot password');
-      showFormSection('#login-form-wrapper');
-      updateAuthHeader('Log in or sign up', 'Manage loans, collections and customer payments smarter with SamKass.');
-    });
-  }
+  $('#show-login-from-forgot')?.addEventListener('click', () => {
+    showFormSection('#login-form-wrapper');
+    updateAuthHeader('Log in or sign up', 'Manage loans, collections and customer payments smarter with SamKass.');
+  });
 
 
 
-  const forgotPasswordForm = $('#forgot-password-form');
-  if (forgotPasswordForm) {
-    forgotPasswordForm.addEventListener('submit', async e => {
-      e.preventDefault();
-      console.log('🔒 Forgot password form submitted');
-      
-      const email = $('#forgot-email').value.trim();
-      const errEl = $('#forgot-error');
-      const succEl = $('#forgot-success');
-      errEl.classList.add('d-none');
-      succEl.classList.add('d-none');
+  $('#forgot-password-form')?.addEventListener('submit', async e => {
+    e.preventDefault();
+    const email = $('#forgot-email').value.trim();
+    const errEl = $('#forgot-error');
+    const succEl = $('#forgot-success');
+    errEl.classList.add('d-none');
+    succEl.classList.add('d-none');
 
-      if (!email || !email.includes('@')) {
-        errEl.textContent = 'Enter a valid email address';
-        errEl.classList.remove('d-none');
-        $('#forgot-email').focus();
-        return;
-      }
+    if (!email || !email.includes('@')) {
+      errEl.textContent = 'Enter a valid email address';
+      errEl.classList.remove('d-none');
+      return;
+    }
 
-      const btn = $('#forgot-submit-btn');
-      const originalText = btn.innerHTML;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Sending...';
-      btn.disabled = true;
+    const btn = $('#forgot-submit-btn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Sending...';
+    btn.disabled = true;
 
-      try {
-        const res = await apiAuth('magic-link/request', { email });
+    const res = await apiAuth('magic-link/request', { email });
 
-        if (res.success) {
-          succEl.textContent = 'A secure login link has been sent to your email!';
-          succEl.classList.remove('d-none');
-          $('#forgot-email').value = '';
-        } else if (res.offline) {
-          succEl.textContent = 'Running in offline mode. Magic links require internet.';
-          succEl.classList.remove('d-none');
-        } else {
-          errEl.textContent = res.error || res.message || 'Failed to send reset link.';
-          errEl.classList.remove('d-none');
-        }
-      } catch (error) {
-        console.error('❌ Forgot password error:', error);
-        errEl.textContent = 'Failed to send reset link - ' + error.message;
-        errEl.classList.remove('d-none');
-      } finally {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-      }
-    });
-  }
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+
+    if (res.success) {
+      succEl.textContent = 'A secure login link has been sent to your email!';
+      succEl.classList.remove('d-none');
+      $('#forgot-email').value = '';
+    } else if (res.offline) {
+      succEl.textContent = 'Running in offline mode. Magic links require internet.';
+      succEl.classList.remove('d-none');
+    } else {
+      errEl.textContent = res.error || res.message || 'Failed to send reset link.';
+      errEl.classList.remove('d-none');
+    }
+  });
 
   // ── PIN INPUT BEHAVIOR ──────────────────────────────────────
   setupPinInputBehavior('#pin-setup-inputs');
@@ -4651,7 +4365,6 @@ window.addEventListener('appinstalled', () => {
     installBtn.disabled = true;
     installBtn.style.opacity = '0.6';
   }
-  
   // Hide install bubble after successful installation
   const bubble = $('#pwa-install-bubble');
   if (bubble) bubble.style.display = 'none';
@@ -4717,9 +4430,6 @@ document.addEventListener('DOMContentLoaded', () => {
     console.warn('⚠️ BOOT: RazorpayPayment not found');
   }
   
-  // Initialize Google Sign-In
-  initializeGoogleSignIn();
-  
   // Initialize chatbot
   initChatbot();
   
@@ -4735,129 +4445,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const loader = document.getElementById('app-loading');
       if (loader) loader.style.display = 'none';
       const authScreen = document.getElementById('auth-screen');
-      if (authScreen) {
-        authScreen.style.display = 'block';
-        // Show user-friendly error message
-        showToast('App initialization failed. Please refresh the page.', 'error');
-      }
+      if (authScreen) authScreen.style.display = 'block';
     }
   }, 400);
 });
-
-// Google Sign-In Initialization - SIMPLIFIED
-function initializeGoogleSignIn() {
-  console.log('🔐 Initializing Google Sign-In (simple)...');
-  
-  // Simple timeout-based initialization
-  let retryCount = 0;
-  const maxRetries = 10;
-  
-  const tryInit = () => {
-    if (typeof google !== 'undefined' && google.accounts) {
-      console.log('✅ Google Identity Services available');
-      
-      try {
-        // Simple initialization
-        google.accounts.id.initialize({
-          client_id: '1008709235007-vh9u2526ol0haffogibri3kno6rtjejl.apps.googleusercontent.com',
-          callback: handleGoogleLogin,
-          auto_select: false,
-          cancel_on_tap_outside: true
-        });
-        
-        console.log('✅ Google Sign-In initialized');
-        
-        // Try to render button after initialization
-        setTimeout(() => {
-          const googleContainers = document.querySelectorAll('.g_id_signin');
-          googleContainers.forEach((container, i) => {
-            try {
-              if (container.children.length === 0) { // Only render if empty
-                google.accounts.id.renderButton(container, {
-                  type: 'standard',
-                  shape: 'pill', 
-                  theme: 'outline',
-                  text: 'continue_with',
-                  size: 'large'
-                });
-                console.log(`✅ Google button ${i+1} rendered`);
-              }
-            } catch (err) {
-              console.warn(`⚠️ Google button ${i+1} render failed:`, err);
-            }
-          });
-        }, 500);
-        
-      } catch (error) {
-        console.error('❌ Google init failed:', error);
-      }
-    } else {
-      retryCount++;
-      if (retryCount < maxRetries) {
-        console.log(`⏳ Google not ready, retry ${retryCount}/${maxRetries}...`);
-        setTimeout(tryInit, 500);
-      } else {
-        console.warn('⚠️ Google Sign-In unavailable after max retries');
-      }
-    }
-  };
-  
-  tryInit();
-}
-
-// Manual Google Sign-In Trigger
-window.triggerGoogleSignIn = function() {
-  console.log('🔘 Manual Google Sign-In triggered');
-  
-  if (typeof google !== 'undefined' && google.accounts) {
-    try {
-      google.accounts.id.prompt((notification) => {
-        console.log('📋 Google prompt notification:', notification);
-        
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          console.log('⚠️ Google prompt not displayed, trying OAuth popup');
-          
-          // Fallback to OAuth popup
-          google.accounts.oauth2.initTokenClient({
-            client_id: '1008709235007-vh9u2526ol0haffogibri3kno6rtjejl.apps.googleusercontent.com',
-            scope: 'openid email profile',
-            callback: (response) => {
-              console.log('🔑 OAuth response:', response);
-              if (response.access_token) {
-                // Get user info using access token
-                fetch(`https://www.googleapis.com/oauth2/v2/userinfo?access_token=${response.access_token}`)
-                  .then(res => res.json())
-                  .then(userInfo => {
-                    console.log('👤 User info from OAuth:', userInfo);
-                    // Create a credential-like object
-                    const fakeCredential = {
-                      credential: btoa(JSON.stringify({
-                        email: userInfo.email,
-                        name: userInfo.name,
-                        picture: userInfo.picture,
-                        sub: userInfo.id
-                      }))
-                    };
-                    handleGoogleLogin(fakeCredential);
-                  })
-                  .catch(error => {
-                    console.error('❌ Failed to get user info:', error);
-                    showToast('Google login failed - please try again', 'error');
-                  });
-              }
-            }
-          }).requestAccessToken();
-        }
-      });
-    } catch (error) {
-      console.error('❌ Manual Google Sign-In failed:', error);
-      showToast('Google Sign-In not available. Please try email login.', 'error');
-    }
-  } else {
-    console.error('❌ Google Identity Services not loaded');
-    showToast('Google Sign-In not available. Please try email login.', 'error');
-  }
-};
 
 // ── CHATBOT FUNCTIONALITY ──────────────────────────────────────
 let isDragging = false;
@@ -4895,33 +4486,53 @@ const chatbotTranslations = {
 function initChatbot() {
   console.log('🤖 Initializing chatbot...');
   
-  const chatbotIcon = document.getElementById('chatbot-icon');
-  const chatbotInterface = document.getElementById('chatbot-interface');
-  
-  if (!chatbotIcon) return;
-  
-  // Make icon draggable
-  chatbotIcon.addEventListener('mousedown', startDrag);
-  chatbotIcon.addEventListener('touchstart', startDrag);
-  
-  // Click to open chat
-  chatbotIcon.addEventListener('click', (e) => {
-    if (!isDragging) {
-      openChatbot();
+  // Wait for DOM to be fully ready
+  setTimeout(() => {
+    const chatbotIcon = document.getElementById('chatbot-icon');
+    const chatbotInterface = document.getElementById('chatbot-interface');
+    
+    if (!chatbotIcon) {
+      console.error('❌ Chatbot icon element not found!');
+      return;
     }
-  });
-  
-  // Auto-resize textarea
-  const textarea = document.getElementById('chatbot-input');
-  if (textarea) {
-    textarea.addEventListener('input', autoResizeTextarea);
-    textarea.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
+    
+    console.log('✅ Chatbot icon element found, binding events...');
+    
+    // Make icon draggable
+    chatbotIcon.addEventListener('mousedown', startDrag);
+    chatbotIcon.addEventListener('touchstart', startDrag, { passive: false });
+    
+    // Click to open chat - use both click and touchend for better mobile support
+    chatbotIcon.addEventListener('click', (e) => {
+      e.preventDefault();
+      console.log('🔘 Chatbot icon clicked, isDragging:', isDragging);
+      if (!isDragging) {
+        openChatbot();
       }
     });
-  }
+    
+    chatbotIcon.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      console.log('👆 Chatbot icon touched, isDragging:', isDragging);
+      if (!isDragging) {
+        openChatbot();
+      }
+    });
+    
+    // Auto-resize textarea
+    const textarea = document.getElementById('chatbot-input');
+    if (textarea) {
+      textarea.addEventListener('input', autoResizeTextarea);
+      textarea.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+    }
+    
+    console.log('✅ Chatbot initialization complete!');
+  }, 500);
 }
 
 function startDrag(e) {
@@ -4929,6 +4540,8 @@ function startDrag(e) {
   isDragging = false;
   
   const chatbotIcon = document.getElementById('chatbot-icon');
+  if (!chatbotIcon) return;
+  
   const rect = chatbotIcon.getBoundingClientRect();
   
   const clientX = e.clientX || (e.touches && e.touches[0].clientX);
@@ -4937,17 +4550,26 @@ function startDrag(e) {
   dragOffset.x = clientX - rect.left;
   dragOffset.y = clientY - rect.top;
   
+  // Add event listeners
   document.addEventListener('mousemove', drag);
-  document.addEventListener('touchmove', drag);
+  document.addEventListener('touchmove', drag, { passive: false });
   document.addEventListener('mouseup', stopDrag);
   document.addEventListener('touchend', stopDrag);
   
+  // Only mark as dragging after a small delay to allow clicks
   setTimeout(() => {
     if (document.addEventListener) {
-      isDragging = true;
-      chatbotIcon.classList.add('dragging');
+      // Check if mouse/finger moved significantly
+      const currentX = e.clientX || (e.touches && e.touches[0].clientX);
+      const currentY = e.clientY || (e.touches && e.touches[0].clientY);
+      
+      if (Math.abs(currentX - clientX) > 5 || Math.abs(currentY - clientY) > 5) {
+        isDragging = true;
+        chatbotIcon.classList.add('dragging');
+        console.log('🖱️ Started dragging chatbot');
+      }
     }
-  }, 100);
+  }, 150);
 }
 
 function drag(e) {
@@ -4989,33 +4611,56 @@ function stopDrag() {
 }
 
 function openChatbot() {
+  console.log('🚀 Opening chatbot interface...');
+  
   const chatbotInterface = document.getElementById('chatbot-interface');
   const chatbotIcon = document.getElementById('chatbot-icon');
   
-  if (chatbotInterface && chatbotIcon) {
-    chatbotInterface.style.display = 'flex';
-    chatbotIcon.style.display = 'none';
-    
-    // Update language
-    updateChatbotLanguage();
-    
-    // Focus input
-    setTimeout(() => {
-      const input = document.getElementById('chatbot-input');
-      if (input) input.focus();
-    }, 300);
+  if (!chatbotInterface) {
+    console.error('❌ Chatbot interface element not found!');
+    return;
   }
+  
+  if (!chatbotIcon) {
+    console.error('❌ Chatbot icon element not found!');
+    return;
+  }
+  
+  console.log('✅ Opening chatbot interface...');
+  chatbotInterface.style.display = 'flex';
+  chatbotIcon.style.display = 'none';
+  
+  // Update language
+  updateChatbotLanguage();
+  
+  // Focus input
+  setTimeout(() => {
+    const input = document.getElementById('chatbot-input');
+    if (input) {
+      input.focus();
+      console.log('✅ Chatbot input focused');
+    }
+  }, 300);
 }
 
+// Make openChatbot globally available
+window.openChatbot = openChatbot;
+
 function closeChatbot() {
+  console.log('🚪 Closing chatbot interface...');
+  
   const chatbotInterface = document.getElementById('chatbot-interface');
   const chatbotIcon = document.getElementById('chatbot-icon');
   
   if (chatbotInterface && chatbotIcon) {
     chatbotInterface.style.display = 'none';
     chatbotIcon.style.display = 'flex';
+    console.log('✅ Chatbot interface closed');
   }
 }
+
+// Make closeChatbot globally available  
+window.closeChatbot = closeChatbot;
 
 function updateChatbotLanguage() {
   const settings = Store.settings();
@@ -5034,13 +4679,26 @@ function updateChatbotLanguage() {
 }
 
 function sendMessage() {
+  console.log('💬 Sending message...');
+  
   const input = document.getElementById('chatbot-input');
+  if (!input) {
+    console.error('❌ Chatbot input not found!');
+    return;
+  }
+  
   const message = input.value.trim();
   
-  if (!message) return;
+  if (!message) {
+    console.log('⚠️ Empty message, skipping...');
+    return;
+  }
+  
+  console.log('📤 Message:', message);
   
   // Detect language from input
   const detectedLang = detectLanguage(message);
+  console.log('🌐 Detected language:', detectedLang);
   
   // Add user message
   addMessage(message, 'user');
@@ -5056,9 +4714,13 @@ function sendMessage() {
   setTimeout(() => {
     hideTypingIndicator();
     const response = processUserMessage(message, detectedLang);
+    console.log('🤖 Bot response:', response);
     addMessage(response, 'bot');
   }, 1000 + Math.random() * 1000);
 }
+
+// Make sendMessage globally available
+window.sendMessage = sendMessage;
 
 function detectLanguage(text) {
   // Simple Tamil detection - check for Tamil Unicode characters
@@ -5077,16 +4739,10 @@ function addMessage(message, type) {
     `;
   } else {
     messageDiv.innerHTML = `
-      <div class="robot-avatar-small" style="width: 32px; height: 32px; background: linear-gradient(135deg, #7ed321, #4caf1a); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 2px solid rgba(126, 211, 33, 0.3);">
-        <div style="position: relative; width: 16px; height: 16px;">
-          <div style="width: 16px; height: 12px; background: white; border-radius: 8px 8px 4px 4px; position: relative; display: flex; align-items: center; justify-content: center;">
-            <div style="display: flex; gap: 2px; margin-top: -1px;">
-              <div style="width: 2px; height: 2px; background: #4caf1a; border-radius: 50%;"></div>
-              <div style="width: 2px; height: 2px; background: #4caf1a; border-radius: 50%;"></div>
-            </div>
-            <div style="position: absolute; bottom: 1px; left: 50%; transform: translateX(-50%); width: 3px; height: 1px; background: #4caf1a; border-radius: 1px;"></div>
-          </div>
-        </div>
+      <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #7ed321, #4caf1a); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+          <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2Z"/>
+        </svg>
       </div>
       <div class="message-content">${message}</div>
     `;
@@ -5103,27 +4759,10 @@ function showTypingIndicator() {
   typingDiv.id = 'typing-indicator';
   
   typingDiv.innerHTML = `
-    <div class="robot-avatar-small" style="width: 32px; height: 32px; background: linear-gradient(135deg, #7ed321, #4caf1a); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 2px solid rgba(126, 211, 33, 0.3);">
-      <div style="position: relative; width: 16px; height: 16px;">
-        <div style="width: 16px; height: 12px; background: white; border-radius: 8px 8px 4px 4px; position: relative; display: flex; align-items: center; justify-content: center;">
-          <div style="display: flex; gap: 2px; margin-top: -1px;">
-            <div style="width: 2px; height: 2px; background: #4caf1a; border-radius: 50%; animation: blink 0.8s infinite;"></div>
-            <div style="width: 2px; height: 2px; background: #4caf1a; border-radius: 50%; animation: blink 0.8s infinite 0.2s;"></div>
-          </div>
-          <div style="position: absolute; bottom: 1px; left: 50%; transform: translateX(-50%); width: 3px; height: 1px; background: #4caf1a; border-radius: 1px; animation: robotTalk 0.5s infinite;"></div>
-        </div>
-      </div>
-    </div>
-    <div style="background: var(--bg-input); padding: 12px 16px; border-radius: 16px 16px 16px 4px; display: flex; align-items: center; gap: 4px; border: 1px solid var(--border-default);">
-      <div class="typing-dot"></div>
-      <div class="typing-dot"></div>
-      <div class="typing-dot"></div>
-    </div>
-  `;
-  
-  messagesContainer.appendChild(typingDiv);
-  messagesContainer.scrollTop = messagesContainer.scrollHeight;
-}
+    <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #7ed321, #4caf1a); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+        <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2Z"/>
+      </svg>
     </div>
     <div style="background: var(--bg-input); padding: 12px 16px; border-radius: 16px 16px 16px 4px; display: flex; align-items: center; gap: 4px;">
       <div class="typing-dot"></div>
@@ -5375,9 +5014,12 @@ function autoResizeTextarea() {
 }
 
 function toggleVoiceInput() {
+  console.log('🎤 Toggling voice input...');
+  
   if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
     const t = chatbotTranslations[currentLang] || chatbotTranslations.en;
     addMessage(t.voiceError, 'bot');
+    console.log('❌ Speech recognition not supported');
     return;
   }
   
@@ -5388,131 +5030,43 @@ function toggleVoiceInput() {
   }
 }
 
+// Make toggleVoiceInput globally available
+window.toggleVoiceInput = toggleVoiceInput;
+
 function startVoiceRecording() {
-  console.log('🎙️ Starting voice recording...');
-  
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   recognition = new SpeechRecognition();
   
   recognition.continuous = false;
-  recognition.interimResults = true;
+  recognition.interimResults = false;
   recognition.lang = currentLang === 'ta' ? 'ta-IN' : 'en-US';
   
   const voiceButton = document.getElementById('chatbot-voice');
-  const voiceIcon = document.getElementById('voice-icon');
-  const chatbotIcon = document.getElementById('chatbot-icon');
   const t = chatbotTranslations[currentLang] || chatbotTranslations.en;
   
   recognition.onstart = () => {
-    console.log('🎤 Speech recognition started');
     isRecording = true;
     voiceButton.classList.add('recording');
-    
-    // Change voice icon to stop icon
-    if (voiceIcon) {
-      voiceIcon.innerHTML = '<circle cx="12" cy="12" r="10" fill="currentColor"/><rect x="9" y="9" width="6" height="6" fill="white" rx="1"/>';
-    }
-    
-    // Make chatbot icon animate while listening
-    if (chatbotIcon) {
-      chatbotIcon.classList.add('talking');
-    }
-    
     addMessage(t.voiceStart, 'bot');
-    if (window.showToast) showToast('Listening... Speak now', 'info');
   };
   
   recognition.onresult = (event) => {
-    console.log('🎯 Speech recognition result received');
-    let transcript = '';
-    
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      if (event.results[i].isFinal) {
-        transcript = event.results[i][0].transcript;
-        break;
-      } else {
-        // Show interim results
-        const interimTranscript = event.results[i][0].transcript;
-        const input = document.getElementById('chatbot-input');
-        if (input) {
-          input.value = interimTranscript;
-          autoResizeTextarea();
-        }
-      }
-    }
-    
-    if (transcript) {
-      console.log('📝 Final transcript:', transcript);
-      const input = document.getElementById('chatbot-input');
-      if (input) {
-        input.value = transcript;
-        autoResizeTextarea();
-        
-        // Auto-send after getting final result
-        setTimeout(() => {
-          if (input.value.trim()) {
-            sendMessage();
-          }
-        }, 500);
-      }
-    }
+    const transcript = event.results[0][0].transcript;
+    document.getElementById('chatbot-input').value = transcript;
+    autoResizeTextarea();
   };
   
-  recognition.onerror = (event) => {
-    console.error('❌ Speech recognition error:', event.error);
+  recognition.onerror = () => {
     isRecording = false;
     voiceButton.classList.remove('recording');
-    
-    // Reset voice icon
-    if (voiceIcon) {
-      voiceIcon.innerHTML = '<path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"/>';
-    }
-    
-    if (chatbotIcon) {
-      chatbotIcon.classList.remove('talking');
-    }
-    
-    let errorMessage = 'Voice recognition failed';
-    switch(event.error) {
-      case 'no-speech':
-        errorMessage = currentLang === 'ta' ? 'பேச்சு கேட்கப்படவில்லை. மீண்டும் முயற்சிக்கவும்.' : 'No speech detected. Please try again.';
-        break;
-      case 'audio-capture':
-        errorMessage = currentLang === 'ta' ? 'மைக்ரோஃபோன் அணுக முடியவில்லை.' : 'Microphone not accessible.';
-        break;
-      case 'not-allowed':
-        errorMessage = currentLang === 'ta' ? 'மைக்ரோஃபோன் அனுமதி மறுக்கப்பட்டது.' : 'Microphone permission denied.';
-        break;
-      case 'network':
-        errorMessage = currentLang === 'ta' ? 'நெட்வர்க் பிழை.' : 'Network error.';
-        break;
-    }
-    
-    if (window.showToast) showToast(errorMessage, 'error');
-    addMessage(errorMessage, 'bot');
   };
   
   recognition.onend = () => {
-    console.log('🔚 Speech recognition ended');
     isRecording = false;
     voiceButton.classList.remove('recording');
-    
-    // Reset voice icon
-    if (voiceIcon) {
-      voiceIcon.innerHTML = '<path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"/>';
-    }
-    
-    if (chatbotIcon) {
-      chatbotIcon.classList.remove('talking');
-    }
   };
   
-  try {
-    recognition.start();
-  } catch (error) {
-    console.error('❌ Failed to start speech recognition:', error);
-    if (window.showToast) showToast('Failed to start voice recognition', 'error');
-  }
+  recognition.start();
 }
 
 function stopVoiceRecording() {
