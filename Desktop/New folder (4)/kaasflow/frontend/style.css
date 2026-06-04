@@ -70,19 +70,14 @@ body {
   overflow-x: hidden;
   transition: background-color 0.3s ease, color 0.3s ease;
   -webkit-tap-highlight-color: transparent;
+  max-width: 430px;
 }
 
-/* Mobile view: max-width 430px */
-@media (max-width: 768px) {
-  body {
-    max-width: 430px;
-  }
-}
-
-/* Desktop view: full width with max container */
-@media (min-width: 769px) {
+/* Desktop: Remove mobile constraints */
+@media (min-width: 1024px) {
   body {
     max-width: 100%;
+    margin: 0;
   }
 }
 
@@ -327,7 +322,7 @@ h1, h2, h3, h4, h5, h6 {
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
-  max-width: 100%;
+  max-width: 430px;
   height: var(--header-h);
   background: var(--color-bg-card);
   border-bottom: 1px solid var(--color-border);
@@ -340,6 +335,18 @@ h1, h2, h3, h4, h5, h6 {
   padding: 0 1rem;
   z-index: 1000;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Desktop: Full width header */
+@media (min-width: 1024px) {
+  #top-header {
+    left: 0;
+    transform: none;
+    max-width: 100%;
+    padding: 0 2rem;
+    border-left: none;
+    border-bottom: 1px solid var(--color-border);
+  }
 }
 
 .header-left {
@@ -429,7 +436,7 @@ h1, h2, h3, h4, h5, h6 {
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
-  max-width: 100%;
+  max-width: 430px;
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: 0 0 var(--radius) var(--radius);
@@ -438,12 +445,15 @@ h1, h2, h3, h4, h5, h6 {
   overflow: hidden;
 }
 
-@media (min-width: 769px) {
+/* Desktop: Positioned dropdown */
+@media (min-width: 1024px) {
   .notif-dropdown {
-    max-width: 400px;
-    right: 20px;
     left: auto;
     transform: none;
+    right: 2rem;
+    max-width: 400px;
+    width: 400px;
+    border-radius: var(--radius);
   }
 }
 
@@ -574,7 +584,7 @@ h1, h2, h3, h4, h5, h6 {
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
-  max-width: 100%;
+  max-width: 430px;
   background: rgba(239, 68, 68, 0.12);
   border-bottom: 1px solid rgba(239, 68, 68, 0.3);
   color: var(--color-danger);
@@ -584,6 +594,16 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   align-items: center;
   z-index: 998;
+}
+
+/* Desktop: Full width banner */
+@media (min-width: 1024px) {
+  .plan-banner {
+    left: 0;
+    transform: none;
+    max-width: 100%;
+    padding: 0.5rem 2rem;
+  }
 }
 
 .btn-upgrade-sm {
@@ -610,6 +630,16 @@ h1, h2, h3, h4, h5, h6 {
   overflow-y: auto;
 }
 
+/* Desktop: Enhanced page content layout */
+@media (min-width: 1024px) {
+  #page-content {
+    padding-bottom: 0;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
 .page-section {
   padding: 1rem;
   animation: fadeIn 0.25s ease-out;
@@ -633,7 +663,7 @@ h1, h2, h3, h4, h5, h6 {
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
-  max-width: 100%;
+  max-width: 430px;
   height: var(--nav-h);
   background: var(--color-bg-card);
   border-top: 1px solid var(--color-border);
@@ -642,6 +672,27 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
   z-index: 1000;
   box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Desktop: Transform to sidebar navigation */
+@media (min-width: 1024px) {
+  #bottom-nav {
+    position: fixed;
+    top: var(--header-h);
+    left: 0;
+    bottom: 0;
+    width: 240px;
+    height: auto;
+    max-width: none;
+    transform: none;
+    border-top: none;
+    border-right: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 1rem 0;
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.1);
+  }
 }
 
 .nav-tab {
@@ -660,6 +711,32 @@ h1, h2, h3, h4, h5, h6 {
   position: relative;
 }
 
+/* Desktop: Sidebar navigation tabs */
+@media (min-width: 1024px) {
+  .nav-tab {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem 1.5rem;
+    margin: 0.125rem 0.75rem;
+    border-radius: var(--radius-sm);
+    min-height: auto;
+  }
+  
+  .nav-tab:hover {
+    background: var(--color-glow);
+  }
+  
+  .nav-tab.active {
+    background: var(--color-glow);
+    color: var(--color-primary);
+  }
+  
+  .nav-tab.active::after {
+    display: none;
+  }
+}
+
 .nav-tab:hover {
   color: var(--color-primary);
   background: var(--color-glow);
@@ -669,6 +746,14 @@ h1, h2, h3, h4, h5, h6 {
 .nav-tab i {
   font-size: 1.0625rem;
   transition: color 0.2s ease, transform 0.15s ease;
+}
+
+/* Desktop: Sidebar navigation icons */
+@media (min-width: 1024px) {
+  .nav-tab i {
+    font-size: 1.125rem;
+    transform: none !important;
+  }
 }
 
 .nav-tab span {
@@ -681,6 +766,19 @@ h1, h2, h3, h4, h5, h6 {
   text-overflow: ellipsis;
   max-width: 100%;
   padding: 0 2px;
+}
+
+/* Desktop: Sidebar navigation labels */
+@media (min-width: 1024px) {
+  .nav-tab span {
+    font-size: 0.875rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: none;
+    padding: 0;
+  }
 }
 
 /* Tamil text in bottom nav */
@@ -3095,80 +3193,525 @@ body.tamil-text .nav-tab i {
   }
 }
 
-/* ===== Desktop Responsive Layout ===== */
-@media (min-width: 769px) {
-  /* Content padding for desktop */
-  #main-content,
-  .page-container,
-  main {
+/* =====================================================
+   DESKTOP RESPONSIVE LAYOUT - FULL WIDTH PROFESSIONAL SAAS
+   ===================================================== */
+
+/* Desktop: 1024px+ (Laptops, Desktops, Large Monitors) */
+@media (min-width: 1024px) {
+  
+  /* Remove mobile width constraint */
+  #top-header,
+  #bottom-nav,
+  .plan-banner,
+  .notif-dropdown {
+    max-width: 100%;
+    left: 0;
+    right: 0;
+    transform: none;
+  }
+  
+  /* Header: Full width with padding */
+  #top-header {
+    padding: 0 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  /* Bottom Navigation: Horizontal centered layout */
+  #bottom-nav {
+    grid-template-columns: repeat(6, minmax(100px, 160px));
+    justify-content: center;
+    gap: 12px;
+    padding: 0 32px;
+  }
+  
+  /* Plan Banner: Full width */
+  .plan-banner {
+    padding: 12px 32px;
+    text-align: center;
+  }
+  
+  /* Notifications Dropdown: Right aligned */
+  .notif-dropdown {
+    left: auto;
+    right: 32px;
+    max-width: 420px;
+    border-radius: var(--radius);
+    top: calc(var(--header-h) + 8px);
+  }
+  
+  /* Main App Container: Add page wrapper */
+  #main-app {
+    padding: calc(var(--header-h) + 20px) 32px calc(var(--nav-h) + 20px);
+    max-width: 100%;
+  }
+  
+  /* Page Content: Centered with max-width */
+  .page-content,
+  #home-page,
+  #clients-page,
+  #loans-page,
+  #collection-page,
+  #reports-page,
+  #settings-page {
     max-width: 1400px;
     margin: 0 auto;
-    padding-left: 40px;
-    padding-right: 40px;
+    width: 100%;
   }
   
-  /* Header responsive */
-  #top-header {
-    padding-left: 40px;
-    padding-right: 40px;
+  /* Cards Grid Layout */
+  .client-card-list,
+  .loan-card-list,
+  .collection-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 24px;
   }
   
-  /* Bottom nav for desktop - make it look better */
-  #bottom-nav {
-    max-width: 100%;
-    grid-template-columns: repeat(6, minmax(120px, 180px));
-    justify-content: center;
-    padding: 0 40px;
+  /* Dashboard Grid */
+  #home-page .stat-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
   }
   
-  /* Auth container centered on desktop */
+  /* Forms and Modals: Better width */
+  .modal-content,
+  .modal-dialog {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  
+  .modal-xl {
+    max-width: 900px;
+  }
+  
+  /* Settings Page: Two column layout */
+  #settings-page .settings-section {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  
+  /* Reports: Better table layout */
+  .kf-table-wrapper {
+    overflow-x: auto;
+  }
+  
+  .kf-table {
+    min-width: 100%;
+  }
+  
+  /* Auth Container: Keep centered */
   .auth-container {
     max-width: 480px;
   }
   
-  /* Modals better sized on desktop */
-  .modal-content {
-    max-width: 600px;
+  /* Card hover effects for desktop */
+  .client-card,
+  .loan-card,
+  .collection-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
   
-  /* Cards in grid layout on desktop */
-  .clients-grid,
-  .loans-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 20px;
+  .client-card:hover,
+  .loan-card:hover,
+  .collection-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-elevated);
   }
 }
 
-/* Large desktop */
-@media (min-width: 1200px) {
-  #main-content,
-  .page-container,
-  main {
-    max-width: 1600px;
-    padding-left: 60px;
-    padding-right: 60px;
-  }
+/* Large Desktop: 1366px+ (HD Displays) */
+@media (min-width: 1366px) {
   
-  #top-header {
-    padding-left: 60px;
-    padding-right: 60px;
-  }
-  
+  #top-header,
   #bottom-nav {
-    padding: 0 60px;
+    padding: 0 48px;
+  }
+  
+  #main-app {
+    padding: calc(var(--header-h) + 24px) 48px calc(var(--nav-h) + 24px);
+  }
+  
+  .page-content,
+  #home-page,
+  #clients-page,
+  #loans-page,
+  #collection-page,
+  #reports-page,
+  #settings-page {
+    max-width: 1600px;
+  }
+  
+  /* More columns for large screens */
+  .client-card-list,
+  .loan-card-list,
+  .collection-list {
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 28px;
+  }
+  
+  #home-page .stat-cards {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
   }
 }
 
-/* Keep mobile layout intact for tablets and phones */
-@media (max-width: 768px) {
+/* Extra Large Desktop: 1920px+ (Full HD) */
+@media (min-width: 1920px) {
+  
+  #top-header,
+  #bottom-nav {
+    padding: 0 64px;
+  }
+  
+  #main-app {
+    padding: calc(var(--header-h) + 32px) 64px calc(var(--nav-h) + 32px);
+  }
+  
+  .page-content,
+  #home-page,
+  #clients-page,
+  #loans-page,
+  #collection-page,
+  #reports-page,
+  #settings-page {
+    max-width: 1800px;
+  }
+  
+  /* Even more columns for ultra-wide */
+  .client-card-list,
+  .loan-card-list,
+  .collection-list {
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 32px;
+  }
+  
+  #home-page .stat-cards {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  }
+  
+  .modal-xl {
+    max-width: 1100px;
+  }
+}
+
+/* 4K and Ultra-Wide: 2560px+ */
+@media (min-width: 2560px) {
+  
+  #top-header,
+  #bottom-nav {
+    padding: 0 80px;
+  }
+  
+  #main-app {
+    padding: calc(var(--header-h) + 40px) 80px calc(var(--nav-h) + 40px);
+  }
+  
+  .page-content,
+  #home-page,
+  #clients-page,
+  #loans-page,
+  #collection-page,
+  #reports-page,
+  #settings-page {
+    max-width: 2200px;
+  }
+  
+  .client-card-list,
+  .loan-card-list,
+  .collection-list {
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+    gap: 36px;
+  }
+}
+
+/* Tablet: 768px - 1023px (Keep mobile-ish layout) */
+@media (min-width: 768px) and (max-width: 1023px) {
   body {
-    max-width: 430px;
+    max-width: 768px;
   }
   
   #top-header,
   #bottom-nav,
   .plan-banner {
-    max-width: 430px;
+    max-width: 768px;
+  }
+  
+  /* Slightly wider cards on tablet */
+  .client-card-list,
+  .loan-card-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+  }
+}
+
+
+/* ============================================================
+   CHATBOT & FLOATING WIDGETS - DESKTOP RESPONSIVE
+   ============================================================ */
+
+@media (min-width: 1024px) {
+  /* Chatbot icon - Better desktop positioning */
+  #chatbot-icon {
+    bottom: 2rem !important;
+    right: 2rem !important;
+    width: 70px !important;
+    height: 70px !important;
+  }
+
+  /* Chatbot interface - Better desktop sizing */
+  #chatbot-interface {
+    width: 450px !important;
+    max-width: 450px !important;
+    height: 700px !important;
+    max-height: 80vh !important;
+  }
+
+  /* PWA install bubble - Desktop positioning */
+  #pwa-install-bubble {
+    bottom: 2rem !important;
+    right: 6rem !important;
+  }
+}
+
+/* Large desktop adjustments */
+@media (min-width: 1920px) {
+  #chatbot-icon {
+    bottom: 3rem !important;
+    right: 3rem !important;
+  }
+
+  #pwa-install-bubble {
+    bottom: 3rem !important;
+    right: 8rem !important;
+  }
+}
+
+/* ============================================================
+   AUTH SCREEN - DESKTOP RESPONSIVE
+   ============================================================ */
+
+@media (min-width: 1024px) {
+  #auth-screen {
+    padding: 3rem 2rem;
+  }
+
+  .auth-container {
+    max-width: 480px;
+  }
+
+  .auth-logo-icon {
+    width: 80px !important;
+    height: 80px !important;
+    font-size: 2.25rem !important;
+  }
+
+  .auth-logo-title {
+    font-size: 2.5rem;
+  }
+
+  .auth-card {
+    padding: 2.5rem 2rem;
+  }
+
+  .auth-card-title {
+    font-size: 1.5rem;
+  }
+
+  .onboarding-bottom-sheet {
+    padding: 2rem;
+  }
+
+  /* Pin lock screen - Better desktop layout */
+  #pin-lock-screen .auth-card {
+    max-width: 500px;
+    padding: 3rem 2.5rem;
+  }
+
+  .pin-digit-input {
+    width: 65px !important;
+    height: 75px !important;
+    font-size: 2.25rem !important;
+  }
+
+  /* Auth ambient background - Scale for desktop */
+  .auth-ambient-bg {
+    scale: 1.2;
+  }
+}
+
+@media (min-width: 1920px) {
+  .auth-container {
+    max-width: 550px;
+  }
+
+  .auth-card {
+    padding: 3rem 2.5rem;
+  }
+}
+
+/* ============================================================
+   MODALS - DESKTOP RESPONSIVE
+   ============================================================ */
+
+@media (min-width: 1024px) {
+  .modal-dialog {
+    max-width: 650px;
+    margin: 3rem auto;
+  }
+
+  .modal-dialog-centered {
+    min-height: calc(100vh - 6rem);
+  }
+
+  .modal-content {
+    border-radius: 24px !important;
+  }
+
+  .modal-header {
+    padding: 1.5rem 2rem;
+  }
+
+  .modal-body {
+    padding: 1.5rem 2rem;
+  }
+
+  .modal-footer {
+    padding: 1.5rem 2rem;
+  }
+
+  /* Info modals - Better desktop layout */
+  .info-modal {
+    padding: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .info-modal .info-modal-header,
+  .info-modal .info-modal-body {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .info-modal-body {
+    padding: 2rem 3rem;
+  }
+
+  /* Contact modal - Desktop centered */
+  .contact-modal-overlay {
+    align-items: center;
+  }
+
+  .contact-modal-card {
+    border-radius: 24px;
+    max-width: 550px;
+  }
+}
+
+@media (min-width: 1920px) {
+  .modal-dialog {
+    max-width: 800px;
+  }
+
+  .info-modal .info-modal-header,
+  .info-modal .info-modal-body {
+    max-width: 1200px;
+  }
+}
+
+/* ============================================================
+   UTILITY CLASSES - DESKTOP RESPONSIVE
+   ============================================================ */
+
+@media (min-width: 1024px) {
+  /* Hide mobile-only elements on desktop */
+  .mobile-only {
+    display: none !important;
+  }
+
+  /* Show desktop-only elements */
+  .desktop-only {
+    display: block !important;
+  }
+
+  /* Flex utilities for desktop */
+  .desktop-flex {
+    display: flex !important;
+  }
+
+  .desktop-grid {
+    display: grid !important;
+  }
+
+  /* Spacing utilities for desktop */
+  .desktop-mt-0 { margin-top: 0 !important; }
+  .desktop-mt-1 { margin-top: 0.5rem !important; }
+  .desktop-mt-2 { margin-top: 1rem !important; }
+  .desktop-mt-3 { margin-top: 1.5rem !important; }
+  .desktop-mt-4 { margin-top: 2rem !important; }
+
+  .desktop-mb-0 { margin-bottom: 0 !important; }
+  .desktop-mb-1 { margin-bottom: 0.5rem !important; }
+  .desktop-mb-2 { margin-bottom: 1rem !important; }
+  .desktop-mb-3 { margin-bottom: 1.5rem !important; }
+  .desktop-mb-4 { margin-bottom: 2rem !important; }
+
+  .desktop-p-0 { padding: 0 !important; }
+  .desktop-p-1 { padding: 0.5rem !important; }
+  .desktop-p-2 { padding: 1rem !important; }
+  .desktop-p-3 { padding: 1.5rem !important; }
+  .desktop-p-4 { padding: 2rem !important; }
+
+  /* Width utilities for desktop */
+  .desktop-w-25 { width: 25% !important; }
+  .desktop-w-50 { width: 50% !important; }
+  .desktop-w-75 { width: 75% !important; }
+  .desktop-w-100 { width: 100% !important; }
+  .desktop-w-auto { width: auto !important; }
+
+  /* Flexbox utilities */
+  .desktop-flex-row { flex-direction: row !important; }
+  .desktop-flex-column { flex-direction: column !important; }
+  .desktop-justify-start { justify-content: flex-start !important; }
+  .desktop-justify-center { justify-content: center !important; }
+  .desktop-justify-between { justify-content: space-between !important; }
+  .desktop-justify-around { justify-content: space-around !important; }
+  .desktop-align-start { align-items: flex-start !important; }
+  .desktop-align-center { align-items: center !important; }
+  .desktop-align-end { align-items: flex-end !important; }
+
+  /* Gap utilities */
+  .desktop-gap-1 { gap: 0.5rem !important; }
+  .desktop-gap-2 { gap: 1rem !important; }
+  .desktop-gap-3 { gap: 1.5rem !important; }
+  .desktop-gap-4 { gap: 2rem !important; }
+
+  /* Text utilities */
+  .desktop-text-left { text-align: left !important; }
+  .desktop-text-center { text-align: center !important; }
+  .desktop-text-right { text-align: right !important; }
+
+  /* Font size utilities */
+  .desktop-text-sm { font-size: 0.875rem !important; }
+  .desktop-text-base { font-size: 1rem !important; }
+  .desktop-text-lg { font-size: 1.125rem !important; }
+  .desktop-text-xl { font-size: 1.25rem !important; }
+  .desktop-text-2xl { font-size: 1.5rem !important; }
+  .desktop-text-3xl { font-size: 1.875rem !important; }
+}
+
+/* Ensure mobile utilities work */
+@media (max-width: 1023px) {
+  .desktop-only {
+    display: none !important;
+  }
+
+  .mobile-only {
+    display: block !important;
   }
 }
