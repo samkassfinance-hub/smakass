@@ -838,7 +838,7 @@ function init() {
       console.log('✅ INIT: Emergency fallback - showing auth screen');
     }
     
-    throw error; // Re-throw to see in console
+    // Don't re-throw the error to avoid breaking the app completely
   }
 }
 
@@ -900,6 +900,12 @@ function showAuth() {
   $('#pin-lock-screen').style.display = 'none';
   $('#main-app').style.display = 'none';
   
+  // Show PWA install bubble on auth screen
+  const bubble = $('#pwa-install-bubble');
+  if (bubble) {
+    bubble.style.display = 'block';
+  }
+  
   const aiText = document.getElementById('ai-typing-text');
   if (aiText && !aiText.dataset.typingStarted) {
     aiText.dataset.typingStarted = 'true';
@@ -942,6 +948,10 @@ function showPinLock() {
   $('#auth-screen').style.display = 'none';
   $('#pin-lock-screen').style.display = '';
   $('#main-app').style.display = 'none';
+  
+  // Hide PWA install bubble
+  const bubble = $('#pwa-install-bubble');
+  if (bubble) bubble.style.display = 'none';
   // Populate user info
   const session = getSession();
   const user = session?.user;
@@ -4343,7 +4353,37 @@ window.addEventListener('appinstalled', () => {
     installBtn.disabled = true;
     installBtn.style.opacity = '0.6';
   }
+  // Hide install bubble after successful installation
+  const bubble = $('#pwa-install-bubble');
+  if (bubble) bubble.style.display = 'none';
 });
+
+// Handle floating bubble install click
+window.handleBubbleInstall = async function() {
+  console.log('🔘 Install bubble clicked');
+  
+  if (!window.deferredPrompt) {
+    showToast('To install: Tap browser menu (⋮) → "Add to Home screen"', 'info');
+    return;
+  }
+  
+  try {
+    window.deferredPrompt.prompt();
+    const { outcome } = await window.deferredPrompt.userChoice;
+    console.log('👤 User choice:', outcome);
+    
+    if (outcome === 'accepted') {
+      showToast('App installed successfully!', 'success');
+      const bubble = $('#pwa-install-bubble');
+      if (bubble) bubble.style.display = 'none';
+    }
+  } catch (err) {
+    console.error('❌ Install prompt error:', err);
+    showToast('To install: Tap browser menu (⋮) → "Add to Home screen"', 'info');
+  }
+  
+  window.deferredPrompt = null;
+};
 
 // ── BOOT ──────────────────────────────────────────────────────
 // Emergency fallback: Force hide loading screen after 3 seconds
@@ -4363,6 +4403,12 @@ setTimeout(() => {
 
 document.addEventListener('DOMContentLoaded', () => {
   console.log('🎬 BOOT: DOMContentLoaded event fired');
+  
+  // Check if required dependencies are loaded
+  console.log('🔍 BOOT: Checking dependencies...');
+  console.log('Bootstrap:', typeof bootstrap !== 'undefined');
+  console.log('Chart.js:', typeof Chart !== 'undefined');
+  console.log('jsPDF:', typeof window.jspdf !== 'undefined');
   
   if (typeof RazorpayPayment !== 'undefined') {
     console.log('💳 BOOT: Initializing Razorpay...');
