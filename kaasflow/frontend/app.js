@@ -4739,10 +4739,16 @@ function addMessage(message, type) {
     `;
   } else {
     messageDiv.innerHTML = `
-      <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #7ed321, #4caf1a); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-          <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2Z"/>
-        </svg>
+      <div class="robot-avatar-small" style="width: 32px; height: 32px; background: linear-gradient(135deg, #7ed321, #4caf1a); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 2px solid rgba(126, 211, 33, 0.3);">
+        <div style="position: relative; width: 16px; height: 16px;">
+          <div style="width: 16px; height: 12px; background: white; border-radius: 8px 8px 4px 4px; position: relative; display: flex; align-items: center; justify-content: center;">
+            <div style="display: flex; gap: 2px; margin-top: -1px;">
+              <div style="width: 2px; height: 2px; background: #4caf1a; border-radius: 50%;"></div>
+              <div style="width: 2px; height: 2px; background: #4caf1a; border-radius: 50%;"></div>
+            </div>
+            <div style="position: absolute; bottom: 1px; left: 50%; transform: translateX(-50%); width: 3px; height: 1px; background: #4caf1a; border-radius: 1px;"></div>
+          </div>
+        </div>
       </div>
       <div class="message-content">${message}</div>
     `;
@@ -4759,10 +4765,27 @@ function showTypingIndicator() {
   typingDiv.id = 'typing-indicator';
   
   typingDiv.innerHTML = `
-    <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #7ed321, #4caf1a); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-        <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2Z"/>
-      </svg>
+    <div class="robot-avatar-small" style="width: 32px; height: 32px; background: linear-gradient(135deg, #7ed321, #4caf1a); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 2px solid rgba(126, 211, 33, 0.3);">
+      <div style="position: relative; width: 16px; height: 16px;">
+        <div style="width: 16px; height: 12px; background: white; border-radius: 8px 8px 4px 4px; position: relative; display: flex; align-items: center; justify-content: center;">
+          <div style="display: flex; gap: 2px; margin-top: -1px;">
+            <div style="width: 2px; height: 2px; background: #4caf1a; border-radius: 50%; animation: blink 0.8s infinite;"></div>
+            <div style="width: 2px; height: 2px; background: #4caf1a; border-radius: 50%; animation: blink 0.8s infinite 0.2s;"></div>
+          </div>
+          <div style="position: absolute; bottom: 1px; left: 50%; transform: translateX(-50%); width: 3px; height: 1px; background: #4caf1a; border-radius: 1px; animation: robotTalk 0.5s infinite;"></div>
+        </div>
+      </div>
+    </div>
+    <div style="background: var(--bg-input); padding: 12px 16px; border-radius: 16px 16px 16px 4px; display: flex; align-items: center; gap: 4px; border: 1px solid var(--border-default);">
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+    </div>
+  `;
+  
+  messagesContainer.appendChild(typingDiv);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
     </div>
     <div style="background: var(--bg-input); padding: 12px 16px; border-radius: 16px 16px 16px 4px; display: flex; align-items: center; gap: 4px;">
       <div class="typing-dot"></div>
@@ -5034,39 +5057,130 @@ function toggleVoiceInput() {
 window.toggleVoiceInput = toggleVoiceInput;
 
 function startVoiceRecording() {
+  console.log('🎙️ Starting voice recording...');
+  
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   recognition = new SpeechRecognition();
   
   recognition.continuous = false;
-  recognition.interimResults = false;
+  recognition.interimResults = true;
   recognition.lang = currentLang === 'ta' ? 'ta-IN' : 'en-US';
   
   const voiceButton = document.getElementById('chatbot-voice');
+  const voiceIcon = document.getElementById('voice-icon');
+  const chatbotIcon = document.getElementById('chatbot-icon');
   const t = chatbotTranslations[currentLang] || chatbotTranslations.en;
   
   recognition.onstart = () => {
+    console.log('🎤 Speech recognition started');
     isRecording = true;
     voiceButton.classList.add('recording');
+    
+    // Change voice icon to stop icon
+    if (voiceIcon) {
+      voiceIcon.innerHTML = '<circle cx="12" cy="12" r="10" fill="currentColor"/><rect x="9" y="9" width="6" height="6" fill="white" rx="1"/>';
+    }
+    
+    // Make chatbot icon animate while listening
+    if (chatbotIcon) {
+      chatbotIcon.classList.add('talking');
+    }
+    
     addMessage(t.voiceStart, 'bot');
+    if (window.showToast) showToast('Listening... Speak now', 'info');
   };
   
   recognition.onresult = (event) => {
-    const transcript = event.results[0][0].transcript;
-    document.getElementById('chatbot-input').value = transcript;
-    autoResizeTextarea();
+    console.log('🎯 Speech recognition result received');
+    let transcript = '';
+    
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      if (event.results[i].isFinal) {
+        transcript = event.results[i][0].transcript;
+        break;
+      } else {
+        // Show interim results
+        const interimTranscript = event.results[i][0].transcript;
+        const input = document.getElementById('chatbot-input');
+        if (input) {
+          input.value = interimTranscript;
+          autoResizeTextarea();
+        }
+      }
+    }
+    
+    if (transcript) {
+      console.log('📝 Final transcript:', transcript);
+      const input = document.getElementById('chatbot-input');
+      if (input) {
+        input.value = transcript;
+        autoResizeTextarea();
+        
+        // Auto-send after getting final result
+        setTimeout(() => {
+          if (input.value.trim()) {
+            sendMessage();
+          }
+        }, 500);
+      }
+    }
   };
   
-  recognition.onerror = () => {
+  recognition.onerror = (event) => {
+    console.error('❌ Speech recognition error:', event.error);
     isRecording = false;
     voiceButton.classList.remove('recording');
+    
+    // Reset voice icon
+    if (voiceIcon) {
+      voiceIcon.innerHTML = '<path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"/>';
+    }
+    
+    if (chatbotIcon) {
+      chatbotIcon.classList.remove('talking');
+    }
+    
+    let errorMessage = 'Voice recognition failed';
+    switch(event.error) {
+      case 'no-speech':
+        errorMessage = currentLang === 'ta' ? 'பேச்சு கேட்கப்படவில்லை. மீண்டும் முயற்சிக்கவும்.' : 'No speech detected. Please try again.';
+        break;
+      case 'audio-capture':
+        errorMessage = currentLang === 'ta' ? 'மைக்ரோஃபோன் அணுக முடியவில்லை.' : 'Microphone not accessible.';
+        break;
+      case 'not-allowed':
+        errorMessage = currentLang === 'ta' ? 'மைக்ரோஃபோன் அனுமதி மறுக்கப்பட்டது.' : 'Microphone permission denied.';
+        break;
+      case 'network':
+        errorMessage = currentLang === 'ta' ? 'நெட்வர்க் பிழை.' : 'Network error.';
+        break;
+    }
+    
+    if (window.showToast) showToast(errorMessage, 'error');
+    addMessage(errorMessage, 'bot');
   };
   
   recognition.onend = () => {
+    console.log('🔚 Speech recognition ended');
     isRecording = false;
     voiceButton.classList.remove('recording');
+    
+    // Reset voice icon
+    if (voiceIcon) {
+      voiceIcon.innerHTML = '<path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"/>';
+    }
+    
+    if (chatbotIcon) {
+      chatbotIcon.classList.remove('talking');
+    }
   };
   
-  recognition.start();
+  try {
+    recognition.start();
+  } catch (error) {
+    console.error('❌ Failed to start speech recognition:', error);
+    if (window.showToast) showToast('Failed to start voice recognition', 'error');
+  }
 }
 
 function stopVoiceRecording() {
