@@ -211,44 +211,40 @@ async function handleCredentialResponse(response) {
 // Install Bubble Logic — PWA Install Prompt
 let deferredPrompt;
 
+// Listen for beforeinstallprompt event
 window.addEventListener('beforeinstallprompt', (event) => {
     event.preventDefault();
     deferredPrompt = event;
-    const installBubble = document.getElementById('installBubble');
-    if (installBubble) {
-        installBubble.classList.remove('hidden');
-    }
 });
 
-window.addEventListener('appinstalled', () => {
-    const installBubble = document.getElementById('installBubble');
-    if (installBubble) {
-        installBubble.classList.add('hidden');
-    }
-});
-
+// Show bubble by default on page load
 document.addEventListener('DOMContentLoaded', () => {
     const installBubble = document.getElementById('installBubble');
     
     if (installBubble) {
-        // Show bubble by default (it animates up from bottom)
-        installBubble.classList.remove('hidden');
-
-        // Click handler for install bubble
-        installBubble.addEventListener('click', async () => {
-            // If PWA install prompt is available, use it
+        // Always show the bubble
+        installBubble.style.display = 'flex';
+        
+        // Click handler to trigger install
+        installBubble.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
             if (deferredPrompt) {
                 deferredPrompt.prompt();
                 const { outcome } = await deferredPrompt.userChoice;
-                
                 if (outcome === 'accepted') {
                     deferredPrompt = null;
-                    installBubble.classList.add('hidden');
                 }
-            } else {
-                // Fallback: show alert or attempt to trigger install manually
-                alert('Install this app:\n\n1. Click the browser menu (⋮)\n2. Select "Install app"\n3. Confirm installation');
             }
         });
+    }
+});
+
+// Hide bubble after app is installed
+window.addEventListener('appinstalled', () => {
+    const installBubble = document.getElementById('installBubble');
+    if (installBubble) {
+        installBubble.style.display = 'none';
     }
 });
