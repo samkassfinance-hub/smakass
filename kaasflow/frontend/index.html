@@ -996,80 +996,106 @@
       font-weight: 400 !important;
     }
 
-    /* ── Google Sign-In Button ── */
-    .btn-google-signin {
+    /* ── Simple Google Sign-In Button ── */
+    .btn-google-simple {
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 12px;
-      padding: 13px 20px;
+      padding: 14px 20px;
       background: #ffffff;
       color: #3c4043;
-      font-family: 'Plus Jakarta Sans', 'Inter', 'Roboto', sans-serif;
-      font-size: 0.95rem;
+      font-family: 'Outfit', sans-serif;
+      font-size: 16px;
       font-weight: 600;
       letter-spacing: 0.2px;
-      border: 1.5px solid #dadce0;
-      border-radius: 14px;
+      border: 2px solid #dadce0;
+      border-radius: 12px;
       cursor: pointer;
-      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-      position: relative;
-      overflow: hidden;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      width: 100%;
     }
-    .btn-google-signin::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, rgba(66,133,244,0.04), rgba(234,67,53,0.04), rgba(251,188,5,0.04), rgba(52,168,83,0.04));
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    }
-    .btn-google-signin:hover {
+
+    .btn-google-simple:hover {
       border-color: #4285F4;
-      box-shadow: 0 4px 16px rgba(66, 133, 244, 0.15), 0 2px 6px rgba(0,0,0,0.06);
+      box-shadow: 0 4px 16px rgba(66, 133, 244, 0.2);
       transform: translateY(-1px);
+      background: #f8f9fa;
+      color: #3c4043;
     }
-    .btn-google-signin:hover::before {
-      opacity: 1;
-    }
-    .btn-google-signin:active {
+
+    .btn-google-simple:active {
       transform: translateY(0);
       box-shadow: 0 2px 8px rgba(66, 133, 244, 0.1);
     }
-    .btn-google-signin svg {
-      position: relative;
-      z-index: 1;
-    }
-    .btn-google-signin span {
-      position: relative;
-      z-index: 1;
+
+    .btn-try-another {
+      background: var(--bg-input);
+      color: var(--text-primary);
+      border: 2px solid var(--border-default);
+      border-radius: 12px;
+      padding: 14px 20px;
+      font-weight: 600;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      width: 100%;
+      font-family: 'Outfit', sans-serif;
     }
 
-    /* Dark theme overrides for Google button */
-    [data-theme="dark"] .btn-google-signin {
+    .btn-try-another:hover {
+      background: rgba(126, 211, 33, 0.1);
+      border-color: var(--green-mid);
+      color: var(--green-mid);
+    }
+
+    .btn-try-another:active {
+      transform: translateY(1px);
+    }
+
+    /* Auth screen slider fixes */
+    #auth-slider-container {
+      display: flex;
+      transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+      width: 200%; /* Two slides side by side */
+    }
+
+    .auth-slide {
+      width: 50%; /* Each slide takes half the container */
+      flex-shrink: 0;
+      padding: 0 20px;
+    }
+
+    #auth-slider-container.slide-to-step-2 {
+      transform: translateX(-50%); /* Move to show second slide */
+    }
+
+    /* Form section switching */
+    .auth-form-section {
+      display: none;
+    }
+
+    .auth-form-section.active {
+      display: block !important;
+    }
+
+    /* Loading spinner animation */
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Dark theme overrides */
+    [data-theme="dark"] .btn-google-simple {
       background: rgba(255, 255, 255, 0.06);
       border-color: rgba(255, 255, 255, 0.12);
       color: #e8eaed;
     }
-    [data-theme="dark"] .btn-google-signin:hover {
+
+    [data-theme="dark"] .btn-google-simple:hover {
       background: rgba(255, 255, 255, 0.1);
       border-color: rgba(66, 133, 244, 0.5);
-      box-shadow: 0 4px 16px rgba(66, 133, 244, 0.15), 0 0 0 1px rgba(66, 133, 244, 0.2);
-    }
-
-    /* Google button loading state */
-    .btn-google-signin.loading {
-      pointer-events: none;
-      opacity: 0.75;
-    }
-    .btn-google-signin.loading span::after {
-      content: '...';
-      animation: googleBtnDots 1.2s infinite;
-    }
-    @keyframes googleBtnDots {
-      0%, 20% { content: '.'; }
-      40% { content: '..'; }
-      60%, 100% { content: '...'; }
     }
   </style>
 
@@ -1165,48 +1191,26 @@
             <p class="auth-logo-sub">Finance Manager</p>
           </div>
 
-          <!-- AI Voice Assistant Orb Animation -->
-          <div class="ai-orb-container">
-            <div class="ai-typing-text" id="ai-typing-text"></div>
-          </div>
-
-
-
           <!-- Bottom Sheet Container -->
           <div class="onboarding-bottom-sheet">
             <h2 class="bottom-sheet-title" data-i18n="welcomeToSamKass">Welcome to SamKass</h2>
             <p class="bottom-sheet-sub" data-i18n="chooseSignInMethod">Choose your sign-in method</p>
             
-            <!-- Google Sign-in Wrapper -->
-            <div class="mb-2 d-flex flex-column align-items-center w-100">
-              <div id="g_id_onload" 
-                   data-client_id="1008709235007-vh9u2526ol0haffogibri3kno6rtjejl.apps.googleusercontent.com"
-                   data-callback="handleGoogleLogin"
-                   data-auto_prompt="false">
-              </div>
-              <div class="g_id_signin w-100" 
-                   data-type="standard" 
-                   data-shape="pill" 
-                   data-theme="outline"
-                   data-text="continue_with" 
-                   data-size="large" 
-                   data-logo_alignment="left">
-              </div>
-              
-              <!-- Backup Google Sign-In Button -->
-              <button type="button" class="btn-google-signin w-100 mt-2" id="manual-google-signin" onclick="triggerGoogleSignIn()" style="display: none;">
+            <!-- Simple Google Sign-in Button -->
+            <div class="mb-3 d-flex flex-column align-items-center w-100">
+              <button type="button" class="btn-google-simple w-100" onclick="window.startGoogleLogin && window.startGoogleLogin()">
                 <svg width="20" height="20" viewBox="0 0 24 24" style="margin-right: 8px;">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                   <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
-                <span>Continue with Google</span>
+                Continue with Google
               </button>
             </div>
 
             <!-- Try Another Way Button -->
-            <button type="button" class="btn-try-another w-100" id="btn-try-another">
+            <button type="button" class="btn-try-another w-100" onclick="window.showEmailLogin && window.showEmailLogin()">
               Try another way <i class="fa-solid fa-chevron-right ms-1"></i>
             </button>
           </div>
