@@ -634,74 +634,122 @@ function saveSessionIsolated(token, user) {
 
 // Google Login Callback
 window.handleGoogleLogin = async function(response) {
-  // Remove loading state from buttons
-  const btns = document.querySelectorAll('.btn-google-signin');
-  btns.forEach(b => b.classList.remove('loading'));
-
-  // Decode the JWT credential to extract user info
-  let googleUser = {};
-  try {
-    const payload = JSON.parse(atob(response.credential.split('.')[1]));
-    googleUser = {
-      email: payload.email,
-      name: payload.name || payload.email.split('@')[0],
-      picture: payload.picture || '',
-      sub: payload.sub
-    };
-  } catch (e) {
-    googleUser = { email: 'google-user@gmail.com', name: 'Google User' };
+  console.log('🔐 Google login initiated');
+  
+  if (!response || !response.credential) {
+    console.error('❌ Invalid Google response:', response);
+    showToast('Google login failed - invalid response', 'error');
+    return;
   }
 
-  // Try backend first
-  const res = await apiAuth('google', { token: response.credential });
+  // Remove loading state from buttons
+  const btns = document.querySelectorAll('.btn-google-signin, .g_id_signin');
+  btns.forEach(b => b.classList.remove('loading'));
 
-  if (res.success) {
-    const token = res.token || ('google-session:' + encodeURIComponent(res.user?.email || googleUser.email) + ':' + Date.now());
-    saveSessionIsolated(token, res.user);
-    const s = Store.settings();
-    if (res.user?.name && !s.financierName) { s.financierName = res.user.name; Store.saveSettings(s); }
-    if (res.user?.appPin) { s.appPin = res.user.appPin; Store.saveSettings(s); }
-    state.session = getSession();
-    
-    // Crucial: Restore from cloud BEFORE checking PIN
-    // so we don't overwrite data for an existing user logging into a new device
-    if (window.KFSync) await KFSync.restore();
-    if (hasPin()) { showPinLock(); } else { showPinSetup(); }
-  } else if (res.offline) {
-    // Backend offline — create local session from Google credential
-    const user = {
-      email: googleUser.email,
-      name: googleUser.name,
-      financierName: googleUser.name,
-      picture: googleUser.picture
-    };
-    saveSessionIsolated('google-session:' + encodeURIComponent(user.email) + ':' + Date.now(), user);
-    // Save to local users list for consistency
-    const users = getLocalUsers();
-    if (!users.find(u => u.email.toLowerCase() === googleUser.email.toLowerCase())) {
-      users.push({
-        id: Date.now(),
-        email: googleUser.email,
-        passwordHash: '', // Google users don't have passwords
-        financierName: googleUser.name,
-        businessName: '',
-        googleAuth: true,
-        createdAt: new Date().toISOString()
-      });
-      saveLocalUsers(users);
+  try {
+    // Decode the JWT credential to extract user info
+    let googleUser = {};
+    try {
+      const payload = JSON.parse(atob(response.credential.split('.')[1]));
+      googleUser = {
+        email: payload.email,
+        name: payload.name || payload.email.split('@')[0],
+        picture: payload.picture || '',
+        sub: payload.sub
+      };
+      console.log('✅ Google user info decoded:', { email: googleUser.email, name: googleUser.name });
+    } catch (e) {
+      console.error('❌ Failed to decode Google credential:', e);
+      googleUser = { email: 'google-user@gmail.com', name: 'Google User' };
     }
-    const s = Store.settings();
-    if (!s.financierName) { s.financierName = googleUser.name; Store.saveSettings(s); }
-    state.session = getSession();
+
+    // Show loading message
+    showToast('Connecting with Google...', 'info');
+
+    // Try backend first
+    const res = await apiAuth('google', { token: response.credential });
+    console.log('🔄 Backend Google auth response:', res);
+
+    if (res.success) {
+      console.log('✅ Backend Google auth successful');
+      const token = res.token || ('google-session:' + encodeURIComponent(res.user?.email || googleUser.email) + ':' + Date.now());
+      saveSessionIsolated(token, res.user);
+      const s = Store.settings();
+      if (res.user?.name && !s.financierName) { s.financierName = res.user.name; Store.saveSettings(s); }
+      if (res.user?.appPin) { s.appPin = res.user.appPin; Store.saveSettings(s); }
+      state.session = getSession();
+      
+      // Crucial: Restore from cloud BEFORE checking PIN
+      // so we don't overwrite data for an existing user logging into a new device
+      if (window.KFSync) await KFSync.restore();
+      
+      showToast('Welcome back, ' + (res.user?.name || googleUser.name) + '!', 'success');
+      
+      if (hasPin()) { 
+        console.log('📱 User has PIN, showing PIN lock');
+        showPinLock(); 
+      } else { 
+        console.log('🆕 No PIN found, showing PIN setup');
+        showPinSetup(); 
+      }
+    } else if (res.offline) {
+      console.log('🔄 Backend offline, using local Google auth');
+      // Backend offline — create local session from Google credential
+      const user = {
+        email: googleUser.email,
+        name: googleUser.name,
+        financierName: googleUser.name,
+        picture: googleUser.picture
+      };
+      saveSessionIsolated('google-session:' + encodeURIComponent(user.email) + ':' + Date.now(), user);
+      
+      // Save to local users list for consistency
+      const users = getLocalUsers();
+      if (!users.find(u => u.email.toLowerCase() === googleUser.email.toLowerCase())) {
+        users.push({
+          id: Date.now(),
+          email: googleUser.email,
+          passwordHash: '', // Google users don't have passwords
+          financierName: googleUser.name,
+          businessName: '',
+          googleAuth: true,
+          createdAt: new Date().toISOString()
+        });
+        saveLocalUsers(users);
+      }
+      
+      const s = Store.settings();
+      if (!s.financierName) { s.financierName = googleUser.name; Store.saveSettings(s); }
+      state.session = getSession();
+      
+      // Crucial: Restore from cloud BEFORE checking PIN
+      if (window.KFSync) await KFSync.restore();
+      
+      showToast('Welcome, ' + googleUser.name + '! (Offline mode)', 'success');
+      
+      if (hasPin()) { 
+        console.log('📱 User has PIN, showing PIN lock');
+        showPinLock(); 
+      } else { 
+        console.log('🆕 No PIN found, showing PIN setup');
+        showPinSetup(); 
+      }
+    } else {
+      console.error('❌ Google login failed:', res.error);
+      const errEl = $('#login-error');
+      if (errEl) {
+        errEl.textContent = res.error || 'Google login failed - please try again';
+        errEl.classList.remove('d-none');
+      }
+      showToast(res.error || 'Google login failed', 'error');
+    }
+  } catch (error) {
+    console.error('❌ Google login error:', error);
+    showToast('Google login failed - ' + error.message, 'error');
     
-    // Crucial: Restore from cloud BEFORE checking PIN
-    if (window.KFSync) await KFSync.restore();
-    
-    if (hasPin()) { showPinLock(); } else { showPinSetup(); }
-  } else {
     const errEl = $('#login-error');
     if (errEl) {
-      errEl.textContent = res.error || 'Google login failed';
+      errEl.textContent = 'Google login failed: ' + error.message;
       errEl.classList.remove('d-none');
     }
   }
@@ -4430,6 +4478,9 @@ document.addEventListener('DOMContentLoaded', () => {
     console.warn('⚠️ BOOT: RazorpayPayment not found');
   }
   
+  // Initialize Google Sign-In
+  initializeGoogleSignIn();
+  
   // Initialize chatbot
   initChatbot();
   
@@ -4449,6 +4500,131 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }, 400);
 });
+
+// Google Sign-In Initialization
+function initializeGoogleSignIn() {
+  console.log('🔐 Initializing Google Sign-In...');
+  
+  // Wait for Google Identity Services to load
+  const waitForGoogle = () => {
+    if (typeof google !== 'undefined' && google.accounts) {
+      console.log('✅ Google Identity Services loaded');
+      
+      try {
+        // Initialize Google Sign-In
+        google.accounts.id.initialize({
+          client_id: '1008709235007-vh9u2526ol0haffogibri3kno6rtjejl.apps.googleusercontent.com',
+          callback: handleGoogleLogin,
+          auto_select: false,
+          cancel_on_tap_outside: true,
+          use_fedcm_for_prompt: false
+        });
+        
+        console.log('✅ Google Sign-In initialized successfully');
+        
+        // Render Google button in all containers
+        setTimeout(() => {
+          const containers = document.querySelectorAll('.g_id_signin');
+          let renderSuccess = false;
+          
+          containers.forEach((container, index) => {
+            try {
+              google.accounts.id.renderButton(container, {
+                type: 'standard',
+                shape: 'pill',
+                theme: 'outline',
+                text: 'continue_with',
+                size: 'large',
+                logo_alignment: 'left',
+                width: container.offsetWidth || 280
+              });
+              console.log(`✅ Google button rendered in container ${index + 1}`);
+              renderSuccess = true;
+            } catch (error) {
+              console.error(`❌ Failed to render Google button in container ${index + 1}:`, error);
+            }
+          });
+          
+          // Show manual button if automatic rendering failed
+          if (!renderSuccess) {
+            console.log('⚠️ Google button auto-render failed, showing manual button');
+            const manualBtn = document.getElementById('manual-google-signin');
+            if (manualBtn) {
+              manualBtn.style.display = 'flex';
+            }
+          }
+        }, 1000);
+        
+      } catch (error) {
+        console.error('❌ Failed to initialize Google Sign-In:', error);
+        // Show manual button as fallback
+        const manualBtn = document.getElementById('manual-google-signin');
+        if (manualBtn) {
+          manualBtn.style.display = 'flex';
+        }
+      }
+    } else {
+      console.log('⏳ Waiting for Google Identity Services...');
+      setTimeout(waitForGoogle, 500);
+    }
+  };
+  
+  waitForGoogle();
+}
+
+// Manual Google Sign-In Trigger
+window.triggerGoogleSignIn = function() {
+  console.log('🔘 Manual Google Sign-In triggered');
+  
+  if (typeof google !== 'undefined' && google.accounts) {
+    try {
+      google.accounts.id.prompt((notification) => {
+        console.log('📋 Google prompt notification:', notification);
+        
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+          console.log('⚠️ Google prompt not displayed, trying OAuth popup');
+          
+          // Fallback to OAuth popup
+          google.accounts.oauth2.initTokenClient({
+            client_id: '1008709235007-vh9u2526ol0haffogibri3kno6rtjejl.apps.googleusercontent.com',
+            scope: 'openid email profile',
+            callback: (response) => {
+              console.log('🔑 OAuth response:', response);
+              if (response.access_token) {
+                // Get user info using access token
+                fetch(`https://www.googleapis.com/oauth2/v2/userinfo?access_token=${response.access_token}`)
+                  .then(res => res.json())
+                  .then(userInfo => {
+                    console.log('👤 User info from OAuth:', userInfo);
+                    // Create a credential-like object
+                    const fakeCredential = {
+                      credential: btoa(JSON.stringify({
+                        email: userInfo.email,
+                        name: userInfo.name,
+                        picture: userInfo.picture,
+                        sub: userInfo.id
+                      }))
+                    };
+                    handleGoogleLogin(fakeCredential);
+                  })
+                  .catch(error => {
+                    console.error('❌ Failed to get user info:', error);
+                    showToast('Google login failed - please try again', 'error');
+                  });
+              }
+            }
+          }).requestAccessToken();
+        }
+      });
+    } catch (error) {
+      console.error('❌ Manual Google Sign-In failed:', error);
+      showToast('Google Sign-In not available. Please try email login.', 'error');
+    }
+  } else {
+    console.error('❌ Google Identity Services not loaded');
+    showToast('Google Sign-In not available. Please try email login.', 'error');
+  }
+};
 
 // ── CHATBOT FUNCTIONALITY ──────────────────────────────────────
 let isDragging = false;
