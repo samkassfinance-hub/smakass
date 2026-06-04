@@ -986,6 +986,10 @@ async function showApp() {
   $('#auth-screen').style.display = 'none';
   $('#pin-lock-screen').style.display = 'none';
   $('#main-app').style.display = '';
+  
+  // Show chatbot for logged-in users
+  showChatbotForLoggedInUser();
+  
   updatePlanBanner();
   checkAccessControl();
   
@@ -4426,6 +4430,9 @@ document.addEventListener('DOMContentLoaded', () => {
     console.warn('⚠️ BOOT: RazorpayPayment not found');
   }
   
+  // Initialize chatbot
+  initChatbot();
+  
   // Brief loading screen delay for smooth UX
   console.log('⏳ BOOT: Waiting 400ms before calling init()...');
   setTimeout(() => {
@@ -4442,6 +4449,564 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }, 400);
 });
+
+// ── CHATBOT FUNCTIONALITY ──────────────────────────────────────
+let isDragging = false;
+let dragOffset = { x: 0, y: 0 };
+let isRecording = false;
+let recognition = null;
+let currentLang = 'en';
+
+// Chatbot translations
+const chatbotTranslations = {
+  en: {
+    title: 'SamKass Assistant',
+    subtitle: 'Ask me anything about your finances',
+    welcome: 'Hello! I\'m your SamKass assistant. Ask me about your clients, loans, payments, or any app feature!',
+    placeholder: 'Type your question here...',
+    thinking: 'Let me check that for you...',
+    noData: 'I couldn\'t find that information in your current data.',
+    error: 'Sorry, I couldn\'t process that request.',
+    voiceStart: 'Listening... Speak now',
+    voiceError: 'Voice recognition is not supported in your browser.'
+  },
+  ta: {
+    title: 'சாம்காஸ் உதவியாளர்',
+    subtitle: 'உங்கள் நிதி குறித்து எதையும் கேளுங்கள்',
+    welcome: 'வணக்கம்! நான் உங்கள் சாம்காஸ் உதவியாளர். உங்கள் வாடிக்கையாளர்கள், கடன்கள், பணம் செலுத்துதல் அல்லது எந்த செயலி அம்சத்தைப் பற்றியும் கேளுங்கள்!',
+    placeholder: 'உங்கள் கேள்வியை இங்கே தட்டச்சு செய்யுங்கள்...',
+    thinking: 'உங்களுக்காக அதை சரிபார்க்கிறேன்...',
+    noData: 'உங்கள் தற்போதைய தரவில் அந்த தகவலைக் கண்டுபிடிக்க முடியவில்லை.',
+    error: 'மன்னிக்கவும், அந்த கோரிக்கையைச் செயல்படுத்த முடியவில்லை.',
+    voiceStart: 'கேட்கிறது... இப்போது பேசுங்கள்',
+    voiceError: 'உங்கள் உலாவியில் குரல் அடையாளம் ஆதரிக்கப்படவில்லை.'
+  }
+};
+
+function initChatbot() {
+  console.log('🤖 Initializing chatbot...');
+  
+  const chatbotIcon = document.getElementById('chatbot-icon');
+  const chatbotInterface = document.getElementById('chatbot-interface');
+  
+  if (!chatbotIcon) return;
+  
+  // Make icon draggable
+  chatbotIcon.addEventListener('mousedown', startDrag);
+  chatbotIcon.addEventListener('touchstart', startDrag);
+  
+  // Click to open chat
+  chatbotIcon.addEventListener('click', (e) => {
+    if (!isDragging) {
+      openChatbot();
+    }
+  });
+  
+  // Auto-resize textarea
+  const textarea = document.getElementById('chatbot-input');
+  if (textarea) {
+    textarea.addEventListener('input', autoResizeTextarea);
+    textarea.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+  }
+}
+
+function startDrag(e) {
+  e.preventDefault();
+  isDragging = false;
+  
+  const chatbotIcon = document.getElementById('chatbot-icon');
+  const rect = chatbotIcon.getBoundingClientRect();
+  
+  const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+  const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+  
+  dragOffset.x = clientX - rect.left;
+  dragOffset.y = clientY - rect.top;
+  
+  document.addEventListener('mousemove', drag);
+  document.addEventListener('touchmove', drag);
+  document.addEventListener('mouseup', stopDrag);
+  document.addEventListener('touchend', stopDrag);
+  
+  setTimeout(() => {
+    if (document.addEventListener) {
+      isDragging = true;
+      chatbotIcon.classList.add('dragging');
+    }
+  }, 100);
+}
+
+function drag(e) {
+  if (!isDragging) return;
+  
+  e.preventDefault();
+  const chatbotIcon = document.getElementById('chatbot-icon');
+  
+  const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+  const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+  
+  const x = clientX - dragOffset.x;
+  const y = clientY - dragOffset.y;
+  
+  const maxX = window.innerWidth - 60;
+  const maxY = window.innerHeight - 60;
+  
+  const clampedX = Math.max(0, Math.min(x, maxX));
+  const clampedY = Math.max(0, Math.min(y, maxY));
+  
+  chatbotIcon.style.left = clampedX + 'px';
+  chatbotIcon.style.top = clampedY + 'px';
+  chatbotIcon.style.right = 'auto';
+  chatbotIcon.style.bottom = 'auto';
+}
+
+function stopDrag() {
+  document.removeEventListener('mousemove', drag);
+  document.removeEventListener('touchmove', drag);
+  document.removeEventListener('mouseup', stopDrag);
+  document.removeEventListener('touchend', stopDrag);
+  
+  const chatbotIcon = document.getElementById('chatbot-icon');
+  chatbotIcon.classList.remove('dragging');
+  
+  setTimeout(() => {
+    isDragging = false;
+  }, 100);
+}
+
+function openChatbot() {
+  const chatbotInterface = document.getElementById('chatbot-interface');
+  const chatbotIcon = document.getElementById('chatbot-icon');
+  
+  if (chatbotInterface && chatbotIcon) {
+    chatbotInterface.style.display = 'flex';
+    chatbotIcon.style.display = 'none';
+    
+    // Update language
+    updateChatbotLanguage();
+    
+    // Focus input
+    setTimeout(() => {
+      const input = document.getElementById('chatbot-input');
+      if (input) input.focus();
+    }, 300);
+  }
+}
+
+function closeChatbot() {
+  const chatbotInterface = document.getElementById('chatbot-interface');
+  const chatbotIcon = document.getElementById('chatbot-icon');
+  
+  if (chatbotInterface && chatbotIcon) {
+    chatbotInterface.style.display = 'none';
+    chatbotIcon.style.display = 'flex';
+  }
+}
+
+function updateChatbotLanguage() {
+  const settings = Store.settings();
+  currentLang = settings.lang || 'en';
+  const t = chatbotTranslations[currentLang] || chatbotTranslations.en;
+  
+  const title = document.getElementById('chatbot-title');
+  const subtitle = document.getElementById('chatbot-subtitle');
+  const welcome = document.getElementById('welcome-message');
+  const placeholder = document.getElementById('chatbot-input');
+  
+  if (title) title.textContent = t.title;
+  if (subtitle) subtitle.textContent = t.subtitle;
+  if (welcome) welcome.textContent = t.welcome;
+  if (placeholder) placeholder.placeholder = t.placeholder;
+}
+
+function sendMessage() {
+  const input = document.getElementById('chatbot-input');
+  const message = input.value.trim();
+  
+  if (!message) return;
+  
+  // Detect language from input
+  const detectedLang = detectLanguage(message);
+  
+  // Add user message
+  addMessage(message, 'user');
+  
+  // Clear input
+  input.value = '';
+  autoResizeTextarea();
+  
+  // Show thinking indicator
+  showTypingIndicator();
+  
+  // Process message and respond
+  setTimeout(() => {
+    hideTypingIndicator();
+    const response = processUserMessage(message, detectedLang);
+    addMessage(response, 'bot');
+  }, 1000 + Math.random() * 1000);
+}
+
+function detectLanguage(text) {
+  // Simple Tamil detection - check for Tamil Unicode characters
+  const tamilPattern = /[\u0B80-\u0BFF]/;
+  return tamilPattern.test(text) ? 'ta' : 'en';
+}
+
+function addMessage(message, type) {
+  const messagesContainer = document.getElementById('chatbot-messages');
+  const messageDiv = document.createElement('div');
+  messageDiv.className = type + '-message';
+  
+  if (type === 'user') {
+    messageDiv.innerHTML = `
+      <div class="message-content">${message}</div>
+    `;
+  } else {
+    messageDiv.innerHTML = `
+      <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #7ed321, #4caf1a); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+          <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2Z"/>
+        </svg>
+      </div>
+      <div class="message-content">${message}</div>
+    `;
+  }
+  
+  messagesContainer.appendChild(messageDiv);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function showTypingIndicator() {
+  const messagesContainer = document.getElementById('chatbot-messages');
+  const typingDiv = document.createElement('div');
+  typingDiv.className = 'bot-message typing-indicator';
+  typingDiv.id = 'typing-indicator';
+  
+  typingDiv.innerHTML = `
+    <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #7ed321, #4caf1a); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+        <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2Z"/>
+      </svg>
+    </div>
+    <div style="background: var(--bg-input); padding: 12px 16px; border-radius: 16px 16px 16px 4px; display: flex; align-items: center; gap: 4px;">
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+    </div>
+  `;
+  
+  messagesContainer.appendChild(typingDiv);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function hideTypingIndicator() {
+  const indicator = document.getElementById('typing-indicator');
+  if (indicator) {
+    indicator.remove();
+  }
+}
+
+function processUserMessage(message, language) {
+  const lowerMessage = message.toLowerCase();
+  
+  // Get app data
+  const clients = Store.clients();
+  const loans = Store.loans();
+  const payments = Store.payments();
+  const settings = Store.settings();
+  
+  // Use appropriate language for response
+  const t = chatbotTranslations[language] || chatbotTranslations.en;
+  
+  // Calculate key metrics
+  const totalLent = loans.reduce((sum, loan) => sum + loan.principal, 0);
+  const totalCollected = payments.reduce((sum, p) => sum + p.amount, 0);
+  const outstandingBalance = totalLent - totalCollected;
+  const activeLoans = loans.filter(l => l.status === 'active');
+  
+  // Today's data
+  const today = new Date().toISOString().split('T')[0];
+  const todayPayments = payments.filter(p => p.date === today);
+  const todayCollection = todayPayments.reduce((sum, p) => sum + p.amount, 0);
+  
+  // Client-related queries
+  if (lowerMessage.includes('client') || lowerMessage.includes('வாடிக்கையாளர்') || lowerMessage.includes('customer')) {
+    if (lowerMessage.includes('how many') || lowerMessage.includes('எத்தனை') || lowerMessage.includes('count')) {
+      return language === 'ta' 
+        ? `உங்களிடம் மொத்தம் ${clients.length} வாடிக்கையாளர்கள் உள்ளனர். ${activeLoans.length} பேருக்கு செயலில் உள்ள கடன்கள் உள்ளன.`
+        : `You have a total of ${clients.length} clients. ${activeLoans.length} have active loans.`;
+    }
+    
+    if (lowerMessage.includes('list') || lowerMessage.includes('பட்டியல்')) {
+      if (clients.length === 0) {
+        return language === 'ta' 
+          ? 'உங்களிடம் இன்னும் வாடிக்கையாளர்கள் எவரும் இல்லை.'
+          : 'You don\'t have any clients yet.';
+      }
+      const clientList = clients.slice(0, 5).map(c => c.name).join(', ');
+      const moreText = clients.length > 5 ? (language === 'ta' ? ` மற்றும் ${clients.length - 5} மேலும்` : ` and ${clients.length - 5} more`) : '';
+      return language === 'ta' 
+        ? `உங்கள் வாடிக்கையாளர்கள்: ${clientList}${moreText}.`
+        : `Your clients: ${clientList}${moreText}.`;
+    }
+    
+    if (lowerMessage.includes('top') || lowerMessage.includes('best') || lowerMessage.includes('சிறந்த')) {
+      const clientStats = clients.map(client => {
+        const clientLoans = loans.filter(l => l.clientId === client.id);
+        const clientPayments = payments.filter(p => {
+          const loan = loans.find(l => l.id === p.loanId);
+          return loan && loan.clientId === client.id;
+        });
+        const totalLent = clientLoans.reduce((sum, l) => sum + l.principal, 0);
+        const totalPaid = clientPayments.reduce((sum, p) => sum + p.amount, 0);
+        return { ...client, totalLent, totalPaid, balance: totalLent - totalPaid };
+      }).sort((a, b) => b.totalLent - a.totalLent);
+      
+      if (clientStats.length === 0) return t.noData;
+      
+      const topClient = clientStats[0];
+      return language === 'ta' 
+        ? `உங்கள் மிகப்பெரிய வாடிக்கையாளர் ${topClient.name} - ₹${topClient.totalLent.toLocaleString()} கடன்.`
+        : `Your biggest client is ${topClient.name} - ₹${topClient.totalLent.toLocaleString()} lent.`;
+    }
+  }
+  
+  // Loan-related queries
+  if (lowerMessage.includes('loan') || lowerMessage.includes('கடன்') || lowerMessage.includes('lend')) {
+    if (lowerMessage.includes('total') || lowerMessage.includes('amount') || lowerMessage.includes('மொத்தம்')) {
+      return language === 'ta' 
+        ? `நீங்கள் மொத்தம் ₹${totalLent.toLocaleString()} கடன் கொடுத்துள்ளீர்கள். ${loans.length} கடன்கள் இதுவரை வழங்கப்பட்டுள்ளன.`
+        : `You have lent a total of ₹${totalLent.toLocaleString()} across ${loans.length} loans.`;
+    }
+    
+    if (lowerMessage.includes('active') || lowerMessage.includes('செயலில்')) {
+      const activePrincipal = activeLoans.reduce((sum, l) => sum + l.principal, 0);
+      return language === 'ta' 
+        ? `உங்களிடம் ${activeLoans.length} செயலில் உள்ள கடன்கள் உள்ளன, மொத்தம் ₹${activePrincipal.toLocaleString()}.`
+        : `You have ${activeLoans.length} active loans totaling ₹${activePrincipal.toLocaleString()}.`;
+    }
+    
+    if (lowerMessage.includes('biggest') || lowerMessage.includes('largest') || lowerMessage.includes('பெரிய')) {
+      if (loans.length === 0) return t.noData;
+      const biggestLoan = loans.sort((a, b) => b.principal - a.principal)[0];
+      const client = clients.find(c => c.id === biggestLoan.clientId);
+      return language === 'ta' 
+        ? `மிகப்பெரிய கடன் ${client?.name || 'Unknown'} - ₹${biggestLoan.principal.toLocaleString()}.`
+        : `Biggest loan is to ${client?.name || 'Unknown'} - ₹${biggestLoan.principal.toLocaleString()}.`;
+    }
+  }
+  
+  // Payment and collection queries
+  if (lowerMessage.includes('payment') || lowerMessage.includes('பணம்') || lowerMessage.includes('collect') || lowerMessage.includes('due')) {
+    if (lowerMessage.includes('today') || lowerMessage.includes('இன்று')) {
+      if (lowerMessage.includes('due') || lowerMessage.includes('வரவேண்டிய')) {
+        // Calculate due today
+        const dueToday = activeLoans.filter(loan => {
+          const stats = calcLoanStats(loan);
+          return stats.nextDue && stats.nextDue <= today && stats.nextDue >= today;
+        });
+        const dueAmount = dueToday.reduce((sum, loan) => sum + calcLoanStats(loan).emi, 0);
+        
+        return language === 'ta' 
+          ? `இன்று ₹${dueAmount.toLocaleString()} சேகரிக்க வேண்டும் (${dueToday.length} கடன்கள்).`
+          : `Today you need to collect ₹${dueAmount.toLocaleString()} from ${dueToday.length} loans.`;
+      } else {
+        return language === 'ta' 
+          ? `இன்று நீங்கள் ₹${todayCollection.toLocaleString()} பெற்றுள்ளீர்கள் (${todayPayments.length} பணம் செலுத்துதல்கள்).`
+          : `Today you collected ₹${todayCollection.toLocaleString()} from ${todayPayments.length} payments.`;
+      }
+    }
+    
+    if (lowerMessage.includes('total') || lowerMessage.includes('மொத்தம்')) {
+      return language === 'ta' 
+        ? `நீங்கள் மொத்தம் ₹${totalCollected.toLocaleString()} சேகரித்துள்ளீர்கள் ${payments.length} பணம் செலுத்துதல்களில்.`
+        : `You have collected a total of ₹${totalCollected.toLocaleString()} from ${payments.length} payments.`;
+    }
+    
+    if (lowerMessage.includes('overdue') || lowerMessage.includes('late') || lowerMessage.includes('தாமதம்')) {
+      const overdueLoans = activeLoans.filter(loan => {
+        const stats = calcLoanStats(loan);
+        return stats.nextDue && new Date(stats.nextDue) < new Date(today);
+      });
+      
+      if (overdueLoans.length === 0) {
+        return language === 'ta' 
+          ? 'தாமதமான கடன்கள் எதுவும் இல்லை. நன்று!'
+          : 'No overdue loans. Great!';
+      }
+      
+      const overdueAmount = overdueLoans.reduce((sum, loan) => sum + calcLoanStats(loan).emi, 0);
+      return language === 'ta' 
+        ? `${overdueLoans.length} கடன்கள் தாமதமாகியுள்ளன, மொத்தம் ₹${overdueAmount.toLocaleString()}.`
+        : `${overdueLoans.length} loans are overdue, totaling ₹${overdueAmount.toLocaleString()}.`;
+    }
+  }
+  
+  // Financial summary and dashboard queries
+  if (lowerMessage.includes('summary') || lowerMessage.includes('overview') || lowerMessage.includes('dashboard') || lowerMessage.includes('சுருக்கம்')) {
+    return language === 'ta' 
+      ? `📊 உங்கள் நிதி சுருக்கம்:\n💰 மொத்த கடன்: ₹${totalLent.toLocaleString()}\n💳 சேகரிக்கப்பட்டது: ₹${totalCollected.toLocaleString()}\n📈 இருப்பு: ₹${outstandingBalance.toLocaleString()}\n👥 வாடிக்கையாளர்கள்: ${clients.length}\n📋 செயலில் உள்ள கடன்கள்: ${activeLoans.length}`
+      : `📊 Your Financial Summary:\n💰 Total Lent: ₹${totalLent.toLocaleString()}\n💳 Collected: ₹${totalCollected.toLocaleString()}\n📈 Outstanding: ₹${outstandingBalance.toLocaleString()}\n👥 Clients: ${clients.length}\n📋 Active Loans: ${activeLoans.length}`;
+  }
+  
+  // Balance and outstanding queries
+  if (lowerMessage.includes('balance') || lowerMessage.includes('outstanding') || lowerMessage.includes('இருப்பு') || lowerMessage.includes('நிலுவை')) {
+    const balanceText = language === 'ta' 
+      ? `உங்கள் நிலுவை தொகை ₹${outstandingBalance.toLocaleString()}.`
+      : `Your outstanding balance is ₹${outstandingBalance.toLocaleString()}.`;
+      
+    if (outstandingBalance > totalLent * 0.8) {
+      return balanceText + (language === 'ta' 
+        ? ' பெரும்பாலான தொகை இன்னும் நிலுவையில் உள்ளது.'
+        : ' Most of your money is still outstanding.');
+    }
+    return balanceText;
+  }
+  
+  // Interest and profit queries  
+  if (lowerMessage.includes('interest') || lowerMessage.includes('profit') || lowerMessage.includes('வட்டி') || lowerMessage.includes('லாபம்')) {
+    const totalInterest = payments.reduce((sum, p) => {
+      const loan = loans.find(l => l.id === p.loanId);
+      if (!loan) return sum;
+      return sum + Math.max(0, p.amount - (loan.principal / (loan.duration || 12)));
+    }, 0);
+    
+    return language === 'ta' 
+      ? `தோராயமாக ₹${totalInterest.toLocaleString()} வட்டி வருமானம் கிடைத்துள்ளது.`
+      : `Approximately ₹${totalInterest.toLocaleString()} in interest income earned.`;
+  }
+  
+  // Help and feature queries
+  if (lowerMessage.includes('help') || lowerMessage.includes('உதவி') || lowerMessage.includes('how to') || lowerMessage.includes('எப்படி')) {
+    return language === 'ta' 
+      ? 'நான் உங்கள் வாடிக்கையாளர்கள், கடன்கள், பணம் செலுத்துதல் மற்றும் அறிக்கைகள் குறித்து உதவ முடியும். "சுருக்கம்", "இன்று வரவேண்டிய தொகை", "மிகப்பெரிய கடன்" போன்ற கேள்விகள் கேளுங்கள்!'
+      : 'I can help with your clients, loans, payments, and reports. Try asking "summary", "due today", "biggest loan", or specific client names!';
+  }
+  
+  // Search for specific client names in the message
+  const clientMatch = clients.find(c => 
+    c.name.toLowerCase().includes(lowerMessage.replace(/[^\w\s]/g, '')) || 
+    lowerMessage.includes(c.name.toLowerCase())
+  );
+  
+  if (clientMatch) {
+    const clientLoans = loans.filter(l => l.clientId === clientMatch.id);
+    const clientPayments = payments.filter(p => {
+      const loan = loans.find(l => l.id === p.loanId);
+      return loan && loan.clientId === clientMatch.id;
+    });
+    
+    const totalLent = clientLoans.reduce((sum, l) => sum + l.principal, 0);
+    const totalPaid = clientPayments.reduce((sum, p) => sum + p.amount, 0);
+    const activeCount = clientLoans.filter(l => l.status === 'active').length;
+    
+    return language === 'ta' 
+      ? `${clientMatch.name}:\n💰 மொத்த கடன்: ₹${totalLent.toLocaleString()}\n💳 செலுத்தப்பட்டது: ₹${totalPaid.toLocaleString()}\n📈 இருப்பு: ₹${(totalLent - totalPaid).toLocaleString()}\n📱 தொலைபேசி: ${clientMatch.phone || 'N/A'}\n📋 செயலில் உள்ள கடன்கள்: ${activeCount}`
+      : `${clientMatch.name}:\n💰 Total Lent: ₹${totalLent.toLocaleString()}\n💳 Paid: ₹${totalPaid.toLocaleString()}\n📈 Balance: ₹${(totalLent - totalPaid).toLocaleString()}\n📱 Phone: ${clientMatch.phone || 'N/A'}\n📋 Active Loans: ${activeCount}`;
+  }
+  
+  // Number queries (amounts, percentages, etc.)
+  const numberMatch = lowerMessage.match(/\d+/);
+  if (numberMatch && (lowerMessage.includes('amount') || lowerMessage.includes('rupees') || lowerMessage.includes('₹'))) {
+    const amount = parseInt(numberMatch[0]);
+    const matchingLoans = loans.filter(l => l.principal >= amount * 0.9 && l.principal <= amount * 1.1);
+    
+    if (matchingLoans.length > 0) {
+      return language === 'ta' 
+        ? `₹${amount.toLocaleString()} அருகே ${matchingLoans.length} கடன்கள் கண்டுபிடிக்கப்பட்டன.`
+        : `Found ${matchingLoans.length} loans around ₹${amount.toLocaleString()}.`;
+    }
+  }
+  
+  // Default fallback with helpful suggestions
+  const suggestions = language === 'ta' 
+    ? ['சுருக்கம்', 'இன்று வரவேண்டிய தொகை', 'மொத்த கடன்', 'வாடிக்கையாளர்கள் பட்டியல்']
+    : ['summary', 'due today', 'total loans', 'client list'];
+    
+  return (language === 'ta' ? 'மன்னிக்கவும், அதைப் புரிந்துகொள்ள முடியவில்லை. ' : 'Sorry, I didn\'t understand that. ') + 
+         (language === 'ta' ? 'இவற்றை முயற்சி செய்யுங்கள்: ' : 'Try asking: ') + 
+         suggestions.join(', ') + 
+         (language === 'ta' ? ' அல்லது வாடிக்கையாளர் பெயர்கள்.' : ' or client names.');
+}
+
+function autoResizeTextarea() {
+  const textarea = document.getElementById('chatbot-input');
+  if (!textarea) return;
+  
+  textarea.style.height = 'auto';
+  textarea.style.height = Math.min(textarea.scrollHeight, 100) + 'px';
+}
+
+function toggleVoiceInput() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    const t = chatbotTranslations[currentLang] || chatbotTranslations.en;
+    addMessage(t.voiceError, 'bot');
+    return;
+  }
+  
+  if (isRecording) {
+    stopVoiceRecording();
+  } else {
+    startVoiceRecording();
+  }
+}
+
+function startVoiceRecording() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SpeechRecognition();
+  
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  recognition.lang = currentLang === 'ta' ? 'ta-IN' : 'en-US';
+  
+  const voiceButton = document.getElementById('chatbot-voice');
+  const t = chatbotTranslations[currentLang] || chatbotTranslations.en;
+  
+  recognition.onstart = () => {
+    isRecording = true;
+    voiceButton.classList.add('recording');
+    addMessage(t.voiceStart, 'bot');
+  };
+  
+  recognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    document.getElementById('chatbot-input').value = transcript;
+    autoResizeTextarea();
+  };
+  
+  recognition.onerror = () => {
+    isRecording = false;
+    voiceButton.classList.remove('recording');
+  };
+  
+  recognition.onend = () => {
+    isRecording = false;
+    voiceButton.classList.remove('recording');
+  };
+  
+  recognition.start();
+}
+
+function stopVoiceRecording() {
+  if (recognition) {
+    recognition.stop();
+  }
+  isRecording = false;
+  document.getElementById('chatbot-voice').classList.remove('recording');
+}
+
+// Show chatbot when user logs in
+function showChatbotForLoggedInUser() {
+  const chatbotWidget = document.getElementById('chatbot-widget');
+  if (chatbotWidget) {
+    chatbotWidget.style.display = 'block';
+  }
+}
 
 // Auto-Sync when returning to the app from the background (Cross-device real-time sync)
 document.addEventListener('visibilitychange', () => {
