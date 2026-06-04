@@ -4651,6 +4651,7 @@ window.addEventListener('appinstalled', () => {
     installBtn.disabled = true;
     installBtn.style.opacity = '0.6';
   }
+  
   // Hide install bubble after successful installation
   const bubble = $('#pwa-install-bubble');
   if (bubble) bubble.style.display = 'none';
