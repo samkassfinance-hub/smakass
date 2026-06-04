@@ -65,12 +65,25 @@ body {
   font-family: 'Baloo 2', sans-serif;
   background-color: var(--color-bg);
   color: var(--color-text);
-  max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
   overflow-x: hidden;
   transition: background-color 0.3s ease, color 0.3s ease;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Mobile view: max-width 430px */
+@media (max-width: 768px) {
+  body {
+    max-width: 430px;
+  }
+}
+
+/* Desktop view: full width with max container */
+@media (min-width: 769px) {
+  body {
+    max-width: 100%;
+  }
 }
 
 a { color: var(--color-primary); text-decoration: none; }
@@ -314,7 +327,7 @@ h1, h2, h3, h4, h5, h6 {
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
-  max-width: 430px;
+  max-width: 100%;
   height: var(--header-h);
   background: var(--color-bg-card);
   border-bottom: 1px solid var(--color-border);
@@ -416,13 +429,22 @@ h1, h2, h3, h4, h5, h6 {
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
-  max-width: 430px;
+  max-width: 100%;
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: 0 0 var(--radius) var(--radius);
   box-shadow: var(--shadow-elevated);
   z-index: 999;
   overflow: hidden;
+}
+
+@media (min-width: 769px) {
+  .notif-dropdown {
+    max-width: 400px;
+    right: 20px;
+    left: auto;
+    transform: none;
+  }
 }
 
 .notif-header {
@@ -552,7 +574,7 @@ h1, h2, h3, h4, h5, h6 {
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
-  max-width: 430px;
+  max-width: 100%;
   background: rgba(239, 68, 68, 0.12);
   border-bottom: 1px solid rgba(239, 68, 68, 0.3);
   color: var(--color-danger);
@@ -611,7 +633,7 @@ h1, h2, h3, h4, h5, h6 {
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
-  max-width: 430px;
+  max-width: 100%;
   height: var(--nav-h);
   background: var(--color-bg-card);
   border-top: 1px solid var(--color-border);
@@ -3070,5 +3092,83 @@ body.tamil-text .nav-tab i {
   }
   50% {
     opacity: 0.5;
+  }
+}
+
+/* ===== Desktop Responsive Layout ===== */
+@media (min-width: 769px) {
+  /* Content padding for desktop */
+  #main-content,
+  .page-container,
+  main {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding-left: 40px;
+    padding-right: 40px;
+  }
+  
+  /* Header responsive */
+  #top-header {
+    padding-left: 40px;
+    padding-right: 40px;
+  }
+  
+  /* Bottom nav for desktop - make it look better */
+  #bottom-nav {
+    max-width: 100%;
+    grid-template-columns: repeat(6, minmax(120px, 180px));
+    justify-content: center;
+    padding: 0 40px;
+  }
+  
+  /* Auth container centered on desktop */
+  .auth-container {
+    max-width: 480px;
+  }
+  
+  /* Modals better sized on desktop */
+  .modal-content {
+    max-width: 600px;
+  }
+  
+  /* Cards in grid layout on desktop */
+  .clients-grid,
+  .loans-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+  }
+}
+
+/* Large desktop */
+@media (min-width: 1200px) {
+  #main-content,
+  .page-container,
+  main {
+    max-width: 1600px;
+    padding-left: 60px;
+    padding-right: 60px;
+  }
+  
+  #top-header {
+    padding-left: 60px;
+    padding-right: 60px;
+  }
+  
+  #bottom-nav {
+    padding: 0 60px;
+  }
+}
+
+/* Keep mobile layout intact for tablets and phones */
+@media (max-width: 768px) {
+  body {
+    max-width: 430px;
+  }
+  
+  #top-header,
+  #bottom-nav,
+  .plan-banner {
+    max-width: 430px;
   }
 }
