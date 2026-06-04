@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bubble Test</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+            padding-bottom: 120px;
+        }
+
+        .auth-container {
+            width: 100%;
+            max-width: 420px;
+            padding: 2rem;
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .install-bubble {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 15px 45px rgba(99, 102, 241, 0.7);
+            z-index: 9999;
+            animation: floatingBubble 3s ease-in-out infinite;
+            border: none;
+        }
+
+        .install-bubble:hover {
+            transform: translateX(-50%) scale(1.15);
+            box-shadow: 0 20px 60px rgba(99, 102, 241, 1);
+        }
+
+        .install-bubble img {
+            width: 75px;
+            height: 75px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        @keyframes floatingBubble {
+            0%, 100% {
+                transform: translateX(-50%) translateY(0px);
+                opacity: 1;
+            }
+            50% {
+                transform: translateX(-50%) translateY(-20px);
+                opacity: 1;
+            }
+        }
+
+        .test-info {
+            color: #22c55e;
+            text-align: center;
+            font-size: 14px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <h2 style="text-align: center; margin-top: 0;">Login Page Test</h2>
+        <p style="text-align: center; color: #94a3b8;">The floating bubble should appear below</p>
+        <button style="width: 100%; padding: 10px; background: #6366f1; color: white; border: none; border-radius: 8px; cursor: pointer;">Test Button</button>
+        <div class="test-info">✓ Bubble should be floating at the bottom</div>
+    </div>
+
+    <div class="install-bubble" id="installBubble">
+        <img src="../../../samkaslogo.jpeg" alt="Install SamKass App">
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const bubble = document.getElementById('installBubble');
+            console.log('Bubble element found:', !!bubble);
+            console.log('Bubble display:', window.getComputedStyle(bubble).display);
+            console.log('Bubble position:', window.getComputedStyle(bubble).position);
+            console.log('Bubble bottom:', window.getComputedStyle(bubble).bottom);
+            console.log('Bubble z-index:', window.getComputedStyle(bubble).zIndex);
+            
+            if (bubble) {
+                bubble.addEventListener('click', () => {
+                    alert('Bubble clicked! Installation prompt would trigger here.');
+                });
+            }
+        });
+    </script>
+</body>
+</html>

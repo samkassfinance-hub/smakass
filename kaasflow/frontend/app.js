@@ -13,6 +13,13 @@ if (window.location.hostname === 'localhost' || window.location.hostname === '12
 } else if (window.location.port === '5500') {
   API_BASE = `http://${window.location.hostname}:5000/api`;
 }
+
+// Debug logging for samkass.site
+if (window.location.hostname.includes('samkass.site')) {
+  console.log('🌐 Running on samkass.site domain');
+  console.log('📍 Current URL:', window.location.href);
+  console.log('🔧 API_BASE:', API_BASE);
+}
 const LS = {
   session:  'kf_session',
   settings: 'kf_settings',
@@ -900,10 +907,11 @@ function showAuth() {
   $('#pin-lock-screen').style.display = 'none';
   $('#main-app').style.display = 'none';
   
-  // Show PWA install bubble on auth screen
+  // Show PWA install bubble on auth screen - enhanced for samkass.site
   const bubble = $('#pwa-install-bubble');
   if (bubble) {
     bubble.style.display = 'block';
+    console.log('🔘 PWA install bubble shown on samkass.site');
   }
   
   const aiText = document.getElementById('ai-typing-text');
@@ -4360,10 +4368,11 @@ window.addEventListener('appinstalled', () => {
 
 // Handle floating bubble install click
 window.handleBubbleInstall = async function() {
-  console.log('🔘 Install bubble clicked');
+  console.log('🔘 Install bubble clicked on samkass.site');
   
   if (!window.deferredPrompt) {
-    showToast('To install: Tap browser menu (⋮) → "Add to Home screen"', 'info');
+    showToast('To install SamKass: Tap browser menu (⋮) → "Add to Home screen"', 'info');
+    console.log('📱 Manual install instruction shown');
     return;
   }
   
@@ -4373,13 +4382,13 @@ window.handleBubbleInstall = async function() {
     console.log('👤 User choice:', outcome);
     
     if (outcome === 'accepted') {
-      showToast('App installed successfully!', 'success');
+      showToast('SamKass app installed successfully!', 'success');
       const bubble = $('#pwa-install-bubble');
       if (bubble) bubble.style.display = 'none';
     }
   } catch (err) {
     console.error('❌ Install prompt error:', err);
-    showToast('To install: Tap browser menu (⋮) → "Add to Home screen"', 'info');
+    showToast('To install SamKass: Tap browser menu (⋮) → "Add to Home screen"', 'info');
   }
   
   window.deferredPrompt = null;
