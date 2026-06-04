@@ -12,6 +12,8 @@ from dotenv import load_dotenv
 env_path = os.path.join(backend_dir, '.env')
 load_dotenv(dotenv_path=env_path)
 
+# OTP Email Fix - Updated 2025
+
 app = Flask(__name__)
 
 # Allow requests from frontend
@@ -30,7 +32,6 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
 
 # Import and register auth routes
 from auth.routes import auth_bp
-from routes.sync import sync_bp
 from razorpay_integration import payment_routes
 
 import os
@@ -51,7 +52,7 @@ if SUPABASE_URL and SUPABASE_KEY:
         print(f"Warning: Failed to initialize Supabase client: {e}")
         supabase = None
 app.register_blueprint(auth_bp, url_prefix='/api')
-app.register_blueprint(sync_bp, url_prefix='/api/sync')
+app.register_blueprint(auth_bp, url_prefix='/auth', name='auth_prefix')
 
 # Register payment routes
 payment_routes(app)
@@ -81,7 +82,110 @@ def debug_env():
     })
 
 
+
+# ── Cloud Sync Routes ────────────────────────────────────────
+
+def get_user_email_from_token():
+    """Extract user email with multi-channel authentication fallbacks"""
+    import urllib.parse
+    
+    # 1. Check X-User-Email header first
+    email_header = request.headers.get('X-User-Email')
+    if email_header:
+        return email_header.strip()
+
+    # 2. Check Authorization header Bearer token
+    auth_header = request.headers.get('Authorization')
+    if auth_header and auth_header.startswith('Bearer '):
+        token = auth_header.split(' ')[1]
+        
+        # Try standard JWT decode
+        try:
+            payload = decode_token(token)
+            if payload and payload.get('sub'):
+                return payload.get('sub').strip()
+        except Exception as e:
+            print(f"JWT decode failed: {e}")
+            
+        # Try custom session token format: session:email:timestamp
+        if ':' in token:
+            parts = token.split(':')
+            for part in parts:
+                unquoted = urllib.parse.unquote(part)
+                if '@' in unquoted:
+                    return unquoted.strip()
+        # Try hyphen separation: session-email-timestamp
+        elif '-' in token:
+            parts = token.split('-')
+            for part in parts:
+                unquoted = urllib.parse.unquote(part)
+                if '@' in unquoted:
+                    return unquoted.strip()
+                    
+    # 3. Check request JSON body or query args as final fallbacks
+    try:
+        if request.is_json and request.json:
+            email = request.json.get('email') or request.json.get('user_email')
+            if email:
+                return email.strip()
+    except Exception as e:
+        print(f"Failed to read JSON body: {e}")
+        
+    email = request.args.get('email') or request.args.get('user_email')
+    if email:
+        return email.strip()
+        
+    return None
+
+@app.route('/api/sync/status', methods=['GET'])
+def sync_status():
+    return jsonify({"supabase_configured": supabase is not None})
+
+@app.route('/api/sync/backup', methods=['POST'])
+def sync_backup():
+    if not supabase:
+        return jsonify({"success": False, "errors": ["Supabase not configured"]}), 500
+    user_email = get_user_email_from_token()
+    if not user_email:
+        return jsonify({"success": False, "errors": ["Unauthorized"]}), 401
+    data = request.json
+    try:
+        response = supabase.table('app_backups').upsert({
+            "user_email": user_email,
+            "clients_json": data.get("clients", []),
+            "loans_json": data.get("loans", []),
+            "payments_json": data.get("payments", []),
+            "settings_json": data.get("settings", {})
+        }).execute()
+        return jsonify({"success": True, "data": response.data})
+    except Exception as e:
+        print(f"Sync Backup Error: {e}")
+        return jsonify({"success": False, "errors": [str(e)]}), 500
+
+@app.route('/api/sync/restore', methods=['GET'])
+def sync_restore():
+    if not supabase:
+        return jsonify({"success": False, "error": "Supabase not configured"}), 500
+    user_email = get_user_email_from_token()
+    if not user_email:
+        return jsonify({"success": False, "error": "Unauthorized"}), 401
+    try:
+        response = supabase.table('app_backups').select('*').eq('user_email', user_email).execute()
+        if not response.data:
+            return jsonify({"success": True, "data": {"clients": [], "loans": [], "payments": [], "settings": {}}})
+        backup = response.data[0]
+        return jsonify({
+            "success": True, 
+            "data": {
+                "clients": backup.get("clients_json", []),
+                "loans": backup.get("loans_json", []),
+                "payments": backup.get("payments_json", []),
+                "settings": backup.get("settings_json", {})
+            }
+        })
+    except Exception as e:
+        print(f"Sync Restore Error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 if __name__ == '__main__':
     port = int(os.environ.get('BACKEND_PORT', 5000))
     app.run(debug=True, port=port, host='0.0.0.0')
-

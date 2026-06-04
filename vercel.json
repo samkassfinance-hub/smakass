@@ -11,6 +11,8 @@
     }
   ],
   "env": {
+    "RESEND_API_KEY": "re_idEsk2Lb_BWoY4posiqyRHxXPRFe8iSLj",
+    "RESEND_FROM_EMAIL": "SamKass <welcome@samkass.site>",
     "RAZORPAY_KEY_ID": "rzp_live_SuharfZYrJBbHj",
     "RAZORPAY_KEY_SECRET": "FsmmZywk4NGiI1PxIS4UWb0e"
   },

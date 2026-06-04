@@ -8,11 +8,16 @@ function getInitialTheme(): Theme {
   try {
     const stored = localStorage.getItem(THEME_KEY) as Theme | null;
     if (stored === "light" || stored === "dark") return stored;
+    
+    // Check system preference
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      return "dark";
+    }
   } catch {
     // ignore
   }
-  // Default: dark (brand identity)
-  return "dark";
+  // Default: light mode for better mobile compatibility
+  return "light";
 }
 
 function applyTheme(theme: Theme) {

@@ -227,6 +227,9 @@ body {
   background-color: var(--kf-bg-deep);
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
+  /* Ensure body is visible even if React fails to load */
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 #root {
@@ -234,6 +237,8 @@ body {
   display: flex;
   justify-content: center;
   background-color: var(--kf-bg-deep);
+  /* Minimum height fallback for older mobile browsers */
+  min-height: 100vh;
 }
 
 .app-wrapper {

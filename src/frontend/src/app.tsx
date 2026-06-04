@@ -15,6 +15,7 @@ import DashboardPage from "./pages/DashboardPage";
 import LoanDetailPage from "./pages/LoanDetailPage";
 import LoansPage from "./pages/LoansPage";
 import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
 import ReportsPage from "./pages/ReportsPage";
 import SettingsPage from "./pages/SettingsPage";
 
@@ -49,8 +50,9 @@ export default function App() {
   const app = useApp();
   const { isLoggedIn, hasAuth } = app;
 
-  // Unified Google Login handles both registration and login
-  if (!hasAuth || !isLoggedIn) return <LoginPage app={app} />;
+  // Auth gates
+  if (!hasAuth) return <RegisterPage app={app} />;
+  if (!isLoggedIn) return <LoginPage app={app} />;
 
   return <AppShell app={app} />;
 }
@@ -122,39 +124,23 @@ function AppShell({ app }: { app: AppInstance }) {
 
           <div className="header-center">
             <span className="header-page-title">{title}</span>
-            <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-              <div className="lang-toggle" data-ocid="app.language_toggle">
-                <button
-                  type="button"
-                  data-ocid="app.lang_en"
-                  className={`lang-btn ${language === "en" ? "active" : ""}`}
-                  onClick={() => updateSettings({ language: "en" })}
-                >
-                  EN
-                </button>
-                <button
-                  type="button"
-                  data-ocid="app.lang_ta"
-                  className={`lang-btn ${language === "ta" ? "active" : ""}`}
-                  onClick={() => updateSettings({ language: "ta" })}
-                >
-                  தமிழ்
-                </button>
-              </div>
-              <span
-                title={language === "ta" ? "மேலும் மொழிகள் விரைவில்" : "More languages coming soon"}
-                style={{
-                  fontSize: "0.6rem",
-                  color: "var(--kf-amber)",
-                  fontWeight: 700,
-                  opacity: 0.8,
-                  cursor: "default",
-                  letterSpacing: "-0.05em",
-                  lineHeight: 1,
-                }}
+            <div className="lang-toggle" data-ocid="app.language_toggle">
+              <button
+                type="button"
+                data-ocid="app.lang_en"
+                className={`lang-btn ${language === "en" ? "active" : ""}`}
+                onClick={() => updateSettings({ language: "en" })}
               >
-                +3
-              </span>
+                EN
+              </button>
+              <button
+                type="button"
+                data-ocid="app.lang_ta"
+                className={`lang-btn ${language === "ta" ? "active" : ""}`}
+                onClick={() => updateSettings({ language: "ta" })}
+              >
+                தமிழ்
+              </button>
             </div>
           </div>
 
