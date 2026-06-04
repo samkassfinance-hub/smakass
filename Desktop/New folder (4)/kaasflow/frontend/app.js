@@ -4630,10 +4630,10 @@ function openChatbot() {
   chatbotInterface.style.display = 'flex';
   chatbotIcon.style.display = 'none';
   
-  // Trigger opening animation
+  // Trigger opening animation - center the chatbot
   setTimeout(() => {
     chatbotInterface.style.opacity = '1';
-    chatbotInterface.style.transform = 'scale(1) translateY(0)';
+    chatbotInterface.style.transform = 'translate(-50%, -50%) scale(1)';
     chatbotInterface.classList.add('active');
   }, 10);
   
@@ -4662,7 +4662,7 @@ function closeChatbot() {
   if (chatbotInterface && chatbotIcon) {
     // Trigger closing animation
     chatbotInterface.style.opacity = '0';
-    chatbotInterface.style.transform = 'scale(0.8) translateY(20px)';
+    chatbotInterface.style.transform = 'translate(-50%, -50%) scale(0.8)';
     chatbotInterface.classList.remove('active');
     
     setTimeout(() => {
