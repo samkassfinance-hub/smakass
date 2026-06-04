@@ -4895,53 +4895,33 @@ const chatbotTranslations = {
 function initChatbot() {
   console.log('🤖 Initializing chatbot...');
   
-  // Wait for DOM to be fully ready
-  setTimeout(() => {
-    const chatbotIcon = document.getElementById('chatbot-icon');
-    const chatbotInterface = document.getElementById('chatbot-interface');
-    
-    if (!chatbotIcon) {
-      console.error('❌ Chatbot icon element not found!');
-      return;
+  const chatbotIcon = document.getElementById('chatbot-icon');
+  const chatbotInterface = document.getElementById('chatbot-interface');
+  
+  if (!chatbotIcon) return;
+  
+  // Make icon draggable
+  chatbotIcon.addEventListener('mousedown', startDrag);
+  chatbotIcon.addEventListener('touchstart', startDrag);
+  
+  // Click to open chat
+  chatbotIcon.addEventListener('click', (e) => {
+    if (!isDragging) {
+      openChatbot();
     }
-    
-    console.log('✅ Chatbot icon element found, binding events...');
-    
-    // Make icon draggable
-    chatbotIcon.addEventListener('mousedown', startDrag);
-    chatbotIcon.addEventListener('touchstart', startDrag, { passive: false });
-    
-    // Click to open chat - use both click and touchend for better mobile support
-    chatbotIcon.addEventListener('click', (e) => {
-      e.preventDefault();
-      console.log('🔘 Chatbot icon clicked, isDragging:', isDragging);
-      if (!isDragging) {
-        openChatbot();
+  });
+  
+  // Auto-resize textarea
+  const textarea = document.getElementById('chatbot-input');
+  if (textarea) {
+    textarea.addEventListener('input', autoResizeTextarea);
+    textarea.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
       }
     });
-    
-    chatbotIcon.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      console.log('👆 Chatbot icon touched, isDragging:', isDragging);
-      if (!isDragging) {
-        openChatbot();
-      }
-    });
-    
-    // Auto-resize textarea
-    const textarea = document.getElementById('chatbot-input');
-    if (textarea) {
-      textarea.addEventListener('input', autoResizeTextarea);
-      textarea.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          sendMessage();
-        }
-      });
-    }
-    
-    console.log('✅ Chatbot initialization complete!');
-  }, 500);
+  }
 }
 
 function startDrag(e) {
@@ -4949,8 +4929,6 @@ function startDrag(e) {
   isDragging = false;
   
   const chatbotIcon = document.getElementById('chatbot-icon');
-  if (!chatbotIcon) return;
-  
   const rect = chatbotIcon.getBoundingClientRect();
   
   const clientX = e.clientX || (e.touches && e.touches[0].clientX);
@@ -4959,26 +4937,17 @@ function startDrag(e) {
   dragOffset.x = clientX - rect.left;
   dragOffset.y = clientY - rect.top;
   
-  // Add event listeners
   document.addEventListener('mousemove', drag);
-  document.addEventListener('touchmove', drag, { passive: false });
+  document.addEventListener('touchmove', drag);
   document.addEventListener('mouseup', stopDrag);
   document.addEventListener('touchend', stopDrag);
   
-  // Only mark as dragging after a small delay to allow clicks
   setTimeout(() => {
     if (document.addEventListener) {
-      // Check if mouse/finger moved significantly
-      const currentX = e.clientX || (e.touches && e.touches[0].clientX);
-      const currentY = e.clientY || (e.touches && e.touches[0].clientY);
-      
-      if (Math.abs(currentX - clientX) > 5 || Math.abs(currentY - clientY) > 5) {
-        isDragging = true;
-        chatbotIcon.classList.add('dragging');
-        console.log('🖱️ Started dragging chatbot');
-      }
+      isDragging = true;
+      chatbotIcon.classList.add('dragging');
     }
-  }, 150);
+  }, 100);
 }
 
 function drag(e) {
@@ -5020,56 +4989,33 @@ function stopDrag() {
 }
 
 function openChatbot() {
-  console.log('🚀 Opening chatbot interface...');
-  
   const chatbotInterface = document.getElementById('chatbot-interface');
   const chatbotIcon = document.getElementById('chatbot-icon');
   
-  if (!chatbotInterface) {
-    console.error('❌ Chatbot interface element not found!');
-    return;
+  if (chatbotInterface && chatbotIcon) {
+    chatbotInterface.style.display = 'flex';
+    chatbotIcon.style.display = 'none';
+    
+    // Update language
+    updateChatbotLanguage();
+    
+    // Focus input
+    setTimeout(() => {
+      const input = document.getElementById('chatbot-input');
+      if (input) input.focus();
+    }, 300);
   }
-  
-  if (!chatbotIcon) {
-    console.error('❌ Chatbot icon element not found!');
-    return;
-  }
-  
-  console.log('✅ Opening chatbot interface...');
-  chatbotInterface.style.display = 'flex';
-  chatbotIcon.style.display = 'none';
-  
-  // Update language
-  updateChatbotLanguage();
-  
-  // Focus input
-  setTimeout(() => {
-    const input = document.getElementById('chatbot-input');
-    if (input) {
-      input.focus();
-      console.log('✅ Chatbot input focused');
-    }
-  }, 300);
 }
 
-// Make openChatbot globally available
-window.openChatbot = openChatbot;
-
 function closeChatbot() {
-  console.log('🚪 Closing chatbot interface...');
-  
   const chatbotInterface = document.getElementById('chatbot-interface');
   const chatbotIcon = document.getElementById('chatbot-icon');
   
   if (chatbotInterface && chatbotIcon) {
     chatbotInterface.style.display = 'none';
     chatbotIcon.style.display = 'flex';
-    console.log('✅ Chatbot interface closed');
   }
 }
-
-// Make closeChatbot globally available  
-window.closeChatbot = closeChatbot;
 
 function updateChatbotLanguage() {
   const settings = Store.settings();
@@ -5088,26 +5034,13 @@ function updateChatbotLanguage() {
 }
 
 function sendMessage() {
-  console.log('💬 Sending message...');
-  
   const input = document.getElementById('chatbot-input');
-  if (!input) {
-    console.error('❌ Chatbot input not found!');
-    return;
-  }
-  
   const message = input.value.trim();
   
-  if (!message) {
-    console.log('⚠️ Empty message, skipping...');
-    return;
-  }
-  
-  console.log('📤 Message:', message);
+  if (!message) return;
   
   // Detect language from input
   const detectedLang = detectLanguage(message);
-  console.log('🌐 Detected language:', detectedLang);
   
   // Add user message
   addMessage(message, 'user');
@@ -5123,13 +5056,9 @@ function sendMessage() {
   setTimeout(() => {
     hideTypingIndicator();
     const response = processUserMessage(message, detectedLang);
-    console.log('🤖 Bot response:', response);
     addMessage(response, 'bot');
   }, 1000 + Math.random() * 1000);
 }
-
-// Make sendMessage globally available
-window.sendMessage = sendMessage;
 
 function detectLanguage(text) {
   // Simple Tamil detection - check for Tamil Unicode characters
@@ -5446,12 +5375,9 @@ function autoResizeTextarea() {
 }
 
 function toggleVoiceInput() {
-  console.log('🎤 Toggling voice input...');
-  
   if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
     const t = chatbotTranslations[currentLang] || chatbotTranslations.en;
     addMessage(t.voiceError, 'bot');
-    console.log('❌ Speech recognition not supported');
     return;
   }
   
@@ -5461,9 +5387,6 @@ function toggleVoiceInput() {
     startVoiceRecording();
   }
 }
-
-// Make toggleVoiceInput globally available
-window.toggleVoiceInput = toggleVoiceInput;
 
 function startVoiceRecording() {
   console.log('🎙️ Starting voice recording...');
