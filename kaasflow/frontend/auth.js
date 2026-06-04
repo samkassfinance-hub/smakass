@@ -207,3 +207,44 @@ async function handleCredentialResponse(response) {
         errorBox.style.display = 'block';
     }
 }
+
+// Install Bubble Logic — PWA Install Prompt
+let deferredPrompt;
+
+// Listen for beforeinstallprompt event
+window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    deferredPrompt = event;
+});
+
+// Show bubble by default on page load
+document.addEventListener('DOMContentLoaded', () => {
+    const installBubble = document.getElementById('installBubble');
+    
+    if (installBubble) {
+        // Always show the bubble
+        installBubble.style.display = 'flex';
+        
+        // Click handler to trigger install
+        installBubble.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    deferredPrompt = null;
+                }
+            }
+        });
+    }
+});
+
+// Hide bubble after app is installed
+window.addEventListener('appinstalled', () => {
+    const installBubble = document.getElementById('installBubble');
+    if (installBubble) {
+        installBubble.style.display = 'none';
+    }
+});

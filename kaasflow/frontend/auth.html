@@ -32,6 +32,7 @@
             align-items: center;
             justify-content: center;
             overflow: hidden;
+            position: relative;
         }
 
         .auth-container {
@@ -217,6 +218,55 @@
             display: none;
             border: 1px solid rgba(34, 197, 94, 0.2);
         }
+
+        .install-bubble {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 15px 45px rgba(99, 102, 241, 0.7);
+            z-index: 9999;
+            animation: floatingBubble 3s ease-in-out infinite;
+            border: none;
+        }
+
+        .install-bubble:hover {
+            transform: translateX(-50%) scale(1.15);
+            box-shadow: 0 20px 60px rgba(99, 102, 241, 1);
+        }
+
+        .install-bubble img {
+            width: 75px;
+            height: 75px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        @keyframes floatingBubble {
+            0%, 100% {
+                transform: translateX(-50%) translateY(0px);
+                opacity: 1;
+            }
+            50% {
+                transform: translateX(-50%) translateY(-20px);
+                opacity: 1;
+            }
+        }
+
+        .install-bubble.hidden {
+            display: none !important;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -288,6 +338,17 @@
             </div>
         </div>
     </div>
+
+    <div id="installBubble" style="position: fixed; bottom: 40px; left: 50%; margin-left: -45px; width: 90px; height: 90px; border-radius: 50%; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 15px 50px rgba(99, 102, 241, 0.8); z-index: 99999; animation: bubble-float 3s ease-in-out infinite; border: none; padding: 0;">
+        <img src="logo.png" alt="Install" style="width: 70px; height: 70px; border-radius: 50%; border: 3px solid white; object-fit: cover;">
+    </div>
+
+    <style>
+        @keyframes bubble-float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+    </style>
 
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="auth.js"></script>

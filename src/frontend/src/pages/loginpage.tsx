@@ -664,6 +664,60 @@ export default function LoginPage({ app }: PageProps) {
         </div>
       </div>
       <AuthFooter />
+      
+      {/* Install Bubble */}
+      <div
+        style={{
+          position: "fixed",
+          bottom: "30px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "90px",
+          height: "90px",
+          borderRadius: "50%",
+          background: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: "pointer",
+          boxShadow: "0 15px 45px rgba(99, 102, 241, 0.7)",
+          zIndex: 99999,
+          animation: "floatingBubbleAuth 3s ease-in-out infinite",
+          border: "none",
+        }}
+        onClick={() => {
+          // Trigger PWA install prompt
+          const event = new Event('click-install-bubble');
+          window.dispatchEvent(event);
+        }}
+        title="Install SamKass App"
+      >
+        <img
+          src="/assets/generated/kaasflow-logo-transparent.dim_120x120.png"
+          alt="Install SamKass App"
+          style={{
+            width: "75px",
+            height: "75px",
+            borderRadius: "50%",
+            objectFit: "cover",
+            border: "4px solid white",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.3)",
+          }}
+        />
+      </div>
+
+      <style>{`
+        @keyframes floatingBubbleAuth {
+          0%, 100% {
+            transform: translateX(-50%) translateY(0px);
+            opacity: 1;
+          }
+          50% {
+            transform: translateX(-50%) translateY(-20px);
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   );
 }

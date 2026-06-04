@@ -13,6 +13,13 @@ if (window.location.hostname === 'localhost' || window.location.hostname === '12
 } else if (window.location.port === '5500') {
   API_BASE = `http://${window.location.hostname}:5000/api`;
 }
+
+// Debug logging for samkass.site
+if (window.location.hostname.includes('samkass.site')) {
+  console.log('🌐 Running on samkass.site domain');
+  console.log('📍 Current URL:', window.location.href);
+  console.log('🔧 API_BASE:', API_BASE);
+}
 const LS = {
   session:  'kf_session',
   settings: 'kf_settings',
@@ -239,86 +246,86 @@ const INDIAN_LANGS = {
     saveClient: 'ಗ್ರಾಹಕರನ್ನು ಉಳಿಸು', saveLoan: 'ಸಾಲವನ್ನು ಉಳಿಸು', clearData: 'ಎಲ್ಲಾ ಡೇಟಾವನ್ನು ಅಳಿಸು'
   },
   ks: {
-    dashboard: 'ڈیش بورڈ', clients: 'خریدار', loans: 'قرضہ',
+    home: '', clients: 'خریدار', loans: 'قرضہ',
     collect: 'جمع کَرُن', reports: 'رپوٹ', settings: 'سیٹنگ',
     logout: 'لاگ آؤٹ', language: 'زبان', cancel: 'منسوخ',
     saveClient: 'خریدار تھاوُن', saveLoan: 'قرضہ تھاوُن', clearData: 'ساری ڈیٹا صاف کَرُن'
   },
   kok: {
-    dashboard: 'डॅशबोर्ड', clients: 'गिऱ्हाईक', loans: 'ऋण',
+    home: '', clients: 'गिऱ्हाईक', loans: 'ऋण',
     collect: 'एकठा करप', reports: 'अहवाल', settings: 'मांडणी',
     logout: 'भायर सरप', language: 'भास', cancel: 'रद्द करप',
     saveClient: 'गिऱ्हाईक सांबाळप', saveLoan: 'ऋण सांबाळप', clearData: 'सगळी म्हायती काडून उडोवप'
   },
   mai: {
-    dashboard: 'डैशबोर्ड', clients: 'ग्राहक', loans: 'ऋण',
+    home: '', clients: 'ग्राहक', loans: 'ऋण',
     collect: 'संग्रह', reports: 'रिपोर्ट', settings: 'सेटिंग्स',
     logout: 'लॉगआउट', language: 'भाषा', cancel: 'रद्द करू',
     saveClient: 'ग्राहक बचाउ', saveLoan: 'ऋण बचाउ', clearData: 'सभ डेटा साफ करू'
   },
   ml: {
-    dashboard: 'ഡാഷ്‌ബോർഡ്', clients: 'ഇടപാടുകാർ', loans: 'വായ്പകൾ',
+    home: '', clients: 'ഇടപാടുകാർ', loans: 'വായ്പകൾ',
     collect: 'ശേഖരിക്കുക', reports: 'റിപ്പോർട്ടുകൾ', settings: 'ക്രമീകരണങ്ങൾ',
     logout: 'ലോഗ് ഔട്ട്', language: 'ഭാഷ', cancel: 'റദ്ദാക്കുക',
     saveClient: 'ഇടപാടുകാരനെ സംരക്ഷിക്കുക', saveLoan: 'വായ്പ സംരക്ഷിക്കുക', clearData: 'എല്ലാ ഡാറ്റയും മായ്ക്കുക'
   },
   mni: {
-    dashboard: 'ডেশবোর্দ', clients: 'গ্রাহকশিং', loans: 'শেন্থোংশিং',
+    home: '', clients: 'গ্রাহকশিং', loans: 'শেন্থোংশিং',
     collect: 'খোমজিনবা', reports: 'রিপোর্তশিং', settings: 'সেতিংস',
     logout: 'লোগ আউত', language: 'লোন', cancel: 'তোকপা',
     saveClient: 'গ্রাহক থমজিনবা', saveLoan: 'শেন্থোং থমজিনবা', clearData: 'অপুম্বা দেতা লৌথোকপা'
   },
   mr: {
-    dashboard: 'डॅशबोर्ड', clients: 'ग्राहक', loans: 'कर्ज',
+    home: '', clients: 'ग्राहक', loans: 'कर्ज',
     collect: 'वसुली', reports: 'अहवाल', settings: 'सेटिंग्ज',
     logout: 'बाहेर पडा', language: 'भाषा', cancel: 'रद्द करा',
     saveClient: 'ग्राहक जतन करा', saveLoan: 'कर्ज जतन करा', clearData: 'सर्व डेटा मिटवा',
     totalClients: 'एकूण ग्राहक', loanGiven: 'दिलेले कर्ज', collected: 'वसुली केलेले', pending: 'प्रलंबित'
   },
   ne: {
-    dashboard: 'ड्यासबोर्ड', clients: 'ग्राहकहरू', loans: 'ऋणहरू',
+    home: '', clients: 'ग्राहकहरू', loans: 'ऋणहरू',
     collect: 'संकलन', reports: 'रिपोर्टहरू', settings: 'सेटिङहरू',
     logout: 'लग आउट', language: 'भाषा', cancel: 'रद्द गर्नुहोस्',
     saveClient: 'ग्राहक सुरक्षित गर्नुहोस्', saveLoan: 'ऋण सुरक्षित गर्नुहोस्', clearData: 'सबै डाटा मेटाउनुहोस्'
   },
   or: {
-    dashboard: 'ଡ୍ୟାସବୋର୍ଡ', clients: 'ଗ୍ରାହକ', loans: 'ଋଣ',
+    home: '', clients: 'ଗ୍ରାହକ', loans: 'ଋଣ',
     collect: 'ସଂଗ୍ରହ', reports: 'ରିପୋର୍ଟ', settings: 'ସେଟିଂସ',
     logout: 'ଲଗ ଆଉଟ', language: 'ଭାଷା', cancel: 'ବାତିล କରନ୍ତୁ',
     saveClient: 'ଗ୍ରାହକ ସଞ୍ચୟ କରନ୍ତୁ', saveLoan: 'ଋଣ ସଞ୍ଚୟ କରନ୍ତು', clearData: 'ସବୁ ଡାଟା ଲିଭାନ୍ତୁ'
   },
   pa: {
-    dashboard: 'ਡੈਸ਼ਬੋਰਡ', clients: 'ਗਾਹਕ', loans: 'ਕਰਜ਼ੇ',
+    home: '', clients: 'ਗਾਹਕ', loans: 'ਕਰਜ਼ੇ',
     collect: 'ਇਕੱਠਾ ਕਰੋ', reports: 'ਰਿਪੋਰਟਾਂ', settings: 'ਸੈਟਿੰਗਾਂ',
     logout: 'ਲੌਗ ਆਉਟ', language: 'ਭਾਸ਼ਾ', cancel: 'ਰੱਦ ਕਰੋ',
     saveClient: 'ਗਾਹਕ ਸੰਭਾਲੋ', saveLoan: 'ਕਰਜ਼ਾ ਸੰਭਾਲੋ', clearData: 'ਸਾਰਾ ਡੇਟਾ ਸਾਫ਼ ਕਰੋ'
   },
   sa: {
-    dashboard: 'पट्टिका', clients: 'ग्राहकाः', loans: 'ऋणानि',
+    home: '', clients: 'ग्राहकाः', loans: 'ऋणानि',
     collect: 'संग्रहः', reports: 'विवरणानि', settings: 'समायोजनानि',
     logout: 'बहिर्गमनम्', language: 'भाषा', cancel: 'प्रत्याहारः',
     saveClient: 'ग्राहकं रक्षतु', saveLoan: 'ऋणं रक्षतु', clearData: 'सर्वाणि विवरणानि निष्कासयतु'
   },
   sat: {
-    dashboard: 'ড্যাশবোর্ড', clients: 'গ্রাহককো', loans: 'ঋণকো',
+    home: '', clients: 'গ্রাহককো', loans: 'ঋণকো',
     collect: 'তুমাল', reports: 'রিপোর্টকো', settings: 'সেটিংস',
     logout: 'লগআউট', language: 'পারসি', cancel: 'বাতিল',
     saveClient: 'গ্রাহক সাঁচাও', saveLoan: 'ঋণ সাঁচাও', clearData: 'সাঁচাও ডাটা মেটাও'
   },
   sd: {
-    dashboard: 'ڊيش بورڊ', clients: 'گراهڪ', loans: 'قرضا',
+    home: '', clients: 'گراهڪ', loans: 'قرضا',
     collect: 'گڏ ڪرڻ', reports: 'رپورتون', settings: 'سيٽنگون',
     logout: 'لاگ آئوٽ', language: 'ٻولي', cancel: 'رد ڪرڻ',
     saveClient: 'گراهڪ بچايو', saveLoan: 'قرضو بچايو', clearData: 'سڄو ڊيٽا ختم ڪريو'
   },
   te: {
-    dashboard: 'డాష్‌బోర్డ్', clients: 'కస్టమర్లు', loans: 'రుణాలు',
+    home: '', clients: 'కస్టమర్లు', loans: 'రుణాలు',
     collect: 'వసూలు', reports: 'నివేదికలు', settings: 'సెట్టింగ్స్',
     logout: 'లాగ్ అవుట్', language: 'భాష', cancel: 'రద్దు చేయి',
     saveClient: 'కస్టమర్ సేవ్ చేయి', saveLoan: 'రుణం సేవ్ చేయి', clearData: 'మొత్తం డేటా తుడిచివేయి'
   },
   ur: {
-    dashboard: 'ڈیش بورڈ', clients: 'گراہک', loans: 'قرضے',
+    home: '', clients: 'گراہک', loans: 'قرضے',
     collect: 'وصولی', reports: 'رپورٹیں', settings: 'سیٹنگز',
     logout: 'لاگ آؤట్', language: 'زبان', cancel: 'منسوخ کریں',
     saveClient: 'گراہک محفوظ کریں', saveLoan: 'قرضہ محفوظ کریں', clearData: 'تمام डेटा साफ करें'
@@ -627,74 +634,122 @@ function saveSessionIsolated(token, user) {
 
 // Google Login Callback
 window.handleGoogleLogin = async function(response) {
-  // Remove loading state from buttons
-  const btns = document.querySelectorAll('.btn-google-signin');
-  btns.forEach(b => b.classList.remove('loading'));
-
-  // Decode the JWT credential to extract user info
-  let googleUser = {};
-  try {
-    const payload = JSON.parse(atob(response.credential.split('.')[1]));
-    googleUser = {
-      email: payload.email,
-      name: payload.name || payload.email.split('@')[0],
-      picture: payload.picture || '',
-      sub: payload.sub
-    };
-  } catch (e) {
-    googleUser = { email: 'google-user@gmail.com', name: 'Google User' };
+  console.log('🔐 Google login initiated');
+  
+  if (!response || !response.credential) {
+    console.error('❌ Invalid Google response:', response);
+    showToast('Google login failed - invalid response', 'error');
+    return;
   }
 
-  // Try backend first
-  const res = await apiAuth('google', { token: response.credential });
+  // Remove loading state from buttons
+  const btns = document.querySelectorAll('.btn-google-signin, .g_id_signin');
+  btns.forEach(b => b.classList.remove('loading'));
 
-  if (res.success) {
-    const token = res.token || ('google-session:' + encodeURIComponent(res.user?.email || googleUser.email) + ':' + Date.now());
-    saveSessionIsolated(token, res.user);
-    const s = Store.settings();
-    if (res.user?.name && !s.financierName) { s.financierName = res.user.name; Store.saveSettings(s); }
-    if (res.user?.appPin) { s.appPin = res.user.appPin; Store.saveSettings(s); }
-    state.session = getSession();
-    
-    // Crucial: Restore from cloud BEFORE checking PIN
-    // so we don't overwrite data for an existing user logging into a new device
-    if (window.KFSync) await KFSync.restore();
-    if (hasPin()) { showPinLock(); } else { showPinSetup(); }
-  } else if (res.offline) {
-    // Backend offline — create local session from Google credential
-    const user = {
-      email: googleUser.email,
-      name: googleUser.name,
-      financierName: googleUser.name,
-      picture: googleUser.picture
-    };
-    saveSessionIsolated('google-session:' + encodeURIComponent(user.email) + ':' + Date.now(), user);
-    // Save to local users list for consistency
-    const users = getLocalUsers();
-    if (!users.find(u => u.email.toLowerCase() === googleUser.email.toLowerCase())) {
-      users.push({
-        id: Date.now(),
-        email: googleUser.email,
-        passwordHash: '', // Google users don't have passwords
-        financierName: googleUser.name,
-        businessName: '',
-        googleAuth: true,
-        createdAt: new Date().toISOString()
-      });
-      saveLocalUsers(users);
+  try {
+    // Decode the JWT credential to extract user info
+    let googleUser = {};
+    try {
+      const payload = JSON.parse(atob(response.credential.split('.')[1]));
+      googleUser = {
+        email: payload.email,
+        name: payload.name || payload.email.split('@')[0],
+        picture: payload.picture || '',
+        sub: payload.sub
+      };
+      console.log('✅ Google user info decoded:', { email: googleUser.email, name: googleUser.name });
+    } catch (e) {
+      console.error('❌ Failed to decode Google credential:', e);
+      googleUser = { email: 'google-user@gmail.com', name: 'Google User' };
     }
-    const s = Store.settings();
-    if (!s.financierName) { s.financierName = googleUser.name; Store.saveSettings(s); }
-    state.session = getSession();
+
+    // Show loading message
+    showToast('Connecting with Google...', 'info');
+
+    // Try backend first
+    const res = await apiAuth('google', { token: response.credential });
+    console.log('🔄 Backend Google auth response:', res);
+
+    if (res.success) {
+      console.log('✅ Backend Google auth successful');
+      const token = res.token || ('google-session:' + encodeURIComponent(res.user?.email || googleUser.email) + ':' + Date.now());
+      saveSessionIsolated(token, res.user);
+      const s = Store.settings();
+      if (res.user?.name && !s.financierName) { s.financierName = res.user.name; Store.saveSettings(s); }
+      if (res.user?.appPin) { s.appPin = res.user.appPin; Store.saveSettings(s); }
+      state.session = getSession();
+      
+      // Crucial: Restore from cloud BEFORE checking PIN
+      // so we don't overwrite data for an existing user logging into a new device
+      if (window.KFSync) await KFSync.restore();
+      
+      showToast('Welcome back, ' + (res.user?.name || googleUser.name) + '!', 'success');
+      
+      if (hasPin()) { 
+        console.log('📱 User has PIN, showing PIN lock');
+        showPinLock(); 
+      } else { 
+        console.log('🆕 No PIN found, showing PIN setup');
+        showPinSetup(); 
+      }
+    } else if (res.offline) {
+      console.log('🔄 Backend offline, using local Google auth');
+      // Backend offline — create local session from Google credential
+      const user = {
+        email: googleUser.email,
+        name: googleUser.name,
+        financierName: googleUser.name,
+        picture: googleUser.picture
+      };
+      saveSessionIsolated('google-session:' + encodeURIComponent(user.email) + ':' + Date.now(), user);
+      
+      // Save to local users list for consistency
+      const users = getLocalUsers();
+      if (!users.find(u => u.email.toLowerCase() === googleUser.email.toLowerCase())) {
+        users.push({
+          id: Date.now(),
+          email: googleUser.email,
+          passwordHash: '', // Google users don't have passwords
+          financierName: googleUser.name,
+          businessName: '',
+          googleAuth: true,
+          createdAt: new Date().toISOString()
+        });
+        saveLocalUsers(users);
+      }
+      
+      const s = Store.settings();
+      if (!s.financierName) { s.financierName = googleUser.name; Store.saveSettings(s); }
+      state.session = getSession();
+      
+      // Crucial: Restore from cloud BEFORE checking PIN
+      if (window.KFSync) await KFSync.restore();
+      
+      showToast('Welcome, ' + googleUser.name + '! (Offline mode)', 'success');
+      
+      if (hasPin()) { 
+        console.log('📱 User has PIN, showing PIN lock');
+        showPinLock(); 
+      } else { 
+        console.log('🆕 No PIN found, showing PIN setup');
+        showPinSetup(); 
+      }
+    } else {
+      console.error('❌ Google login failed:', res.error);
+      const errEl = $('#login-error');
+      if (errEl) {
+        errEl.textContent = res.error || 'Google login failed - please try again';
+        errEl.classList.remove('d-none');
+      }
+      showToast(res.error || 'Google login failed', 'error');
+    }
+  } catch (error) {
+    console.error('❌ Google login error:', error);
+    showToast('Google login failed - ' + error.message, 'error');
     
-    // Crucial: Restore from cloud BEFORE checking PIN
-    if (window.KFSync) await KFSync.restore();
-    
-    if (hasPin()) { showPinLock(); } else { showPinSetup(); }
-  } else {
     const errEl = $('#login-error');
     if (errEl) {
-      errEl.textContent = res.error || 'Google login failed';
+      errEl.textContent = 'Google login failed: ' + error.message;
       errEl.classList.remove('d-none');
     }
   }
@@ -838,7 +893,7 @@ function init() {
       console.log('✅ INIT: Emergency fallback - showing auth screen');
     }
     
-    throw error; // Re-throw to see in console
+    // Don't re-throw the error to avoid breaking the app completely
   }
 }
 
@@ -900,6 +955,13 @@ function showAuth() {
   $('#pin-lock-screen').style.display = 'none';
   $('#main-app').style.display = 'none';
   
+  // Show PWA install bubble on auth screen - enhanced for samkass.site
+  const bubble = $('#pwa-install-bubble');
+  if (bubble) {
+    bubble.style.display = 'block';
+    console.log('🔘 PWA install bubble shown on samkass.site');
+  }
+  
   const aiText = document.getElementById('ai-typing-text');
   if (aiText && !aiText.dataset.typingStarted) {
     aiText.dataset.typingStarted = 'true';
@@ -942,6 +1004,10 @@ function showPinLock() {
   $('#auth-screen').style.display = 'none';
   $('#pin-lock-screen').style.display = '';
   $('#main-app').style.display = 'none';
+  
+  // Hide PWA install bubble
+  const bubble = $('#pwa-install-bubble');
+  if (bubble) bubble.style.display = 'none';
   // Populate user info
   const session = getSession();
   const user = session?.user;
@@ -968,6 +1034,10 @@ async function showApp() {
   $('#auth-screen').style.display = 'none';
   $('#pin-lock-screen').style.display = 'none';
   $('#main-app').style.display = '';
+  
+  // Show chatbot for logged-in users
+  showChatbotForLoggedInUser();
+  
   updatePlanBanner();
   checkAccessControl();
   
@@ -4343,7 +4413,39 @@ window.addEventListener('appinstalled', () => {
     installBtn.disabled = true;
     installBtn.style.opacity = '0.6';
   }
+  
+  // Hide install bubble after successful installation
+  const bubble = $('#pwa-install-bubble');
+  if (bubble) bubble.style.display = 'none';
 });
+
+// Handle floating bubble install click
+window.handleBubbleInstall = async function() {
+  console.log('🔘 Install bubble clicked on samkass.site');
+  
+  if (!window.deferredPrompt) {
+    showToast('To install SamKass: Tap browser menu (⋮) → "Add to Home screen"', 'info');
+    console.log('📱 Manual install instruction shown');
+    return;
+  }
+  
+  try {
+    window.deferredPrompt.prompt();
+    const { outcome } = await window.deferredPrompt.userChoice;
+    console.log('👤 User choice:', outcome);
+    
+    if (outcome === 'accepted') {
+      showToast('SamKass app installed successfully!', 'success');
+      const bubble = $('#pwa-install-bubble');
+      if (bubble) bubble.style.display = 'none';
+    }
+  } catch (err) {
+    console.error('❌ Install prompt error:', err);
+    showToast('To install SamKass: Tap browser menu (⋮) → "Add to Home screen"', 'info');
+  }
+  
+  window.deferredPrompt = null;
+};
 
 // ── BOOT ──────────────────────────────────────────────────────
 // Emergency fallback: Force hide loading screen after 3 seconds
@@ -4364,12 +4466,24 @@ setTimeout(() => {
 document.addEventListener('DOMContentLoaded', () => {
   console.log('🎬 BOOT: DOMContentLoaded event fired');
   
+  // Check if required dependencies are loaded
+  console.log('🔍 BOOT: Checking dependencies...');
+  console.log('Bootstrap:', typeof bootstrap !== 'undefined');
+  console.log('Chart.js:', typeof Chart !== 'undefined');
+  console.log('jsPDF:', typeof window.jspdf !== 'undefined');
+  
   if (typeof RazorpayPayment !== 'undefined') {
     console.log('💳 BOOT: Initializing Razorpay...');
     RazorpayPayment.init();
   } else {
     console.warn('⚠️ BOOT: RazorpayPayment not found');
   }
+  
+  // Initialize Google Sign-In
+  initializeGoogleSignIn();
+  
+  // Initialize chatbot
+  initChatbot();
   
   // Brief loading screen delay for smooth UX
   console.log('⏳ BOOT: Waiting 400ms before calling init()...');
@@ -4388,6 +4502,880 @@ document.addEventListener('DOMContentLoaded', () => {
   }, 400);
 });
 
+// Google Sign-In Initialization
+function initializeGoogleSignIn() {
+  console.log('🔐 Initializing Google Sign-In...');
+  
+  // Wait for Google Identity Services to load
+  const waitForGoogle = () => {
+    if (typeof google !== 'undefined' && google.accounts) {
+      console.log('✅ Google Identity Services loaded');
+      
+      try {
+        // Initialize Google Sign-In
+        google.accounts.id.initialize({
+          client_id: '1008709235007-vh9u2526ol0haffogibri3kno6rtjejl.apps.googleusercontent.com',
+          callback: handleGoogleLogin,
+          auto_select: false,
+          cancel_on_tap_outside: true,
+          use_fedcm_for_prompt: false
+        });
+        
+        console.log('✅ Google Sign-In initialized successfully');
+        
+        // Render Google button in all containers
+        setTimeout(() => {
+          const containers = document.querySelectorAll('.g_id_signin');
+          let renderSuccess = false;
+          
+          containers.forEach((container, index) => {
+            try {
+              google.accounts.id.renderButton(container, {
+                type: 'standard',
+                shape: 'pill',
+                theme: 'outline',
+                text: 'continue_with',
+                size: 'large',
+                logo_alignment: 'left',
+                width: container.offsetWidth || 280
+              });
+              console.log(`✅ Google button rendered in container ${index + 1}`);
+              renderSuccess = true;
+            } catch (error) {
+              console.error(`❌ Failed to render Google button in container ${index + 1}:`, error);
+            }
+          });
+          
+          // Show manual button if automatic rendering failed
+          if (!renderSuccess) {
+            console.log('⚠️ Google button auto-render failed, showing manual button');
+            const manualBtn = document.getElementById('manual-google-signin');
+            if (manualBtn) {
+              manualBtn.style.display = 'flex';
+            }
+          }
+        }, 1000);
+        
+      } catch (error) {
+        console.error('❌ Failed to initialize Google Sign-In:', error);
+        // Show manual button as fallback
+        const manualBtn = document.getElementById('manual-google-signin');
+        if (manualBtn) {
+          manualBtn.style.display = 'flex';
+        }
+      }
+    } else {
+      console.log('⏳ Waiting for Google Identity Services...');
+      setTimeout(waitForGoogle, 500);
+    }
+  };
+  
+  waitForGoogle();
+}
+
+// Manual Google Sign-In Trigger
+window.triggerGoogleSignIn = function() {
+  console.log('🔘 Manual Google Sign-In triggered');
+  
+  if (typeof google !== 'undefined' && google.accounts) {
+    try {
+      google.accounts.id.prompt((notification) => {
+        console.log('📋 Google prompt notification:', notification);
+        
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+          console.log('⚠️ Google prompt not displayed, trying OAuth popup');
+          
+          // Fallback to OAuth popup
+          google.accounts.oauth2.initTokenClient({
+            client_id: '1008709235007-vh9u2526ol0haffogibri3kno6rtjejl.apps.googleusercontent.com',
+            scope: 'openid email profile',
+            callback: (response) => {
+              console.log('🔑 OAuth response:', response);
+              if (response.access_token) {
+                // Get user info using access token
+                fetch(`https://www.googleapis.com/oauth2/v2/userinfo?access_token=${response.access_token}`)
+                  .then(res => res.json())
+                  .then(userInfo => {
+                    console.log('👤 User info from OAuth:', userInfo);
+                    // Create a credential-like object
+                    const fakeCredential = {
+                      credential: btoa(JSON.stringify({
+                        email: userInfo.email,
+                        name: userInfo.name,
+                        picture: userInfo.picture,
+                        sub: userInfo.id
+                      }))
+                    };
+                    handleGoogleLogin(fakeCredential);
+                  })
+                  .catch(error => {
+                    console.error('❌ Failed to get user info:', error);
+                    showToast('Google login failed - please try again', 'error');
+                  });
+              }
+            }
+          }).requestAccessToken();
+        }
+      });
+    } catch (error) {
+      console.error('❌ Manual Google Sign-In failed:', error);
+      showToast('Google Sign-In not available. Please try email login.', 'error');
+    }
+  } else {
+    console.error('❌ Google Identity Services not loaded');
+    showToast('Google Sign-In not available. Please try email login.', 'error');
+  }
+};
+
+// ── CHATBOT FUNCTIONALITY ──────────────────────────────────────
+let isDragging = false;
+let dragOffset = { x: 0, y: 0 };
+let isRecording = false;
+let recognition = null;
+let currentLang = 'en';
+
+// Chatbot translations
+const chatbotTranslations = {
+  en: {
+    title: 'SamKass Assistant',
+    subtitle: 'Ask me anything about your finances',
+    welcome: 'Hello! I\'m your SamKass assistant. Ask me about your clients, loans, payments, or any app feature!',
+    placeholder: 'Type your question here...',
+    thinking: 'Let me check that for you...',
+    noData: 'I couldn\'t find that information in your current data.',
+    error: 'Sorry, I couldn\'t process that request.',
+    voiceStart: 'Listening... Speak now',
+    voiceError: 'Voice recognition is not supported in your browser.'
+  },
+  ta: {
+    title: 'சாம்காஸ் உதவியாளர்',
+    subtitle: 'உங்கள் நிதி குறித்து எதையும் கேளுங்கள்',
+    welcome: 'வணக்கம்! நான் உங்கள் சாம்காஸ் உதவியாளர். உங்கள் வாடிக்கையாளர்கள், கடன்கள், பணம் செலுத்துதல் அல்லது எந்த செயலி அம்சத்தைப் பற்றியும் கேளுங்கள்!',
+    placeholder: 'உங்கள் கேள்வியை இங்கே தட்டச்சு செய்யுங்கள்...',
+    thinking: 'உங்களுக்காக அதை சரிபார்க்கிறேன்...',
+    noData: 'உங்கள் தற்போதைய தரவில் அந்த தகவலைக் கண்டுபிடிக்க முடியவில்லை.',
+    error: 'மன்னிக்கவும், அந்த கோரிக்கையைச் செயல்படுத்த முடியவில்லை.',
+    voiceStart: 'கேட்கிறது... இப்போது பேசுங்கள்',
+    voiceError: 'உங்கள் உலாவியில் குரல் அடையாளம் ஆதரிக்கப்படவில்லை.'
+  }
+};
+
+function initChatbot() {
+  console.log('🤖 Initializing chatbot...');
+  
+  // Wait for DOM to be fully ready
+  setTimeout(() => {
+    const chatbotIcon = document.getElementById('chatbot-icon');
+    const chatbotInterface = document.getElementById('chatbot-interface');
+    
+    if (!chatbotIcon) {
+      console.error('❌ Chatbot icon element not found!');
+      return;
+    }
+    
+    console.log('✅ Chatbot icon element found, binding events...');
+    
+    // Make icon draggable
+    chatbotIcon.addEventListener('mousedown', startDrag);
+    chatbotIcon.addEventListener('touchstart', startDrag, { passive: false });
+    
+    // Click to open chat - use both click and touchend for better mobile support
+    chatbotIcon.addEventListener('click', (e) => {
+      e.preventDefault();
+      console.log('🔘 Chatbot icon clicked, isDragging:', isDragging);
+      if (!isDragging) {
+        openChatbot();
+      }
+    });
+    
+    chatbotIcon.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      console.log('👆 Chatbot icon touched, isDragging:', isDragging);
+      if (!isDragging) {
+        openChatbot();
+      }
+    });
+    
+    // Auto-resize textarea
+    const textarea = document.getElementById('chatbot-input');
+    if (textarea) {
+      textarea.addEventListener('input', autoResizeTextarea);
+      textarea.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+    }
+    
+    console.log('✅ Chatbot initialization complete!');
+  }, 500);
+}
+
+function startDrag(e) {
+  e.preventDefault();
+  isDragging = false;
+  
+  const chatbotIcon = document.getElementById('chatbot-icon');
+  if (!chatbotIcon) return;
+  
+  const rect = chatbotIcon.getBoundingClientRect();
+  
+  const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+  const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+  
+  dragOffset.x = clientX - rect.left;
+  dragOffset.y = clientY - rect.top;
+  
+  // Add event listeners
+  document.addEventListener('mousemove', drag);
+  document.addEventListener('touchmove', drag, { passive: false });
+  document.addEventListener('mouseup', stopDrag);
+  document.addEventListener('touchend', stopDrag);
+  
+  // Only mark as dragging after a small delay to allow clicks
+  setTimeout(() => {
+    if (document.addEventListener) {
+      // Check if mouse/finger moved significantly
+      const currentX = e.clientX || (e.touches && e.touches[0].clientX);
+      const currentY = e.clientY || (e.touches && e.touches[0].clientY);
+      
+      if (Math.abs(currentX - clientX) > 5 || Math.abs(currentY - clientY) > 5) {
+        isDragging = true;
+        chatbotIcon.classList.add('dragging');
+        console.log('🖱️ Started dragging chatbot');
+      }
+    }
+  }, 150);
+}
+
+function drag(e) {
+  if (!isDragging) return;
+  
+  e.preventDefault();
+  const chatbotIcon = document.getElementById('chatbot-icon');
+  
+  const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+  const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+  
+  const x = clientX - dragOffset.x;
+  const y = clientY - dragOffset.y;
+  
+  const maxX = window.innerWidth - 60;
+  const maxY = window.innerHeight - 60;
+  
+  const clampedX = Math.max(0, Math.min(x, maxX));
+  const clampedY = Math.max(0, Math.min(y, maxY));
+  
+  chatbotIcon.style.left = clampedX + 'px';
+  chatbotIcon.style.top = clampedY + 'px';
+  chatbotIcon.style.right = 'auto';
+  chatbotIcon.style.bottom = 'auto';
+}
+
+function stopDrag() {
+  document.removeEventListener('mousemove', drag);
+  document.removeEventListener('touchmove', drag);
+  document.removeEventListener('mouseup', stopDrag);
+  document.removeEventListener('touchend', stopDrag);
+  
+  const chatbotIcon = document.getElementById('chatbot-icon');
+  chatbotIcon.classList.remove('dragging');
+  
+  setTimeout(() => {
+    isDragging = false;
+  }, 100);
+}
+
+function openChatbot() {
+  console.log('🚀 Opening chatbot interface...');
+  
+  const chatbotInterface = document.getElementById('chatbot-interface');
+  const chatbotIcon = document.getElementById('chatbot-icon');
+  
+  if (!chatbotInterface) {
+    console.error('❌ Chatbot interface element not found!');
+    return;
+  }
+  
+  if (!chatbotIcon) {
+    console.error('❌ Chatbot icon element not found!');
+    return;
+  }
+  
+  console.log('✅ Opening chatbot interface...');
+  chatbotInterface.style.display = 'flex';
+  chatbotIcon.style.display = 'none';
+  
+  // Update language
+  updateChatbotLanguage();
+  
+  // Focus input
+  setTimeout(() => {
+    const input = document.getElementById('chatbot-input');
+    if (input) {
+      input.focus();
+      console.log('✅ Chatbot input focused');
+    }
+  }, 300);
+}
+
+// Make openChatbot globally available
+window.openChatbot = openChatbot;
+
+function closeChatbot() {
+  console.log('🚪 Closing chatbot interface...');
+  
+  const chatbotInterface = document.getElementById('chatbot-interface');
+  const chatbotIcon = document.getElementById('chatbot-icon');
+  
+  if (chatbotInterface && chatbotIcon) {
+    chatbotInterface.style.display = 'none';
+    chatbotIcon.style.display = 'flex';
+    console.log('✅ Chatbot interface closed');
+  }
+}
+
+// Make closeChatbot globally available  
+window.closeChatbot = closeChatbot;
+
+function updateChatbotLanguage() {
+  const settings = Store.settings();
+  currentLang = settings.lang || 'en';
+  const t = chatbotTranslations[currentLang] || chatbotTranslations.en;
+  
+  const title = document.getElementById('chatbot-title');
+  const subtitle = document.getElementById('chatbot-subtitle');
+  const welcome = document.getElementById('welcome-message');
+  const placeholder = document.getElementById('chatbot-input');
+  
+  if (title) title.textContent = t.title;
+  if (subtitle) subtitle.textContent = t.subtitle;
+  if (welcome) welcome.textContent = t.welcome;
+  if (placeholder) placeholder.placeholder = t.placeholder;
+}
+
+function sendMessage() {
+  console.log('💬 Sending message...');
+  
+  const input = document.getElementById('chatbot-input');
+  if (!input) {
+    console.error('❌ Chatbot input not found!');
+    return;
+  }
+  
+  const message = input.value.trim();
+  
+  if (!message) {
+    console.log('⚠️ Empty message, skipping...');
+    return;
+  }
+  
+  console.log('📤 Message:', message);
+  
+  // Detect language from input
+  const detectedLang = detectLanguage(message);
+  console.log('🌐 Detected language:', detectedLang);
+  
+  // Add user message
+  addMessage(message, 'user');
+  
+  // Clear input
+  input.value = '';
+  autoResizeTextarea();
+  
+  // Show thinking indicator
+  showTypingIndicator();
+  
+  // Process message and respond
+  setTimeout(() => {
+    hideTypingIndicator();
+    const response = processUserMessage(message, detectedLang);
+    console.log('🤖 Bot response:', response);
+    addMessage(response, 'bot');
+  }, 1000 + Math.random() * 1000);
+}
+
+// Make sendMessage globally available
+window.sendMessage = sendMessage;
+
+function detectLanguage(text) {
+  // Simple Tamil detection - check for Tamil Unicode characters
+  const tamilPattern = /[\u0B80-\u0BFF]/;
+  return tamilPattern.test(text) ? 'ta' : 'en';
+}
+
+function addMessage(message, type) {
+  const messagesContainer = document.getElementById('chatbot-messages');
+  const messageDiv = document.createElement('div');
+  messageDiv.className = type + '-message';
+  
+  if (type === 'user') {
+    messageDiv.innerHTML = `
+      <div class="message-content">${message}</div>
+    `;
+  } else {
+    messageDiv.innerHTML = `
+      <div class="robot-avatar-small" style="width: 32px; height: 32px; background: linear-gradient(135deg, #7ed321, #4caf1a); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 2px solid rgba(126, 211, 33, 0.3);">
+        <div style="position: relative; width: 16px; height: 16px;">
+          <div style="width: 16px; height: 12px; background: white; border-radius: 8px 8px 4px 4px; position: relative; display: flex; align-items: center; justify-content: center;">
+            <div style="display: flex; gap: 2px; margin-top: -1px;">
+              <div style="width: 2px; height: 2px; background: #4caf1a; border-radius: 50%;"></div>
+              <div style="width: 2px; height: 2px; background: #4caf1a; border-radius: 50%;"></div>
+            </div>
+            <div style="position: absolute; bottom: 1px; left: 50%; transform: translateX(-50%); width: 3px; height: 1px; background: #4caf1a; border-radius: 1px;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="message-content">${message}</div>
+    `;
+  }
+  
+  messagesContainer.appendChild(messageDiv);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function showTypingIndicator() {
+  const messagesContainer = document.getElementById('chatbot-messages');
+  const typingDiv = document.createElement('div');
+  typingDiv.className = 'bot-message typing-indicator';
+  typingDiv.id = 'typing-indicator';
+  
+  typingDiv.innerHTML = `
+    <div class="robot-avatar-small" style="width: 32px; height: 32px; background: linear-gradient(135deg, #7ed321, #4caf1a); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 2px solid rgba(126, 211, 33, 0.3);">
+      <div style="position: relative; width: 16px; height: 16px;">
+        <div style="width: 16px; height: 12px; background: white; border-radius: 8px 8px 4px 4px; position: relative; display: flex; align-items: center; justify-content: center;">
+          <div style="display: flex; gap: 2px; margin-top: -1px;">
+            <div style="width: 2px; height: 2px; background: #4caf1a; border-radius: 50%; animation: blink 0.8s infinite;"></div>
+            <div style="width: 2px; height: 2px; background: #4caf1a; border-radius: 50%; animation: blink 0.8s infinite 0.2s;"></div>
+          </div>
+          <div style="position: absolute; bottom: 1px; left: 50%; transform: translateX(-50%); width: 3px; height: 1px; background: #4caf1a; border-radius: 1px; animation: robotTalk 0.5s infinite;"></div>
+        </div>
+      </div>
+    </div>
+    <div style="background: var(--bg-input); padding: 12px 16px; border-radius: 16px 16px 16px 4px; display: flex; align-items: center; gap: 4px; border: 1px solid var(--border-default);">
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+    </div>
+  `;
+  
+  messagesContainer.appendChild(typingDiv);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+    </div>
+    <div style="background: var(--bg-input); padding: 12px 16px; border-radius: 16px 16px 16px 4px; display: flex; align-items: center; gap: 4px;">
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+    </div>
+  `;
+  
+  messagesContainer.appendChild(typingDiv);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function hideTypingIndicator() {
+  const indicator = document.getElementById('typing-indicator');
+  if (indicator) {
+    indicator.remove();
+  }
+}
+
+function processUserMessage(message, language) {
+  const lowerMessage = message.toLowerCase();
+  
+  // Get app data
+  const clients = Store.clients();
+  const loans = Store.loans();
+  const payments = Store.payments();
+  const settings = Store.settings();
+  
+  // Use appropriate language for response
+  const t = chatbotTranslations[language] || chatbotTranslations.en;
+  
+  // Calculate key metrics
+  const totalLent = loans.reduce((sum, loan) => sum + loan.principal, 0);
+  const totalCollected = payments.reduce((sum, p) => sum + p.amount, 0);
+  const outstandingBalance = totalLent - totalCollected;
+  const activeLoans = loans.filter(l => l.status === 'active');
+  
+  // Today's data
+  const today = new Date().toISOString().split('T')[0];
+  const todayPayments = payments.filter(p => p.date === today);
+  const todayCollection = todayPayments.reduce((sum, p) => sum + p.amount, 0);
+  
+  // Client-related queries
+  if (lowerMessage.includes('client') || lowerMessage.includes('வாடிக்கையாளர்') || lowerMessage.includes('customer')) {
+    if (lowerMessage.includes('how many') || lowerMessage.includes('எத்தனை') || lowerMessage.includes('count')) {
+      return language === 'ta' 
+        ? `உங்களிடம் மொத்தம் ${clients.length} வாடிக்கையாளர்கள் உள்ளனர். ${activeLoans.length} பேருக்கு செயலில் உள்ள கடன்கள் உள்ளன.`
+        : `You have a total of ${clients.length} clients. ${activeLoans.length} have active loans.`;
+    }
+    
+    if (lowerMessage.includes('list') || lowerMessage.includes('பட்டியல்')) {
+      if (clients.length === 0) {
+        return language === 'ta' 
+          ? 'உங்களிடம் இன்னும் வாடிக்கையாளர்கள் எவரும் இல்லை.'
+          : 'You don\'t have any clients yet.';
+      }
+      const clientList = clients.slice(0, 5).map(c => c.name).join(', ');
+      const moreText = clients.length > 5 ? (language === 'ta' ? ` மற்றும் ${clients.length - 5} மேலும்` : ` and ${clients.length - 5} more`) : '';
+      return language === 'ta' 
+        ? `உங்கள் வாடிக்கையாளர்கள்: ${clientList}${moreText}.`
+        : `Your clients: ${clientList}${moreText}.`;
+    }
+    
+    if (lowerMessage.includes('top') || lowerMessage.includes('best') || lowerMessage.includes('சிறந்த')) {
+      const clientStats = clients.map(client => {
+        const clientLoans = loans.filter(l => l.clientId === client.id);
+        const clientPayments = payments.filter(p => {
+          const loan = loans.find(l => l.id === p.loanId);
+          return loan && loan.clientId === client.id;
+        });
+        const totalLent = clientLoans.reduce((sum, l) => sum + l.principal, 0);
+        const totalPaid = clientPayments.reduce((sum, p) => sum + p.amount, 0);
+        return { ...client, totalLent, totalPaid, balance: totalLent - totalPaid };
+      }).sort((a, b) => b.totalLent - a.totalLent);
+      
+      if (clientStats.length === 0) return t.noData;
+      
+      const topClient = clientStats[0];
+      return language === 'ta' 
+        ? `உங்கள் மிகப்பெரிய வாடிக்கையாளர் ${topClient.name} - ₹${topClient.totalLent.toLocaleString()} கடன்.`
+        : `Your biggest client is ${topClient.name} - ₹${topClient.totalLent.toLocaleString()} lent.`;
+    }
+  }
+  
+  // Loan-related queries
+  if (lowerMessage.includes('loan') || lowerMessage.includes('கடன்') || lowerMessage.includes('lend')) {
+    if (lowerMessage.includes('total') || lowerMessage.includes('amount') || lowerMessage.includes('மொத்தம்')) {
+      return language === 'ta' 
+        ? `நீங்கள் மொத்தம் ₹${totalLent.toLocaleString()} கடன் கொடுத்துள்ளீர்கள். ${loans.length} கடன்கள் இதுவரை வழங்கப்பட்டுள்ளன.`
+        : `You have lent a total of ₹${totalLent.toLocaleString()} across ${loans.length} loans.`;
+    }
+    
+    if (lowerMessage.includes('active') || lowerMessage.includes('செயலில்')) {
+      const activePrincipal = activeLoans.reduce((sum, l) => sum + l.principal, 0);
+      return language === 'ta' 
+        ? `உங்களிடம் ${activeLoans.length} செயலில் உள்ள கடன்கள் உள்ளன, மொத்தம் ₹${activePrincipal.toLocaleString()}.`
+        : `You have ${activeLoans.length} active loans totaling ₹${activePrincipal.toLocaleString()}.`;
+    }
+    
+    if (lowerMessage.includes('biggest') || lowerMessage.includes('largest') || lowerMessage.includes('பெரிய')) {
+      if (loans.length === 0) return t.noData;
+      const biggestLoan = loans.sort((a, b) => b.principal - a.principal)[0];
+      const client = clients.find(c => c.id === biggestLoan.clientId);
+      return language === 'ta' 
+        ? `மிகப்பெரிய கடன் ${client?.name || 'Unknown'} - ₹${biggestLoan.principal.toLocaleString()}.`
+        : `Biggest loan is to ${client?.name || 'Unknown'} - ₹${biggestLoan.principal.toLocaleString()}.`;
+    }
+  }
+  
+  // Payment and collection queries
+  if (lowerMessage.includes('payment') || lowerMessage.includes('பணம்') || lowerMessage.includes('collect') || lowerMessage.includes('due')) {
+    if (lowerMessage.includes('today') || lowerMessage.includes('இன்று')) {
+      if (lowerMessage.includes('due') || lowerMessage.includes('வரவேண்டிய')) {
+        // Calculate due today
+        const dueToday = activeLoans.filter(loan => {
+          const stats = calcLoanStats(loan);
+          return stats.nextDue && stats.nextDue <= today && stats.nextDue >= today;
+        });
+        const dueAmount = dueToday.reduce((sum, loan) => sum + calcLoanStats(loan).emi, 0);
+        
+        return language === 'ta' 
+          ? `இன்று ₹${dueAmount.toLocaleString()} சேகரிக்க வேண்டும் (${dueToday.length} கடன்கள்).`
+          : `Today you need to collect ₹${dueAmount.toLocaleString()} from ${dueToday.length} loans.`;
+      } else {
+        return language === 'ta' 
+          ? `இன்று நீங்கள் ₹${todayCollection.toLocaleString()} பெற்றுள்ளீர்கள் (${todayPayments.length} பணம் செலுத்துதல்கள்).`
+          : `Today you collected ₹${todayCollection.toLocaleString()} from ${todayPayments.length} payments.`;
+      }
+    }
+    
+    if (lowerMessage.includes('total') || lowerMessage.includes('மொத்தம்')) {
+      return language === 'ta' 
+        ? `நீங்கள் மொத்தம் ₹${totalCollected.toLocaleString()} சேகரித்துள்ளீர்கள் ${payments.length} பணம் செலுத்துதல்களில்.`
+        : `You have collected a total of ₹${totalCollected.toLocaleString()} from ${payments.length} payments.`;
+    }
+    
+    if (lowerMessage.includes('overdue') || lowerMessage.includes('late') || lowerMessage.includes('தாமதம்')) {
+      const overdueLoans = activeLoans.filter(loan => {
+        const stats = calcLoanStats(loan);
+        return stats.nextDue && new Date(stats.nextDue) < new Date(today);
+      });
+      
+      if (overdueLoans.length === 0) {
+        return language === 'ta' 
+          ? 'தாமதமான கடன்கள் எதுவும் இல்லை. நன்று!'
+          : 'No overdue loans. Great!';
+      }
+      
+      const overdueAmount = overdueLoans.reduce((sum, loan) => sum + calcLoanStats(loan).emi, 0);
+      return language === 'ta' 
+        ? `${overdueLoans.length} கடன்கள் தாமதமாகியுள்ளன, மொத்தம் ₹${overdueAmount.toLocaleString()}.`
+        : `${overdueLoans.length} loans are overdue, totaling ₹${overdueAmount.toLocaleString()}.`;
+    }
+  }
+  
+  // Financial summary and dashboard queries
+  if (lowerMessage.includes('summary') || lowerMessage.includes('overview') || lowerMessage.includes('dashboard') || lowerMessage.includes('சுருக்கம்')) {
+    return language === 'ta' 
+      ? `📊 உங்கள் நிதி சுருக்கம்:\n💰 மொத்த கடன்: ₹${totalLent.toLocaleString()}\n💳 சேகரிக்கப்பட்டது: ₹${totalCollected.toLocaleString()}\n📈 இருப்பு: ₹${outstandingBalance.toLocaleString()}\n👥 வாடிக்கையாளர்கள்: ${clients.length}\n📋 செயலில் உள்ள கடன்கள்: ${activeLoans.length}`
+      : `📊 Your Financial Summary:\n💰 Total Lent: ₹${totalLent.toLocaleString()}\n💳 Collected: ₹${totalCollected.toLocaleString()}\n📈 Outstanding: ₹${outstandingBalance.toLocaleString()}\n👥 Clients: ${clients.length}\n📋 Active Loans: ${activeLoans.length}`;
+  }
+  
+  // Balance and outstanding queries
+  if (lowerMessage.includes('balance') || lowerMessage.includes('outstanding') || lowerMessage.includes('இருப்பு') || lowerMessage.includes('நிலுவை')) {
+    const balanceText = language === 'ta' 
+      ? `உங்கள் நிலுவை தொகை ₹${outstandingBalance.toLocaleString()}.`
+      : `Your outstanding balance is ₹${outstandingBalance.toLocaleString()}.`;
+      
+    if (outstandingBalance > totalLent * 0.8) {
+      return balanceText + (language === 'ta' 
+        ? ' பெரும்பாலான தொகை இன்னும் நிலுவையில் உள்ளது.'
+        : ' Most of your money is still outstanding.');
+    }
+    return balanceText;
+  }
+  
+  // Interest and profit queries  
+  if (lowerMessage.includes('interest') || lowerMessage.includes('profit') || lowerMessage.includes('வட்டி') || lowerMessage.includes('லாபம்')) {
+    const totalInterest = payments.reduce((sum, p) => {
+      const loan = loans.find(l => l.id === p.loanId);
+      if (!loan) return sum;
+      return sum + Math.max(0, p.amount - (loan.principal / (loan.duration || 12)));
+    }, 0);
+    
+    return language === 'ta' 
+      ? `தோராயமாக ₹${totalInterest.toLocaleString()} வட்டி வருமானம் கிடைத்துள்ளது.`
+      : `Approximately ₹${totalInterest.toLocaleString()} in interest income earned.`;
+  }
+  
+  // Help and feature queries
+  if (lowerMessage.includes('help') || lowerMessage.includes('உதவி') || lowerMessage.includes('how to') || lowerMessage.includes('எப்படி')) {
+    return language === 'ta' 
+      ? 'நான் உங்கள் வாடிக்கையாளர்கள், கடன்கள், பணம் செலுத்துதல் மற்றும் அறிக்கைகள் குறித்து உதவ முடியும். "சுருக்கம்", "இன்று வரவேண்டிய தொகை", "மிகப்பெரிய கடன்" போன்ற கேள்விகள் கேளுங்கள்!'
+      : 'I can help with your clients, loans, payments, and reports. Try asking "summary", "due today", "biggest loan", or specific client names!';
+  }
+  
+  // Search for specific client names in the message
+  const clientMatch = clients.find(c => 
+    c.name.toLowerCase().includes(lowerMessage.replace(/[^\w\s]/g, '')) || 
+    lowerMessage.includes(c.name.toLowerCase())
+  );
+  
+  if (clientMatch) {
+    const clientLoans = loans.filter(l => l.clientId === clientMatch.id);
+    const clientPayments = payments.filter(p => {
+      const loan = loans.find(l => l.id === p.loanId);
+      return loan && loan.clientId === clientMatch.id;
+    });
+    
+    const totalLent = clientLoans.reduce((sum, l) => sum + l.principal, 0);
+    const totalPaid = clientPayments.reduce((sum, p) => sum + p.amount, 0);
+    const activeCount = clientLoans.filter(l => l.status === 'active').length;
+    
+    return language === 'ta' 
+      ? `${clientMatch.name}:\n💰 மொத்த கடன்: ₹${totalLent.toLocaleString()}\n💳 செலுத்தப்பட்டது: ₹${totalPaid.toLocaleString()}\n📈 இருப்பு: ₹${(totalLent - totalPaid).toLocaleString()}\n📱 தொலைபேசி: ${clientMatch.phone || 'N/A'}\n📋 செயலில் உள்ள கடன்கள்: ${activeCount}`
+      : `${clientMatch.name}:\n💰 Total Lent: ₹${totalLent.toLocaleString()}\n💳 Paid: ₹${totalPaid.toLocaleString()}\n📈 Balance: ₹${(totalLent - totalPaid).toLocaleString()}\n📱 Phone: ${clientMatch.phone || 'N/A'}\n📋 Active Loans: ${activeCount}`;
+  }
+  
+  // Number queries (amounts, percentages, etc.)
+  const numberMatch = lowerMessage.match(/\d+/);
+  if (numberMatch && (lowerMessage.includes('amount') || lowerMessage.includes('rupees') || lowerMessage.includes('₹'))) {
+    const amount = parseInt(numberMatch[0]);
+    const matchingLoans = loans.filter(l => l.principal >= amount * 0.9 && l.principal <= amount * 1.1);
+    
+    if (matchingLoans.length > 0) {
+      return language === 'ta' 
+        ? `₹${amount.toLocaleString()} அருகே ${matchingLoans.length} கடன்கள் கண்டுபிடிக்கப்பட்டன.`
+        : `Found ${matchingLoans.length} loans around ₹${amount.toLocaleString()}.`;
+    }
+  }
+  
+  // Default fallback with helpful suggestions
+  const suggestions = language === 'ta' 
+    ? ['சுருக்கம்', 'இன்று வரவேண்டிய தொகை', 'மொத்த கடன்', 'வாடிக்கையாளர்கள் பட்டியல்']
+    : ['summary', 'due today', 'total loans', 'client list'];
+    
+  return (language === 'ta' ? 'மன்னிக்கவும், அதைப் புரிந்துகொள்ள முடியவில்லை. ' : 'Sorry, I didn\'t understand that. ') + 
+         (language === 'ta' ? 'இவற்றை முயற்சி செய்யுங்கள்: ' : 'Try asking: ') + 
+         suggestions.join(', ') + 
+         (language === 'ta' ? ' அல்லது வாடிக்கையாளர் பெயர்கள்.' : ' or client names.');
+}
+
+function autoResizeTextarea() {
+  const textarea = document.getElementById('chatbot-input');
+  if (!textarea) return;
+  
+  textarea.style.height = 'auto';
+  textarea.style.height = Math.min(textarea.scrollHeight, 100) + 'px';
+}
+
+function toggleVoiceInput() {
+  console.log('🎤 Toggling voice input...');
+  
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    const t = chatbotTranslations[currentLang] || chatbotTranslations.en;
+    addMessage(t.voiceError, 'bot');
+    console.log('❌ Speech recognition not supported');
+    return;
+  }
+  
+  if (isRecording) {
+    stopVoiceRecording();
+  } else {
+    startVoiceRecording();
+  }
+}
+
+// Make toggleVoiceInput globally available
+window.toggleVoiceInput = toggleVoiceInput;
+
+function startVoiceRecording() {
+  console.log('🎙️ Starting voice recording...');
+  
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SpeechRecognition();
+  
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.lang = currentLang === 'ta' ? 'ta-IN' : 'en-US';
+  
+  const voiceButton = document.getElementById('chatbot-voice');
+  const voiceIcon = document.getElementById('voice-icon');
+  const chatbotIcon = document.getElementById('chatbot-icon');
+  const t = chatbotTranslations[currentLang] || chatbotTranslations.en;
+  
+  recognition.onstart = () => {
+    console.log('🎤 Speech recognition started');
+    isRecording = true;
+    voiceButton.classList.add('recording');
+    
+    // Change voice icon to stop icon
+    if (voiceIcon) {
+      voiceIcon.innerHTML = '<circle cx="12" cy="12" r="10" fill="currentColor"/><rect x="9" y="9" width="6" height="6" fill="white" rx="1"/>';
+    }
+    
+    // Make chatbot icon animate while listening
+    if (chatbotIcon) {
+      chatbotIcon.classList.add('talking');
+    }
+    
+    addMessage(t.voiceStart, 'bot');
+    if (window.showToast) showToast('Listening... Speak now', 'info');
+  };
+  
+  recognition.onresult = (event) => {
+    console.log('🎯 Speech recognition result received');
+    let transcript = '';
+    
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      if (event.results[i].isFinal) {
+        transcript = event.results[i][0].transcript;
+        break;
+      } else {
+        // Show interim results
+        const interimTranscript = event.results[i][0].transcript;
+        const input = document.getElementById('chatbot-input');
+        if (input) {
+          input.value = interimTranscript;
+          autoResizeTextarea();
+        }
+      }
+    }
+    
+    if (transcript) {
+      console.log('📝 Final transcript:', transcript);
+      const input = document.getElementById('chatbot-input');
+      if (input) {
+        input.value = transcript;
+        autoResizeTextarea();
+        
+        // Auto-send after getting final result
+        setTimeout(() => {
+          if (input.value.trim()) {
+            sendMessage();
+          }
+        }, 500);
+      }
+    }
+  };
+  
+  recognition.onerror = (event) => {
+    console.error('❌ Speech recognition error:', event.error);
+    isRecording = false;
+    voiceButton.classList.remove('recording');
+    
+    // Reset voice icon
+    if (voiceIcon) {
+      voiceIcon.innerHTML = '<path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"/>';
+    }
+    
+    if (chatbotIcon) {
+      chatbotIcon.classList.remove('talking');
+    }
+    
+    let errorMessage = 'Voice recognition failed';
+    switch(event.error) {
+      case 'no-speech':
+        errorMessage = currentLang === 'ta' ? 'பேச்சு கேட்கப்படவில்லை. மீண்டும் முயற்சிக்கவும்.' : 'No speech detected. Please try again.';
+        break;
+      case 'audio-capture':
+        errorMessage = currentLang === 'ta' ? 'மைக்ரோஃபோன் அணுக முடியவில்லை.' : 'Microphone not accessible.';
+        break;
+      case 'not-allowed':
+        errorMessage = currentLang === 'ta' ? 'மைக்ரோஃபோன் அனுமதி மறுக்கப்பட்டது.' : 'Microphone permission denied.';
+        break;
+      case 'network':
+        errorMessage = currentLang === 'ta' ? 'நெட்வர்க் பிழை.' : 'Network error.';
+        break;
+    }
+    
+    if (window.showToast) showToast(errorMessage, 'error');
+    addMessage(errorMessage, 'bot');
+  };
+  
+  recognition.onend = () => {
+    console.log('🔚 Speech recognition ended');
+    isRecording = false;
+    voiceButton.classList.remove('recording');
+    
+    // Reset voice icon
+    if (voiceIcon) {
+      voiceIcon.innerHTML = '<path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"/>';
+    }
+    
+    if (chatbotIcon) {
+      chatbotIcon.classList.remove('talking');
+    }
+  };
+  
+  try {
+    recognition.start();
+  } catch (error) {
+    console.error('❌ Failed to start speech recognition:', error);
+    if (window.showToast) showToast('Failed to start voice recognition', 'error');
+  }
+}
+
+function stopVoiceRecording() {
+  if (recognition) {
+    recognition.stop();
+  }
+  isRecording = false;
+  document.getElementById('chatbot-voice').classList.remove('recording');
+}
+
+// Show chatbot when user logs in
+function showChatbotForLoggedInUser() {
+  const chatbotWidget = document.getElementById('chatbot-widget');
+  if (chatbotWidget) {
+    chatbotWidget.style.display = 'block';
+  }
+}
+
 // Auto-Sync when returning to the app from the background (Cross-device real-time sync)
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && window.KFSync && isLoggedIn()) {
@@ -4400,3 +5388,4 @@ document.addEventListener('visibilitychange', () => {
     });
   }
 });
+
