@@ -1,0 +1,37 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "kaasflow/backend/app.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "kaasflow/frontend/**",
+      "use": "@vercel/static"
+    }
+  ],
+  "env": {
+    "RESEND_API_KEY": "re_idEsk2Lb_BWoY4posiqyRHxXPRFe8iSLj",
+    "RESEND_FROM_EMAIL": "SamKass <welcome@samkass.site>",
+    "RAZORPAY_KEY_ID": "rzp_live_SuharfZYrJBbHj",
+    "RAZORPAY_KEY_SECRET": "FsmmZywk4NGiI1PxIS4UWb0e"
+  },
+  "routes": [
+    {
+      "src": "/auth/(.*)",
+      "dest": "/kaasflow/backend/app.py"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/kaasflow/backend/app.py"
+    },
+    {
+      "src": "/",
+      "dest": "/kaasflow/frontend/index.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/kaasflow/frontend/$1"
+    }
+  ]
+}

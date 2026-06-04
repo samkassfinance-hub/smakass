@@ -1,0 +1,12 @@
+INSTRUCTIONS:
+============
+
+1. Go to: https://resend.com/api-keys
+2. Log in with: mohaneni80@gmail.com
+3. Click on your "samkass" API key to reveal the FULL key
+4. Copy the COMPLETE key (it's much longer than "re_DxueLnyr...")
+5. Paste it below this line:
+
+RESEND_API_KEY=
+
+(Then let me know when you've added it)

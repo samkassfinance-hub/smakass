@@ -1,0 +1,28 @@
+# Environments
+.env
+.env.local
+.env.*.local
+**/.env
+**/frontend/.env
+**/backend/.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+
+# Node/JS
+node_modules/
+dist/
+.cache/
+
+# Databases
+*.db
+
+# Vercel
+.vercel

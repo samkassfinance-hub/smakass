@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Razorpay Payment Test</title>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .card {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 { color: #333; margin-top: 0; }
+    .plan-btn {
+      display: block;
+      width: 100%;
+      padding: 15px;
+      margin: 10px 0;
+      background: #7ed321;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .plan-btn:hover { background: #6bc01a; }
+    .log {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f9f9f9;
+      border-radius: 5px;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .success { color: green; }
+    .error { color: red; }
+    .info { color: blue; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🔥 Razorpay Payment Test</h1>
+    <p><strong>Key ID:</strong> rzp_live_SuharfZYrJBbHj</p>
+    <p><strong>Backend:</strong> <span id="backend-url">Loading...</span></p>
+    
+    <button class="plan-btn" onclick="testPayment('monthly', 270)">
+      Test Monthly Plan - ₹270
+    </button>
+    <button class="plan-btn" onclick="testPayment('quarterly', 850)">
+      Test Quarterly Plan - ₹850
+    </button>
+    <button class="plan-btn" onclick="testPayment('yearly', 1999)">
+      Test Yearly Plan - ₹1,999
+    </button>
+    
+    <div class="log" id="log"></div>
+  </div>
+
+  <script>
+    const RAZORPAY_KEY_ID = 'rzp_live_SuharfZYrJBbHj';
+    const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://127.0.0.1:5000/api'
+      : window.location.origin + '/api';
+    
+    document.getElementById('backend-url').textContent = API_BASE;
+
+    function log(message, type = 'info') {
+      const logEl = document.getElementById('log');
+      const time = new Date().toLocaleTimeString();
+      const className = type === 'success' ? 'success' : type === 'error' ? 'error' : 'info';
+      logEl.innerHTML += `<div class="${className}">[${time}] ${message}</div>`;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    async function testPayment(planType, amount) {
+      log(`🚀 Starting payment for ${planType} plan (₹${amount})...`);
+      
+      try {
+        // Step 1: Create order
+        log('📝 Creating Razorpay order...');
+        const orderRes = await fetch(`${API_BASE}/payment/create-order`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-User-Email': 'test@example.com'
+          },
+          body: JSON.stringify({
+            amount: amount,
+            plan_type: planType,
+            email: 'test@example.com'
+          })
+        });
+
+        const orderData = await orderRes.json();
+        
+        if (!orderData.success) {
+          log(`❌ Order creation failed: ${orderData.error}`, 'error');
+          return;
+        }
+
+        log(`✅ Order created: ${orderData.order.id}`, 'success');
+        log(`💰 Amount: ₹${orderData.order.amount / 100} (${orderData.order.amount} paise)`);
+
+        // Step 2: Open Razorpay checkout
+        log('💳 Opening Razorpay checkout...');
+        
+        const options = {
+          key: RAZORPAY_KEY_ID,
+          amount: orderData.order.amount,
+          currency: orderData.order.currency,
+          name: 'SamKass',
+          description: `${planType} Plan`,
+          order_id: orderData.order.id,
+          handler: async function(response) {
+            log('✅ Payment successful!', 'success');
+            log(`Payment ID: ${response.razorpay_payment_id}`);
+            log(`Order ID: ${response.razorpay_order_id}`);
+            log(`Signature: ${response.razorpay_signature.substring(0, 20)}...`);
+            
+            // Step 3: Verify payment
+            log('🔍 Verifying payment signature...');
+            const verifyRes = await fetch(`${API_BASE}/payment/verify`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-User-Email': 'test@example.com'
+              },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                plan_type: planType,
+                email: 'test@example.com'
+              })
+            });
+
+            const verifyData = await verifyRes.json();
+            
+            if (verifyData.success && verifyData.payment_verified) {
+              log('🎉 Payment verified successfully!', 'success');
+              log(`Plan activated: ${verifyData.message}`, 'success');
+              alert('✅ Payment Successful!\n\n' + verifyData.message);
+            } else {
+              log(`❌ Verification failed: ${verifyData.error}`, 'error');
+              alert('❌ Payment verification failed');
+            }
+          },
+          prefill: {
+            name: 'Test User',
+            email: 'test@example.com',
+            contact: '9999999999'
+          },
+          theme: {
+            color: '#7ed321'
+          },
+          modal: {
+            ondismiss: function() {
+              log('⚠️ Payment cancelled by user', 'error');
+            }
+          }
+        };
+
+        const rzp = new Razorpay(options);
+        rzp.open();
+
+      } catch (error) {
+        log(`❌ Error: ${error.message}`, 'error');
+        console.error(error);
+      }
+    }
+
+    // Test backend connectivity on load
+    window.addEventListener('load', async () => {
+      try {
+        const res = await fetch(`${API_BASE}/payment/key`);
+        const data = await res.json();
+        if (data.key) {
+          log(`✅ Backend connected! Key: ${data.key}`, 'success');
+        } else {
+          log(`⚠️ Backend responded but no key found`, 'error');
+        }
+      } catch (e) {
+        log(`❌ Backend connection failed: ${e.message}`, 'error');
+      }
+    });
+  </script>
+</body>
+</html>
