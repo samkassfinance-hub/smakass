@@ -694,12 +694,23 @@
 
     @keyframes slideInUp {
       from {
-        transform: translateY(20px);
+        transform: translate(-50%, 100%);
         opacity: 0;
       }
       to {
-        transform: translateY(0);
+        transform: translate(-50%, -50%);
         opacity: 1;
+      }
+    }
+
+    @keyframes slideOutDown {
+      from {
+        transform: translate(-50%, -50%);
+        opacity: 1;
+      }
+      to {
+        transform: translate(-50%, 100%);
+        opacity: 0;
       }
     }
 
@@ -724,7 +735,11 @@
     }
 
     .chatbot-interface {
-      animation: slideInUp 0.3s ease-out;
+      animation: slideInUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .chatbot-interface.closing {
+      animation: slideOutDown 0.3s ease-out forwards;
     }
 
     .chatbot-messages {
@@ -1395,9 +1410,22 @@
       const videoIframe = document.getElementById('tutorial-video-iframe');
       const videoPlaceholder = document.getElementById('video-placeholder');
 
-      if (logoBubbleContainer && pwaModal) {
-        makeDraggable(logoBubbleContainer, function() {
-          pwaModal.style.display = 'flex';
+      if (logoBubbleContainer) {
+        makeDraggable(logoBubbleContainer, async function() {
+          // Use native PWA install prompt (same as settings page)
+          if (deferredPrompt) {
+            try {
+              deferredPrompt.prompt();
+              const { outcome } = await deferredPrompt.userChoice;
+              console.log(`User response to install prompt: ${outcome}`);
+              deferredPrompt = null;
+            } catch (err) {
+              console.error('Install prompt error:', err);
+            }
+          } else {
+            // Fallback instructions if native prompt not available
+            alert('To install:\n\n• Chrome/Edge: Click menu (⋮) > Install app\n• Safari: Tap share (↗) > Add to Home Screen\n• Firefox: Tap menu (⋮) > Install');
+          }
         });
       }
 

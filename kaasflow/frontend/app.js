@@ -4627,20 +4627,25 @@ function openChatbot() {
   }
   
   console.log('✅ Opening chatbot interface...');
+  
+  // Remove closing class if present
+  chatbotInterface.classList.remove('closing');
+  
+  // Show with smooth animation
   chatbotInterface.style.display = 'flex';
   chatbotIcon.style.display = 'none';
   
   // Update language
   updateChatbotLanguage();
   
-  // Focus input
+  // Focus input after animation
   setTimeout(() => {
     const input = document.getElementById('chatbot-input');
     if (input) {
       input.focus();
       console.log('✅ Chatbot input focused');
     }
-  }, 300);
+  }, 400);
 }
 
 // Make openChatbot globally available
@@ -4653,9 +4658,16 @@ function closeChatbot() {
   const chatbotIcon = document.getElementById('chatbot-icon');
   
   if (chatbotInterface && chatbotIcon) {
-    chatbotInterface.style.display = 'none';
-    chatbotIcon.style.display = 'flex';
-    console.log('✅ Chatbot interface closed');
+    // Add closing animation class
+    chatbotInterface.classList.add('closing');
+    
+    // Wait for animation to complete before hiding
+    setTimeout(() => {
+      chatbotInterface.style.display = 'none';
+      chatbotInterface.classList.remove('closing');
+      chatbotIcon.style.display = 'flex';
+      console.log('✅ Chatbot interface closed');
+    }, 300);
   }
 }
 
