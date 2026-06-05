@@ -990,6 +990,480 @@
 
 <body id="app-body">
 
+  <!-- FLOATING BUBBLES - Only visible on auth screens -->
+  <!-- Logo Bubble with "Install App" Label (Bottom Left) -->
+  <div id="logo-bubble-container" class="draggable-bubble auth-only-bubble" style="position: fixed; bottom: 100px; left: 8%; display: none; flex-direction: column; align-items: center; z-index: 9999; cursor: pointer; touch-action: none;">
+    <div id="logo-bubble" class="custom-floating-bubble logo-bubble" style="width: 95px; height: 95px; border-radius: 50%; background: linear-gradient(135deg, #7ed321 0%, #4caf1a 50%, #3d9b15 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 20px 60px rgba(126, 211, 33, 0.7), 0 0 40px rgba(126, 211, 33, 0.4); animation: crazy-bubble-float-1 5s ease-in-out infinite; border: 4px solid rgba(255, 255, 255, 0.4); cursor: pointer; transition: all 0.3s ease; position: relative;">
+      <div style="position: absolute; inset: -8px; border-radius: 50%; background: linear-gradient(45deg, transparent, rgba(126, 211, 33, 0.3), transparent); animation: bubble-rotate 3s linear infinite;"></div>
+      <img src="logo.png" alt="SamKass" style="width: 78px; height: 78px; border-radius: 50%; object-fit: cover; border: 3px solid white; pointer-events: none; position: relative; z-index: 2;">
+    </div>
+    <div class="install-label" style="font-size: 0.75rem; color: #7ed321; margin-top: 12px; font-weight: 700; text-align: center; background: rgba(13, 26, 13, 0.92); padding: 8px 16px; border-radius: 14px; backdrop-filter: blur(16px); border: 2px solid rgba(126, 211, 33, 0.3); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5), inset 0 1px 2px rgba(126, 211, 33, 0.3); animation: crazy-bubble-float-1 5s ease-in-out infinite; pointer-events: none; letter-spacing: 0.5px; text-transform: uppercase;">
+      Install App
+    </div>
+  </div>
+
+  <!-- Video Tutorial Bubble with Label (Bottom Right) -->
+  <div id="video-bubble-container" class="draggable-bubble auth-only-bubble" style="position: fixed; bottom: 100px; right: 8%; display: none; flex-direction: column; align-items: center; z-index: 9999; cursor: pointer; touch-action: none;">
+    <div id="video-bubble" class="custom-floating-bubble video-bubble" style="width: 95px; height: 95px; border-radius: 50%; background: linear-gradient(135deg, #00cfff 0%, #0080c8 50%, #005f96 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 20px 60px rgba(0, 207, 255, 0.7), 0 0 40px rgba(0, 207, 255, 0.4); animation: crazy-bubble-float-2 5.5s ease-in-out infinite; border: 4px solid rgba(255, 255, 255, 0.4); transition: all 0.3s ease; position: relative;">
+      <div style="position: absolute; inset: -8px; border-radius: 50%; background: linear-gradient(-45deg, transparent, rgba(0, 207, 255, 0.3), transparent); animation: bubble-rotate-reverse 3s linear infinite;"></div>
+      <svg width="45" height="45" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="pointer-events: none; position: relative; z-index: 2; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
+        <path d="M8 5v14l11-7L8 5z" fill="white" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="tutorial-label" style="font-size: 0.75rem; color: #00cfff; margin-top: 12px; font-weight: 700; text-align: center; background: rgba(13, 26, 13, 0.92); padding: 8px 16px; border-radius: 14px; backdrop-filter: blur(16px); border: 2px solid rgba(0, 207, 255, 0.3); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5), inset 0 1px 2px rgba(0, 207, 255, 0.3); animation: crazy-bubble-float-2 5.5s ease-in-out infinite; pointer-events: none; letter-spacing: 0.5px; text-transform: uppercase;">
+      Tutorial
+    </div>
+  </div>
+
+  <script>
+    // Show bubbles only on auth screens (first login, PIN setup, PIN entry)
+    function updateBubblesVisibility() {
+      const authScreen = document.getElementById('auth-screen');
+      const pinLockScreen = document.getElementById('pin-lock-screen');
+      const pinSetupWrapper = document.getElementById('pin-setup-wrapper');
+      const logoBubble = document.getElementById('logo-bubble-container');
+      const videoBubble = document.getElementById('video-bubble-container');
+      
+      if (!logoBubble || !videoBubble) return;
+      
+      // Show bubbles if:
+      // 1. Auth screen is visible (first-time login)
+      // 2. PIN setup screen is visible
+      // 3. PIN lock screen is visible (returning user entering PIN)
+      const isAuthVisible = authScreen && authScreen.style.display !== 'none';
+      const isPinLockVisible = pinLockScreen && pinLockScreen.style.display !== 'none';
+      const isPinSetupVisible = pinSetupWrapper && pinSetupWrapper.style.display !== 'none';
+      
+      if (isAuthVisible || isPinLockVisible || isPinSetupVisible) {
+        logoBubble.style.display = 'flex';
+        videoBubble.style.display = 'flex';
+      } else {
+        logoBubble.style.display = 'none';
+        videoBubble.style.display = 'none';
+      }
+    }
+    
+    // Run check initially and whenever DOM changes
+    updateBubblesVisibility();
+    
+    // Watch for visibility changes
+    const observer = new MutationObserver(updateBubblesVisibility);
+    
+    // Start observing once DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function() {
+        observer.observe(document.body, { 
+          attributes: true, 
+          childList: true, 
+          subtree: true,
+          attributeFilter: ['style', 'class']
+        });
+      });
+    } else {
+      observer.observe(document.body, { 
+        attributes: true, 
+        childList: true, 
+        subtree: true,
+        attributeFilter: ['style', 'class']
+      });
+    }
+    
+    // Also check every 500ms as a fallback
+    setInterval(updateBubblesVisibility, 500);
+  </script>
+
+  <!-- PWA Install Modal -->
+  <div id="pwa-install-modal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); z-index: 10001; align-items: center; justify-content: center; backdrop-filter: blur(8px);">
+    <div style="width: 90%; max-width: 420px; background: var(--bg-card); border-radius: 24px; overflow: hidden; box-shadow: 0 25px 80px rgba(0, 0, 0, 0.8); border: 1px solid rgba(126, 211, 33, 0.3); animation: slideInUp 0.4s ease;">
+      <div style="padding: 28px 24px 20px; background: linear-gradient(135deg, #0d1a0d 0%, #0a0f0a 100%); text-align: center; border-bottom: 1px solid rgba(126, 211, 33, 0.2);">
+        <div style="width: 80px; height: 80px; margin: 0 auto 16px; border-radius: 20px; background: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 30px rgba(126, 211, 33, 0.4); overflow: hidden;">
+          <img src="logo.png" alt="SamKass" style="width: 100%; height: 100%; object-fit: cover;">
+        </div>
+        <h3 style="margin: 0 0 8px 0; color: var(--text-primary); font-size: 1.4rem; font-weight: 800;">Install SamKass</h3>
+        <p style="margin: 0; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5;">Install our app for quick access and a better experience</p>
+      </div>
+      <div style="padding: 24px;">
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
+          <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: rgba(126, 211, 33, 0.08); border-radius: 12px; border: 1px solid rgba(126, 211, 33, 0.2);">
+            <i class="fa-solid fa-bolt" style="color: #7ed321; font-size: 1.3rem;"></i>
+            <span style="color: var(--text-primary); font-size: 0.9rem; font-weight: 500;">Instant access from home screen</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: rgba(126, 211, 33, 0.08); border-radius: 12px; border: 1px solid rgba(126, 211, 33, 0.2);">
+            <i class="fa-solid fa-mobile-screen" style="color: #7ed321; font-size: 1.3rem;"></i>
+            <span style="color: var(--text-primary); font-size: 0.9rem; font-weight: 500;">Works offline</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: rgba(126, 211, 33, 0.08); border-radius: 12px; border: 1px solid rgba(126, 211, 33, 0.2);">
+            <i class="fa-solid fa-bell" style="color: #7ed321; font-size: 1.3rem;"></i>
+            <span style="color: var(--text-primary); font-size: 0.9rem; font-weight: 500;">Get instant notifications</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 12px;">
+          <button id="pwa-cancel-btn" style="flex: 1; padding: 14px 20px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: var(--text-secondary); border-radius: 14px; cursor: pointer; font-weight: 600; font-size: 1rem; transition: all 0.3s ease; font-family: 'Outfit', sans-serif;">
+            Cancel
+          </button>
+          <button id="pwa-install-btn" style="flex: 1; padding: 14px 20px; background: linear-gradient(135deg, #7ed321, #4caf1a); border: none; color: white; border-radius: 14px; cursor: pointer; font-weight: 700; font-size: 1rem; box-shadow: 0 6px 20px rgba(126, 211, 33, 0.4); transition: all 0.3s ease; font-family: 'Outfit', sans-serif;">
+            Install
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tutorial Video Modal -->
+  <div id="tutorial-video-modal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.92); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(8px);">
+    <div style="width: 90%; max-width: 900px; background: var(--bg-card); border-radius: 24px; overflow: hidden; box-shadow: 0 25px 80px rgba(0, 0, 0, 0.8); border: 1px solid rgba(126, 211, 33, 0.3);">
+      <div style="padding: 20px 24px; background: linear-gradient(135deg, #0d1a0d 0%, #0a0f0a 100%); border-bottom: 1px solid rgba(126, 211, 33, 0.2); display: flex; align-items: center; justify-content: space-between;">
+        <h3 style="margin: 0; color: var(--text-primary); font-size: 1.25rem; font-weight: 700;">
+          <i class="fa-solid fa-circle-play" style="color: #00cfff; margin-right: 10px;"></i>
+          Tutorial Video
+        </h3>
+        <button id="close-tutorial-modal" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; font-size: 18px;">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div style="padding: 24px; background: #000;">
+        <div style="position: relative; padding-bottom: 56.25%; height: 0; border-radius: 12px; overflow: hidden; background: #1a1a1a;">
+          <iframe id="tutorial-video-iframe" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          <div id="video-placeholder" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #666; font-size: 1.1rem;">
+            <div style="text-align: center;">
+              <i class="fa-solid fa-video" style="font-size: 3rem; margin-bottom: 16px; color: #00cfff;"></i>
+              <p style="margin: 0;">Add your tutorial video URL</p>
+              <p style="font-size: 0.85rem; margin-top: 8px; color: #888;">YouTube, Vimeo, or direct link</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    /* CRAZY FLOATING ANIMATIONS */
+    @keyframes crazy-bubble-float-1 {
+      0% { 
+        transform: translateY(0) translateX(0) rotate(0deg) scale(1); 
+      }
+      15% {
+        transform: translateY(-30px) translateX(15px) rotate(5deg) scale(1.05);
+      }
+      30% {
+        transform: translateY(-45px) translateX(-10px) rotate(-3deg) scale(0.98);
+      }
+      45% {
+        transform: translateY(-25px) translateX(20px) rotate(7deg) scale(1.08);
+      }
+      60% {
+        transform: translateY(-50px) translateX(-5px) rotate(-5deg) scale(1.02);
+      }
+      75% {
+        transform: translateY(-35px) translateX(12px) rotate(4deg) scale(1.06);
+      }
+      90% {
+        transform: translateY(-20px) translateX(-8px) rotate(-2deg) scale(0.99);
+      }
+      100% { 
+        transform: translateY(0) translateX(0) rotate(0deg) scale(1); 
+      }
+    }
+
+    @keyframes crazy-bubble-float-2 {
+      0% { 
+        transform: translateY(0) translateX(0) rotate(0deg) scale(1); 
+      }
+      12% {
+        transform: translateY(-25px) translateX(-18px) rotate(-6deg) scale(1.04);
+      }
+      28% {
+        transform: translateY(-55px) translateX(8px) rotate(4deg) scale(1.09);
+      }
+      42% {
+        transform: translateY(-30px) translateX(-15px) rotate(-7deg) scale(0.97);
+      }
+      58% {
+        transform: translateY(-48px) translateX(12px) rotate(5deg) scale(1.07);
+      }
+      72% {
+        transform: translateY(-38px) translateX(-10px) rotate(-4deg) scale(1.03);
+      }
+      88% {
+        transform: translateY(-18px) translateX(6px) rotate(3deg) scale(1.01);
+      }
+      100% { 
+        transform: translateY(0) translateX(0) rotate(0deg) scale(1); 
+      }
+    }
+
+    @keyframes bubble-rotate {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes bubble-rotate-reverse {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(-360deg); }
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% { 
+        box-shadow: 0 20px 60px rgba(126, 211, 33, 0.7), 0 0 40px rgba(126, 211, 33, 0.4);
+      }
+      50% { 
+        box-shadow: 0 25px 80px rgba(126, 211, 33, 1), 0 0 60px rgba(126, 211, 33, 0.7);
+      }
+    }
+
+    @keyframes pulse-glow-blue {
+      0%, 100% { 
+        box-shadow: 0 20px 60px rgba(0, 207, 255, 0.7), 0 0 40px rgba(0, 207, 255, 0.4);
+      }
+      50% { 
+        box-shadow: 0 25px 80px rgba(0, 207, 255, 1), 0 0 60px rgba(0, 207, 255, 0.7);
+      }
+    }
+
+    @keyframes slideInUp {
+      from { transform: translateY(30px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .custom-floating-bubble:hover {
+      transform: scale(1.2) rotate(10deg) !important;
+      filter: brightness(1.2);
+      animation: pulse-glow 1.5s ease-in-out infinite !important;
+    }
+
+    .custom-floating-bubble.video-bubble:hover {
+      animation: pulse-glow-blue 1.5s ease-in-out infinite !important;
+    }
+
+    .draggable-bubble.dragging {
+      animation: none !important;
+      cursor: grabbing !important;
+      opacity: 0.85;
+      transform: scale(1.1) !important;
+    }
+
+    .draggable-bubble.dragging * {
+      animation: none !important;
+    }
+
+    #close-tutorial-modal:hover {
+      background: rgba(255, 68, 68, 0.2) !important;
+      border-color: #ff4444 !important;
+      transform: rotate(90deg) scale(1.1);
+    }
+
+    #pwa-cancel-btn:hover {
+      background: rgba(255, 255, 255, 0.15) !important;
+      border-color: rgba(255, 255, 255, 0.3) !important;
+      transform: translateY(-2px);
+    }
+
+    #pwa-install-btn:hover {
+      background: linear-gradient(135deg, #9aff2a, #5ec520) !important;
+      box-shadow: 0 8px 25px rgba(126, 211, 33, 0.6) !important;
+      transform: translateY(-3px) scale(1.05);
+    }
+
+    @media (max-width: 768px) {
+      #logo-bubble-container {
+        bottom: 80px !important;
+        left: 4% !important;
+      }
+      .custom-floating-bubble.logo-bubble {
+        width: 75px !important;
+        height: 75px !important;
+      }
+      .custom-floating-bubble.logo-bubble img {
+        width: 62px !important;
+        height: 62px !important;
+      }
+      #video-bubble-container {
+        bottom: 80px !important;
+        right: 4% !important;
+      }
+      .custom-floating-bubble.video-bubble {
+        width: 75px !important;
+        height: 75px !important;
+      }
+      .custom-floating-bubble.video-bubble svg {
+        width: 35px !important;
+        height: 35px !important;
+      }
+      .install-label, .tutorial-label {
+        font-size: 0.65rem !important;
+        padding: 6px 12px !important;
+      }
+    }
+  </style>
+
+  <script>
+    (function() {
+      let deferredPrompt = null;
+
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+      });
+
+      function makeDraggable(element, onClickCallback) {
+        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+        let isDragging = false;
+        let dragThreshold = 5;
+        let startX = 0, startY = 0;
+
+        element.addEventListener('mousedown', dragMouseDown);
+        element.addEventListener('touchstart', dragTouchStart, { passive: false });
+
+        function dragMouseDown(e) {
+          e.preventDefault();
+          startX = e.clientX;
+          startY = e.clientY;
+          pos3 = e.clientX;
+          pos4 = e.clientY;
+          document.addEventListener('mouseup', closeDragElement);
+          document.addEventListener('mousemove', elementDrag);
+        }
+
+        function dragTouchStart(e) {
+          const touch = e.touches[0];
+          startX = touch.clientX;
+          startY = touch.clientY;
+          pos3 = touch.clientX;
+          pos4 = touch.clientY;
+          document.addEventListener('touchend', closeDragElement);
+          document.addEventListener('touchmove', elementTouchDrag, { passive: false });
+        }
+
+        function elementDrag(e) {
+          e.preventDefault();
+          const moved = Math.abs(e.clientX - startX) + Math.abs(e.clientY - startY);
+          if (moved > dragThreshold && !isDragging) {
+            isDragging = true;
+            element.classList.add('dragging');
+          }
+          if (isDragging) {
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            element.style.top = (element.offsetTop - pos2) + 'px';
+            element.style.left = (element.offsetLeft - pos1) + 'px';
+            element.style.right = 'auto';
+          }
+        }
+
+        function elementTouchDrag(e) {
+          e.preventDefault();
+          const touch = e.touches[0];
+          const moved = Math.abs(touch.clientX - startX) + Math.abs(touch.clientY - startY);
+          if (moved > dragThreshold && !isDragging) {
+            isDragging = true;
+            element.classList.add('dragging');
+          }
+          if (isDragging) {
+            pos1 = pos3 - touch.clientX;
+            pos2 = pos4 - touch.clientY;
+            pos3 = touch.clientX;
+            pos4 = touch.clientY;
+            element.style.top = (element.offsetTop - pos2) + 'px';
+            element.style.left = (element.offsetLeft - pos1) + 'px';
+            element.style.right = 'auto';
+          }
+        }
+
+        function closeDragElement(e) {
+          document.removeEventListener('mouseup', closeDragElement);
+          document.removeEventListener('mousemove', elementDrag);
+          document.removeEventListener('touchend', closeDragElement);
+          document.removeEventListener('touchmove', elementTouchDrag);
+          
+          setTimeout(() => {
+            if (isDragging) {
+              element.classList.remove('dragging');
+            } else if (onClickCallback) {
+              onClickCallback(e);
+            }
+            isDragging = false;
+          }, 100);
+        }
+      }
+
+      const logoBubbleContainer = document.getElementById('logo-bubble-container');
+      const videoBubbleContainer = document.getElementById('video-bubble-container');
+      const pwaModal = document.getElementById('pwa-install-modal');
+      const tutorialModal = document.getElementById('tutorial-video-modal');
+      const videoIframe = document.getElementById('tutorial-video-iframe');
+      const videoPlaceholder = document.getElementById('video-placeholder');
+
+      if (logoBubbleContainer && pwaModal) {
+        makeDraggable(logoBubbleContainer, function() {
+          pwaModal.style.display = 'flex';
+        });
+      }
+
+      if (videoBubbleContainer && tutorialModal) {
+        makeDraggable(videoBubbleContainer, function() {
+          tutorialModal.style.display = 'flex';
+          
+          const videoUrl = 'YOUR_VIDEO_URL_HERE';
+          
+          if (videoUrl && videoUrl !== 'YOUR_VIDEO_URL_HERE') {
+            videoIframe.src = videoUrl;
+            if (videoPlaceholder) videoPlaceholder.style.display = 'none';
+          }
+        });
+      }
+
+      const pwaInstallBtn = document.getElementById('pwa-install-btn');
+      const pwaCancelBtn = document.getElementById('pwa-cancel-btn');
+      
+      if (pwaInstallBtn) {
+        pwaInstallBtn.addEventListener('click', async function() {
+          if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            deferredPrompt = null;
+          } else {
+            alert('To install:\n\n• Chrome/Edge: Click menu (⋮) > Install app\n• Safari: Tap share (↗) > Add to Home Screen\n• Firefox: Tap menu (⋮) > Install');
+          }
+          pwaModal.style.display = 'none';
+        });
+      }
+
+      if (pwaCancelBtn) {
+        pwaCancelBtn.addEventListener('click', function() {
+          pwaModal.style.display = 'none';
+        });
+      }
+
+      const closeTutorialBtn = document.getElementById('close-tutorial-modal');
+      
+      if (closeTutorialBtn && tutorialModal) {
+        closeTutorialBtn.addEventListener('click', function() {
+          tutorialModal.style.display = 'none';
+          videoIframe.src = '';
+          if (videoPlaceholder) videoPlaceholder.style.display = 'flex';
+        });
+
+        tutorialModal.addEventListener('click', function(e) {
+          if (e.target === tutorialModal) {
+            tutorialModal.style.display = 'none';
+            videoIframe.src = '';
+            if (videoPlaceholder) videoPlaceholder.style.display = 'flex';
+          }
+        });
+      }
+
+      if (pwaModal) {
+        pwaModal.addEventListener('click', function(e) {
+          if (e.target === pwaModal) {
+            pwaModal.style.display = 'none';
+          }
+        });
+      }
+    })();
+  </script>
+
   <!-- ==== MOBILE LOADING INDICATOR ==== -->
   <div id="app-loading">
     <div class="loader">
@@ -1038,6 +1512,7 @@
           <path d="M58 2H46M58 2V14" stroke="rgba(16, 185, 129, 0.25)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
+
     </div>
 
     <div class="auth-container">
@@ -1349,21 +1824,68 @@
 
     <!-- Floating Chatbot Widget -->
     <div id="chatbot-widget" style="display: none;">
-      <!-- Floating Bot Icon -->
-      <div id="chatbot-icon" class="chatbot-icon" onclick="window.openChatbot && window.openChatbot()" style="position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; background: linear-gradient(135deg, #7ed321, #4caf1a); border-radius: 50%; box-shadow: 0 4px 20px rgba(126, 211, 33, 0.4); cursor: grab; z-index: 9998; display: flex; align-items: center; justify-content: center; animation: float 3s ease-in-out infinite; transition: transform 0.2s ease;">
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="white">
-          <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 1H5C3.9 1 3 1.9 3 3V19C3 20.1 3.9 21 5 21H11V19H5V3H13V9H21ZM16 11C17.7 11 19 12.3 19 14S17.7 17 16 17 13 15.7 13 14 14.3 11 16 11ZM16 19C18.2 19 22 20.1 22 22.2V23H10V22.2C10 20.1 13.8 19 16 19Z"/>
+      <!-- Floating Bot Icon with Cute Robot -->
+      <div id="chatbot-icon" class="chatbot-icon" onclick="window.openChatbot && window.openChatbot()" style="position: fixed; bottom: 250px; right: 20px; width: 60px; height: 60px; background: linear-gradient(135deg, #7ed321, #4caf1a); border-radius: 50%; box-shadow: 0 4px 20px rgba(126, 211, 33, 0.4); cursor: grab; z-index: 9998; display: flex; align-items: center; justify-content: center; animation: float 3s ease-in-out infinite; transition: transform 0.2s ease;">
+        <!-- Cute Robot SVG -->
+        <svg width="36" height="36" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Antenna -->
+          <rect x="47" y="8" width="6" height="8" rx="1" fill="white"/>
+          <circle cx="50" cy="6" r="4" fill="#00cfff"/>
+          
+          <!-- Head -->
+          <rect x="30" y="20" width="40" height="30" rx="8" fill="white"/>
+          
+          <!-- Screen face -->
+          <rect x="34" y="24" width="32" height="22" rx="4" fill="#1a2332"/>
+          
+          <!-- Eyes -->
+          <ellipse cx="42" cy="32" rx="4" ry="5" fill="#00cfff"/>
+          <ellipse cx="58" cy="32" rx="4" ry="5" fill="#00cfff"/>
+          
+          <!-- Smile -->
+          <path d="M 44 40 Q 50 44 56 40" stroke="#00cfff" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          
+          <!-- Ears/Side panels -->
+          <circle cx="26" cy="35" r="6" fill="#e0e0e0"/>
+          <circle cx="74" cy="35" r="6" fill="#e0e0e0"/>
+          
+          <!-- Neck -->
+          <rect x="45" y="50" width="10" height="6" rx="2" fill="#d0d0d0"/>
+          
+          <!-- Body -->
+          <ellipse cx="50" cy="70" rx="18" ry="20" fill="white"/>
+          
+          <!-- Body panel -->
+          <path d="M 38 65 Q 50 68 62 65" stroke="#c0c0c0" stroke-width="1.5" fill="none"/>
+          
+          <!-- Arms -->
+          <ellipse cx="30" cy="68" rx="6" ry="12" fill="#e0e0e0"/>
+          <ellipse cx="70" cy="68" rx="6" ry="12" fill="#e0e0e0"/>
         </svg>
       </div>
 
-      <!-- Chat Interface -->
-      <div id="chatbot-interface" class="chatbot-interface" style="position: fixed; bottom: 20px; right: 20px; width: 350px; height: 500px; background: var(--bg-card); border: 1px solid var(--border-default); border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); z-index: 9999; display: none; flex-direction: column; backdrop-filter: blur(20px);">
+      <!-- Chat Interface - Centered Modal -->
+      <div id="chatbot-interface" class="chatbot-interface" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90vw; max-width: 500px; height: 85vh; background: var(--bg-card); border: 1px solid var(--border-default); border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); z-index: 9999; display: none; flex-direction: column; backdrop-filter: blur(20px);">
         <!-- Chat Header -->
         <div class="chatbot-header" style="padding: 20px; border-bottom: 1px solid var(--border-default); border-radius: 20px 20px 0 0; background: linear-gradient(135deg, #7ed321, #4caf1a); color: white; display: flex; align-items: center; justify-content: space-between;">
           <div style="display: flex; align-items: center; gap: 12px;">
-            <div style="width: 40px; height: 40px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-                <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 1H5C3.9 1 3 1.9 3 3V19C3 20.1 3.9 21 5 21H11V19H5V3H13V9H21ZM16 11C17.7 11 19 12.3 19 14S17.7 17 16 17 13 15.7 13 14 14.3 11 16 11ZM16 19C18.2 19 22 20.1 22 22.2V23H10V22.2C10 20.1 13.8 19 16 19Z"/>
+            <div style="width: 44px; height: 44px; background: rgba(255,255,255,0.25); border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 4px;">
+              <!-- Cute Robot Avatar -->
+              <svg width="36" height="36" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="47" y="8" width="6" height="8" rx="1" fill="white"/>
+                <circle cx="50" cy="6" r="4" fill="#00cfff"/>
+                <rect x="30" y="20" width="40" height="30" rx="8" fill="white"/>
+                <rect x="34" y="24" width="32" height="22" rx="4" fill="#1a2332"/>
+                <ellipse cx="42" cy="32" rx="4" ry="5" fill="#00cfff"/>
+                <ellipse cx="58" cy="32" rx="4" ry="5" fill="#00cfff"/>
+                <path d="M 44 40 Q 50 44 56 40" stroke="#00cfff" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+                <circle cx="26" cy="35" r="6" fill="#e0e0e0"/>
+                <circle cx="74" cy="35" r="6" fill="#e0e0e0"/>
+                <rect x="45" y="50" width="10" height="6" rx="2" fill="#d0d0d0"/>
+                <ellipse cx="50" cy="70" rx="18" ry="20" fill="white"/>
+                <path d="M 38 65 Q 50 68 62 65" stroke="#c0c0c0" stroke-width="1.5" fill="none"/>
+                <ellipse cx="30" cy="68" rx="6" ry="12" fill="#e0e0e0"/>
+                <ellipse cx="70" cy="68" rx="6" ry="12" fill="#e0e0e0"/>
               </svg>
             </div>
             <div>
@@ -1375,21 +1897,35 @@
         </div>
 
         <!-- Chat Messages -->
-        <div id="chatbot-messages" class="chatbot-messages" style="flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; background: var(--bg-card);">
+        <div id="chatbot-messages" class="chatbot-messages" style="flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; background: var(--bg-card); overflow-x: hidden;">
           <div class="bot-message" style="display: flex; align-items: flex-start; gap: 10px;">
-            <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #7ed321, #4caf1a); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-                <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2Z"/>
+            <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #7ed321, #4caf1a); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 3px;">
+              <!-- Small Robot Avatar -->
+              <svg width="28" height="28" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="47" y="8" width="6" height="8" rx="1" fill="white"/>
+                <circle cx="50" cy="6" r="4" fill="#00cfff"/>
+                <rect x="30" y="20" width="40" height="30" rx="8" fill="white"/>
+                <rect x="34" y="24" width="32" height="22" rx="4" fill="#1a2332"/>
+                <ellipse cx="42" cy="32" rx="4" ry="5" fill="#00cfff"/>
+                <ellipse cx="58" cy="32" rx="4" ry="5" fill="#00cfff"/>
+                <path d="M 44 40 Q 50 44 56 40" stroke="#00cfff" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+                <circle cx="26" cy="35" r="6" fill="#e0e0e0"/>
+                <circle cx="74" cy="35" r="6" fill="#e0e0e0"/>
+                <rect x="45" y="50" width="10" height="6" rx="2" fill="#d0d0d0"/>
+                <ellipse cx="50" cy="70" rx="18" ry="20" fill="white"/>
+                <path d="M 38 65 Q 50 68 62 65" stroke="#c0c0c0" stroke-width="1.5" fill="none"/>
+                <ellipse cx="30" cy="68" rx="6" ry="12" fill="#e0e0e0"/>
+                <ellipse cx="70" cy="68" rx="6" ry="12" fill="#e0e0e0"/>
               </svg>
             </div>
-            <div style="background: var(--bg-input); padding: 12px 16px; border-radius: 16px 16px 16px 4px; color: var(--text-primary); font-size: 14px; line-height: 1.4; max-width: 240px;">
+            <div style="background: var(--bg-input); padding: 12px 16px; border-radius: 16px 16px 16px 4px; color: var(--text-primary); font-size: 14px; line-height: 1.4; max-width: 75%; word-wrap: break-word;">
               <span id="welcome-message">Hello! I'm your SamKass assistant. Ask me about your clients, loans, payments, or any app feature!</span>
             </div>
           </div>
         </div>
 
         <!-- Chat Input -->
-        <div class="chatbot-input-area" style="padding: 20px; border-top: 1px solid var(--border-default); background: var(--bg-card); border-radius: 0 0 20px 20px;">
+        <div class="chatbot-input-area" style="padding: 16px; border-top: 1px solid var(--border-default); background: var(--bg-card); border-radius: 0 0 20px 20px;">
           <div style="display: flex; gap: 8px; align-items: flex-end;">
             <div style="flex: 1; position: relative;">
               <textarea id="chatbot-input" placeholder="Type your question here..." style="width: 100%; resize: none; border: 1px solid var(--border-default); border-radius: 12px; padding: 12px 16px; background: var(--bg-input); color: var(--text-primary); font-size: 14px; line-height: 1.4; min-height: 44px; max-height: 100px; outline: none; font-family: inherit;" rows="1"></textarea>
@@ -1600,6 +2136,13 @@
               <label class="form-label" for="loan-start-date">Start Date</label>
               <input type="date" id="loan-start-date" class="form-control kf-input" data-ocid="loan.start_date_input" />
             </div>
+
+            <div class="mb-3">
+              <label class="form-label" for="loan-next-due-date">Next Due Date</label>
+              <input type="date" id="loan-next-due-date" class="form-control kf-input" data-ocid="loan.next_due_date_input" placeholder="When is the next payment due?" />
+              <small class="form-text text-muted" style="font-size: 0.8rem; display: block; margin-top: 4px;">Set when the client needs to pay next</small>
+            </div>
+
             <!-- EMI Preview -->
             <div id="emi-preview" class="emi-preview-box d-none">
               <div class="emi-preview-row">
