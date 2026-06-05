@@ -1500,6 +1500,20 @@ function renderClientsList(clients, loans) {
     const clientLoans = loans.filter(l => l.clientId === c.id);
     const activeLoans = clientLoans.filter(l => l.status === 'active').length;
     const initials = c.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    
+    // Find the earliest next due date among active loans
+    let earliestDue = null;
+    let nextPaymentAmount = 0;
+    clientLoans.filter(l => l.status === 'active').forEach(loan => {
+      const stats = calcLoanStats(loan);
+      if (stats.nextDueDate) {
+        if (!earliestDue || new Date(stats.nextDueDate) < new Date(earliestDue)) {
+          earliestDue = stats.nextDueDate;
+          nextPaymentAmount = stats.emi;
+        }
+      }
+    });
+    
     return `<div class="client-card" data-ocid="clients.item.${i + 1}" data-id="${c.id}">
       <div class="client-avatar">${initials}</div>
       <div class="client-info min-w-0">
@@ -1508,6 +1522,14 @@ function renderClientsList(clients, loans) {
           <span><i class="fa-solid fa-phone" style="font-size:.7rem"></i> ${c.phone}</span>
           <span>${activeLoans} active loan${activeLoans !== 1 ? 's' : ''}</span>
         </div>
+        ${earliestDue ? `
+        <div style="margin-top:6px; padding:6px 10px; background:rgba(126, 211, 33, 0.1); border-radius:8px; border:1px solid rgba(126, 211, 33, 0.3); display:flex; align-items:center; gap:8px;">
+          <i class="fa-solid fa-calendar-day" style="color:var(--color-primary); font-size:0.85rem;"></i>
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:0.65rem; color:var(--color-text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.3px;">Next Due</div>
+            <div style="font-size:0.8rem; font-weight:700; color:var(--color-primary); font-family:'JetBrains Mono', monospace;">${fmtDate(earliestDue)} · ${fmtCur(nextPaymentAmount)}</div>
+          </div>
+        </div>` : ''}
       </div>
       <div class="client-actions">
         <button class="btn-icon primary" data-action="view" data-id="${c.id}" aria-label="View profile" data-ocid="clients.view_button.${i + 1}"><i class="fa-solid fa-eye"></i></button>
@@ -1737,6 +1759,26 @@ function openLoanInfo(loanId) {
       <div class="emi-preview-row"><span>Start Date</span><strong>${fmtDate(loan.startDate)}</strong></div>
     </div>
 
+    ${stats.nextDueDate && loan.status === 'active' ? `
+    <div class="kf-card" style="padding:1rem; margin-bottom:1rem; background:${stats.isOverdue ? 'rgba(239, 68, 68, 0.08)' : 'rgba(126, 211, 33, 0.08)'}; border: 2px solid ${stats.isOverdue ? 'var(--color-danger)' : 'var(--color-primary)'}; box-shadow:0 4px 12px ${stats.isOverdue ? 'rgba(239, 68, 68, 0.2)' : 'rgba(126, 211, 33, 0.2)'};">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+        <i class="fa-solid fa-calendar-day" style="font-size:1.5rem; color:${stats.isOverdue ? 'var(--color-danger)' : 'var(--color-primary)'};"></i>
+        <div style="flex:1;">
+          <div style="font-size:0.75rem; color:var(--color-text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Next Due Date</div>
+          <div style="font-size:1.1rem; font-weight:700; color:${stats.isOverdue ? 'var(--color-danger)' : 'var(--color-primary)'}; font-family:'JetBrains Mono', monospace;">${fmtDate(stats.nextDueDate)}</div>
+        </div>
+      </div>
+      <div class="emi-preview-row" style="margin:0; padding-top:8px; border-top:1px dashed ${stats.isOverdue ? 'rgba(239, 68, 68, 0.3)' : 'rgba(126, 211, 33, 0.3)'};">
+        <span style="font-weight:600;">Next Payment Amount</span>
+        <strong style="font-size:1.15rem; color:${stats.isOverdue ? 'var(--color-danger)' : 'var(--color-primary)'}; font-family:'JetBrains Mono', monospace;">${fmtCur(stats.emi)}</strong>
+      </div>
+      ${stats.isOverdue ? `
+      <div style="margin-top:8px; padding:8px; background:rgba(239, 68, 68, 0.15); border-radius:8px; text-align:center;">
+        <i class="fa-solid fa-exclamation-triangle" style="color:var(--color-danger); margin-right:6px;"></i>
+        <span style="color:var(--color-danger); font-weight:700; font-size:0.85rem;">${stats.daysOverdue} day${stats.daysOverdue !== 1 ? 's' : ''} overdue</span>
+      </div>` : ''}
+    </div>` : ''}
+
     <div class="kf-card" style="padding:1rem; margin-bottom:1rem; background:rgba(0,0,0,0.02); box-shadow:none;">
       <div class="emi-preview-row"><span>Interest Rate</span><strong>${loan.interestRate}% (${loan.interestType === 'fixed' ? 'Fixed' : 'Percentage'})</strong></div>
       <div class="emi-preview-row"><span>Duration</span><strong>${loan.duration ? loan.duration + ' installments' : 'Open'}</strong></div>
@@ -1758,11 +1800,6 @@ function openLoanInfo(loanId) {
         </div>
         <div class="kf-progress"><div class="kf-progress-fill ${stats.isOverdue ? 'danger' : stats.progress === 100 ? 'success' : ''}" style="width:${stats.progress}%"></div></div>
       </div>
-      
-      ${stats.nextDueDate && loan.status === 'active' ? `
-        <div class="emi-preview-row" style="margin-top:12px; padding-top:12px; border-top:1px dashed var(--color-border-muted);">
-          <span>Next Due</span><strong style="${stats.isOverdue ? 'color:var(--color-danger);' : ''}">${fmtDate(stats.nextDueDate)} ${stats.isOverdue ? '(' + stats.daysOverdue + 'd late)' : ''}</strong>
-        </div>` : ''}
     </div>
   `;
   
