@@ -119,7 +119,20 @@ const T = {
     delete: 'Delete',
     upgradePlan: 'Upgrade Plan',
     buyClientSlots: 'Buy Client Slots',
-    extraClients: 'Extra Clients'
+    extraClients: 'Extra Clients',
+    client: 'Client',
+    interestRate: 'Interest Rate',
+    collectionType: 'Collection Type',
+    collectionAmount: 'Collection Amount',
+    totalPaid: 'Total Paid',
+    remaining: 'Remaining',
+    progress: 'Progress',
+    fixed: 'Fixed',
+    percentage: 'Percentage',
+    installments: 'installments',
+    open: 'Open',
+    day: 'day',
+    days: 'days'
   },
   ta: {
     home: 'முகப்பு', clients: 'வாடிக்கையாளர்கள்',
@@ -1523,11 +1536,12 @@ function renderClientsList(clients, loans) {
           <span>${activeLoans} active loan${activeLoans !== 1 ? 's' : ''}</span>
         </div>
         ${earliestDue ? `
-        <div style="margin-top:6px; padding:6px 10px; background:rgba(126, 211, 33, 0.1); border-radius:8px; border:1px solid rgba(126, 211, 33, 0.3); display:flex; align-items:center; gap:8px;">
-          <i class="fa-solid fa-calendar-day" style="color:var(--color-primary); font-size:0.85rem;"></i>
+        <div style="margin-top:8px; padding:8px 12px; background:rgba(126, 211, 33, 0.15); border-radius:10px; border:2px solid rgba(126, 211, 33, 0.4); display:flex; align-items:center; gap:10px;">
+          <i class="fa-solid fa-calendar-day" style="color:var(--color-primary); font-size:1.1rem;"></i>
           <div style="flex:1; min-width:0;">
-            <div style="font-size:0.65rem; color:var(--color-text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.3px;">Next Due</div>
-            <div style="font-size:0.8rem; font-weight:700; color:var(--color-primary); font-family:'JetBrains Mono', monospace;">${fmtDate(earliestDue)} · ${fmtCur(nextPaymentAmount)}</div>
+            <div style="font-size:0.65rem; color:var(--color-text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px;">${t('nextDue')}</div>
+            <div style="font-size:0.9rem; font-weight:800; color:var(--color-primary); font-family:'JetBrains Mono', monospace; line-height:1.2;">${fmtDate(earliestDue)}</div>
+            <div style="font-size:0.85rem; font-weight:700; color:var(--color-primary); font-family:'JetBrains Mono', monospace; margin-top:2px;">${fmtCur(nextPaymentAmount)}</div>
           </div>
         </div>` : ''}
       </div>
@@ -1753,50 +1767,50 @@ function openLoanInfo(loanId) {
       </span>
     </div>
 
-    <div class="kf-card" style="padding:1rem; margin-bottom:1rem; background:rgba(0,0,0,0.02); box-shadow:none;">
-      <div class="emi-preview-row"><span>Client</span><strong style="color:var(--color-primary);">${client ? client.name : 'Unknown'}</strong></div>
-      <div class="emi-preview-row"><span>Phone</span><strong>${client ? client.phone : 'N/A'}</strong></div>
-      <div class="emi-preview-row"><span>Start Date</span><strong>${fmtDate(loan.startDate)}</strong></div>
-    </div>
-
     ${stats.nextDueDate && loan.status === 'active' ? `
-    <div class="kf-card" style="padding:1rem; margin-bottom:1rem; background:${stats.isOverdue ? 'rgba(239, 68, 68, 0.08)' : 'rgba(126, 211, 33, 0.08)'}; border: 2px solid ${stats.isOverdue ? 'var(--color-danger)' : 'var(--color-primary)'}; box-shadow:0 4px 12px ${stats.isOverdue ? 'rgba(239, 68, 68, 0.2)' : 'rgba(126, 211, 33, 0.2)'};">
-      <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
-        <i class="fa-solid fa-calendar-day" style="font-size:1.5rem; color:${stats.isOverdue ? 'var(--color-danger)' : 'var(--color-primary)'};"></i>
+    <div class="kf-card" style="padding:1.25rem; margin-bottom:1rem; background:${stats.isOverdue ? 'rgba(239, 68, 68, 0.12)' : 'rgba(126, 211, 33, 0.12)'}; border: 2px solid ${stats.isOverdue ? 'var(--color-danger)' : 'var(--color-primary)'}; box-shadow:0 6px 20px ${stats.isOverdue ? 'rgba(239, 68, 68, 0.25)' : 'rgba(126, 211, 33, 0.25)'};">
+      <div style="display:flex; align-items:center; gap:14px; margin-bottom:12px;">
+        <i class="fa-solid fa-calendar-day" style="font-size:2rem; color:${stats.isOverdue ? 'var(--color-danger)' : 'var(--color-primary)'};"></i>
         <div style="flex:1;">
-          <div style="font-size:0.75rem; color:var(--color-text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Next Due Date</div>
-          <div style="font-size:1.1rem; font-weight:700; color:${stats.isOverdue ? 'var(--color-danger)' : 'var(--color-primary)'}; font-family:'JetBrains Mono', monospace;">${fmtDate(stats.nextDueDate)}</div>
+          <div style="font-size:0.7rem; color:var(--color-text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:4px;">${t('nextDue')}</div>
+          <div style="font-size:1.25rem; font-weight:800; color:${stats.isOverdue ? 'var(--color-danger)' : 'var(--color-primary)'}; font-family:'JetBrains Mono', monospace; line-height:1.2;">${fmtDate(stats.nextDueDate)}</div>
         </div>
       </div>
-      <div class="emi-preview-row" style="margin:0; padding-top:8px; border-top:1px dashed ${stats.isOverdue ? 'rgba(239, 68, 68, 0.3)' : 'rgba(126, 211, 33, 0.3)'};">
-        <span style="font-weight:600;">Next Payment Amount</span>
-        <strong style="font-size:1.15rem; color:${stats.isOverdue ? 'var(--color-danger)' : 'var(--color-primary)'}; font-family:'JetBrains Mono', monospace;">${fmtCur(stats.emi)}</strong>
+      <div class="emi-preview-row" style="margin:0; padding-top:12px; border-top:2px solid ${stats.isOverdue ? 'rgba(239, 68, 68, 0.3)' : 'rgba(126, 211, 33, 0.3)'};">
+        <span style="font-weight:700; font-size:0.9rem;">${t('emi')}</span>
+        <strong style="font-size:1.3rem; color:${stats.isOverdue ? 'var(--color-danger)' : 'var(--color-primary)'}; font-family:'JetBrains Mono', monospace; font-weight:800;">${fmtCur(stats.emi)}</strong>
       </div>
       ${stats.isOverdue ? `
-      <div style="margin-top:8px; padding:8px; background:rgba(239, 68, 68, 0.15); border-radius:8px; text-align:center;">
-        <i class="fa-solid fa-exclamation-triangle" style="color:var(--color-danger); margin-right:6px;"></i>
-        <span style="color:var(--color-danger); font-weight:700; font-size:0.85rem;">${stats.daysOverdue} day${stats.daysOverdue !== 1 ? 's' : ''} overdue</span>
+      <div style="margin-top:12px; padding:10px 14px; background:rgba(239, 68, 68, 0.2); border-radius:10px; text-align:center; border:1px solid rgba(239, 68, 68, 0.4);">
+        <i class="fa-solid fa-exclamation-triangle" style="color:var(--color-danger); margin-right:8px; font-size:1.1rem;"></i>
+        <span style="color:var(--color-danger); font-weight:800; font-size:0.95rem;">${stats.daysOverdue} ${stats.daysOverdue !== 1 ? t('days') : t('day')} ${t('overdue').toLowerCase()}</span>
       </div>` : ''}
     </div>` : ''}
 
     <div class="kf-card" style="padding:1rem; margin-bottom:1rem; background:rgba(0,0,0,0.02); box-shadow:none;">
-      <div class="emi-preview-row"><span>Interest Rate</span><strong>${loan.interestRate}% (${loan.interestType === 'fixed' ? 'Fixed' : 'Percentage'})</strong></div>
-      <div class="emi-preview-row"><span>Duration</span><strong>${loan.duration ? loan.duration + ' installments' : 'Open'}</strong></div>
-      <div class="emi-preview-row"><span>Collection Type</span><strong style="text-transform:capitalize;">${loan.type}</strong></div>
+      <div class="emi-preview-row"><span>${t('client')}</span><strong style="color:var(--color-primary);">${client ? client.name : 'Unknown'}</strong></div>
+      <div class="emi-preview-row"><span>${t('phone')}</span><strong>${client ? client.phone : 'N/A'}</strong></div>
+      <div class="emi-preview-row"><span>${t('startDate')}</span><strong>${fmtDate(loan.startDate)}</strong></div>
+    </div>
+
+    <div class="kf-card" style="padding:1rem; margin-bottom:1rem; background:rgba(0,0,0,0.02); box-shadow:none;">
+      <div class="emi-preview-row"><span>${t('interestRate')}</span><strong>${loan.interestRate}% (${loan.interestType === 'fixed' ? t('fixed') : t('percentage')})</strong></div>
+      <div class="emi-preview-row"><span>${t('duration')}</span><strong>${loan.duration ? loan.duration + ' ' + t('installments') : t('open')}</strong></div>
+      <div class="emi-preview-row"><span>${t('collectionType')}</span><strong style="text-transform:capitalize;">${t(loan.type)}</strong></div>
       <div class="emi-preview-row" style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--color-border-muted);">
-        <span style="color:var(--color-text-muted); font-weight:600;">Collection Amount</span>
+        <span style="color:var(--color-text-muted); font-weight:600;">${t('collectionAmount')}</span>
         <strong style="color:var(--color-primary); font-size:1.1rem;">${fmtCur(stats.emi)}</strong>
       </div>
     </div>
 
     <div class="kf-card" style="padding:1rem; background:rgba(0,0,0,0.02); box-shadow:none;">
-      <div class="emi-preview-row"><span>Total Payable</span><strong>${fmtCur(stats.totalPayable)}</strong></div>
-      <div class="emi-preview-row"><span>Total Paid</span><strong style="color:var(--color-success);">${fmtCur(stats.totalPaid)}</strong></div>
-      <div class="emi-preview-row"><span>Remaining</span><strong style="color:var(--color-danger);">${fmtCur(stats.remaining)}</strong></div>
+      <div class="emi-preview-row"><span>${t('totalPayable')}</span><strong>${fmtCur(stats.totalPayable)}</strong></div>
+      <div class="emi-preview-row"><span>${t('totalPaid')}</span><strong style="color:var(--color-success);">${fmtCur(stats.totalPaid)}</strong></div>
+      <div class="emi-preview-row"><span>${t('remaining')}</span><strong style="color:var(--color-danger);">${fmtCur(stats.remaining)}</strong></div>
       
       <div style="margin-top:12px;">
         <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--color-text-muted); margin-bottom:4px; font-weight:600;">
-          <span>Progress</span><span>${stats.progress}%</span>
+          <span>${t('progress')}</span><span>${stats.progress}%</span>
         </div>
         <div class="kf-progress"><div class="kf-progress-fill ${stats.isOverdue ? 'danger' : stats.progress === 100 ? 'success' : ''}" style="width:${stats.progress}%"></div></div>
       </div>

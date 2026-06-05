@@ -1412,6 +1412,13 @@
 
       if (logoBubbleContainer) {
         makeDraggable(logoBubbleContainer, async function() {
+          // Check if app is already installed
+          if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+            // App is already installed
+            alert('✅ App is already installed on your device!');
+            return;
+          }
+          
           // Directly trigger native PWA install prompt (no custom modal)
           if (deferredPrompt) {
             try {
