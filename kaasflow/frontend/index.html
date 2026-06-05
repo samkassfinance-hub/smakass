@@ -1410,10 +1410,30 @@
       const videoIframe = document.getElementById('tutorial-video-iframe');
       const videoPlaceholder = document.getElementById('video-placeholder');
 
-      if (logoBubbleContainer && pwaModal) {
-        makeDraggable(logoBubbleContainer, function() {
-          // Show the PWA install modal (same as settings page button)
-          pwaModal.style.display = 'flex';
+      if (logoBubbleContainer) {
+        makeDraggable(logoBubbleContainer, async function() {
+          // Directly trigger native PWA install prompt (no custom modal)
+          if (deferredPrompt) {
+            try {
+              // Show native browser install prompt
+              await deferredPrompt.prompt();
+              const { outcome } = await deferredPrompt.userChoice;
+              console.log(`User response to install prompt: ${outcome}`);
+              if (outcome === 'accepted') {
+                console.log('✅ User accepted the install prompt');
+              } else {
+                console.log('❌ User dismissed the install prompt');
+              }
+              deferredPrompt = null;
+            } catch (err) {
+              console.error('Install prompt error:', err);
+              // Fallback if native prompt fails
+              alert('To install:\n\n• Chrome/Edge: Click menu (⋮) > Install app\n• Safari: Tap share (↗) > Add to Home Screen\n• Firefox: Tap menu (⋮) > Install');
+            }
+          } else {
+            // Native prompt not available, show instructions
+            alert('To install:\n\n• Chrome/Edge: Click menu (⋮) > Install app\n• Safari: Tap share (↗) > Add to Home Screen\n• Firefox: Tap menu (⋮) > Install');
+          }
         });
       }
 
