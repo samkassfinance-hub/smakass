@@ -1410,22 +1410,10 @@
       const videoIframe = document.getElementById('tutorial-video-iframe');
       const videoPlaceholder = document.getElementById('video-placeholder');
 
-      if (logoBubbleContainer) {
-        makeDraggable(logoBubbleContainer, async function() {
-          // Use native PWA install prompt (same as settings page)
-          if (deferredPrompt) {
-            try {
-              deferredPrompt.prompt();
-              const { outcome } = await deferredPrompt.userChoice;
-              console.log(`User response to install prompt: ${outcome}`);
-              deferredPrompt = null;
-            } catch (err) {
-              console.error('Install prompt error:', err);
-            }
-          } else {
-            // Fallback instructions if native prompt not available
-            alert('To install:\n\n• Chrome/Edge: Click menu (⋮) > Install app\n• Safari: Tap share (↗) > Add to Home Screen\n• Firefox: Tap menu (⋮) > Install');
-          }
+      if (logoBubbleContainer && pwaModal) {
+        makeDraggable(logoBubbleContainer, function() {
+          // Show the PWA install modal (same as settings page button)
+          pwaModal.style.display = 'flex';
         });
       }
 
