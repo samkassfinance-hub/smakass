@@ -44,3 +44,45 @@ def decode_token(token: str, is_refresh: bool = False):
             return jwt.decode(token, fallback_secret, algorithms=[ALGORITHM])
         except:
             return None
+from functools import wraps
+from flask import request, jsonify
+
+def token_required(f):
+    """Decorator to require valid JWT token for API endpoints."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+        
+        # Check for token in Authorization header
+        auth_header = request.headers.get('Authorization')
+        if auth_header and auth_header.startswith('Bearer '):
+            token = auth_header.split(' ')[1]
+        
+        if not token:
+            return jsonify({'error': 'Token is missing'}), 401
+        
+        try:
+            # Decode token
+            payload = decode_token(token)
+            if not payload:
+                return jsonify({'error': 'Token is invalid or expired'}), 401
+            
+            # Get user info from payload
+            user_id = payload.get('sub') or payload.get('user_id')
+            if not user_id:
+                return jsonify({'error': 'Invalid token payload'}), 401
+            
+            # Create current_user object
+            current_user = {
+                'id': user_id,
+                'email': payload.get('email', ''),
+                'payload': payload
+            }
+            
+            return f(current_user, *args, **kwargs)
+            
+        except Exception as e:
+            print(f"Token verification error: {e}")
+            return jsonify({'error': 'Token verification failed'}), 401
+    
+    return decorated

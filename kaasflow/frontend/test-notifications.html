@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SamKass - Notification Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f4f7f4;
+        }
+        .test-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #7ed321;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #6cb91a; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .status { 
+            padding: 10px; 
+            margin: 10px 0; 
+            border-radius: 5px; 
+            font-weight: bold;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>🔔 SamKass Notification Test</h1>
+    
+    <div class="test-card">
+        <h2>1. Browser Support Check</h2>
+        <div id="support-status" class="status info">Checking browser support...</div>
+    </div>
+
+    <div class="test-card">
+        <h2>2. Permission Test</h2>
+        <button onclick="testPermission()" id="permission-btn">Request Notification Permission</button>
+        <div id="permission-status" class="status"></div>
+    </div>
+
+    <div class="test-card">
+        <h2>3. Simple Notification Test</h2>
+        <button onclick="testSimpleNotification()" id="simple-btn" disabled>Test Simple Notification</button>
+        <div id="simple-status" class="status"></div>
+    </div>
+
+    <div class="test-card">
+        <h2>4. VAPID Configuration Test</h2>
+        <button onclick="testVAPID()" id="vapid-btn" disabled>Test VAPID Config</button>
+        <div id="vapid-status" class="status"></div>
+    </div>
+
+    <div class="test-card">
+        <h2>5. Service Worker Test</h2>
+        <button onclick="testServiceWorker()" id="sw-btn" disabled>Test Service Worker</button>
+        <div id="sw-status" class="status"></div>
+    </div>
+
+    <div class="test-card">
+        <h2>6. Push Notification Test</h2>
+        <button onclick="testPushNotification()" id="push-btn" disabled>Test Push Notification</button>
+        <div id="push-status" class="status"></div>
+    </div>
+
+    <!-- Load config and dependencies -->
+    <script src="config.js"></script>
+    <script>
+        let hasPermission = false;
+        let swRegistration = null;
+
+        // Check browser support on load
+        window.onload = function() {
+            checkBrowserSupport();
+        };
+
+        function showStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `status ${type}`;
+        }
+
+        function checkBrowserSupport() {
+            const hasNotification = 'Notification' in window;
+            const hasPushManager = 'PushManager' in window;
+            const hasServiceWorker = 'serviceWorker' in navigator;
+            
+            if (hasNotification && hasPushManager && hasServiceWorker) {
+                showStatus('support-status', '✅ Browser fully supports notifications!', 'success');
+                document.getElementById('permission-btn').disabled = false;
+            } else {
+                let missing = [];
+                if (!hasNotification) missing.push('Notifications');
+                if (!hasPushManager) missing.push('Push Manager');
+                if (!hasServiceWorker) missing.push('Service Worker');
+                
+                showStatus('support-status', `❌ Missing: ${missing.join(', ')}`, 'error');
+            }
+        }
+
+        async function testPermission() {
+            try {
+                if (!('Notification' in window)) {
+                    showStatus('permission-status', '❌ Notifications not supported', 'error');
+                    return;
+                }
+
+                const permission = await Notification.requestPermission();
+                
+                if (permission === 'granted') {
+                    hasPermission = true;
+                    showStatus('permission-status', '✅ Permission granted!', 'success');
+                    document.getElementById('simple-btn').disabled = false;
+                    document.getElementById('vapid-btn').disabled = false;
+                    document.getElementById('sw-btn').disabled = false;
+                } else {
+                    showStatus('permission-status', '❌ Permission denied', 'error');
+                }
+            } catch (error) {
+                showStatus('permission-status', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        function testSimpleNotification() {
+            if (!hasPermission) {
+                showStatus('simple-status', '⚠️ Need permission first', 'warning');
+                return;
+            }
+
+            try {
+                const notification = new Notification('🔔 SamKass Test', {
+                    body: 'Simple notification is working!',
+                    icon: '/logo.png',
+                    requireInteraction: true
+                });
+
+                notification.onclick = () => {
+                    showStatus('simple-status', '✅ Notification clicked!', 'success');
+                    notification.close();
+                };
+
+                showStatus('simple-status', '✅ Simple notification sent!', 'success');
+            } catch (error) {
+                showStatus('simple-status', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        function testVAPID() {
+            try {
+                const vapidKey = window.SamKassConfig?.VAPID_PUBLIC_KEY;
+                
+                if (!vapidKey || vapidKey === 'REPLACE_WITH_YOUR_VAPID_PUBLIC_KEY') {
+                    showStatus('vapid-status', '❌ VAPID key not configured', 'error');
+                    return;
+                }
+
+                if (vapidKey.length < 50) {
+                    showStatus('vapid-status', '❌ VAPID key seems too short', 'error');
+                    return;
+                }
+
+                showStatus('vapid-status', `✅ VAPID key loaded (${vapidKey.length} chars)`, 'success');
+            } catch (error) {
+                showStatus('vapid-status', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testServiceWorker() {
+            try {
+                if (!('serviceWorker' in navigator)) {
+                    showStatus('sw-status', '❌ Service Worker not supported', 'error');
+                    return;
+                }
+
+                // Try to register service worker
+                swRegistration = await navigator.serviceWorker.register('/sw.js');
+                showStatus('sw-status', '✅ Service Worker registered!', 'success');
+                
+                // Enable push test
+                document.getElementById('push-btn').disabled = false;
+
+            } catch (error) {
+                showStatus('sw-status', `❌ SW Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testPushNotification() {
+            try {
+                if (!swRegistration) {
+                    showStatus('push-status', '⚠️ Need Service Worker first', 'warning');
+                    return;
+                }
+
+                const vapidKey = window.SamKassConfig?.VAPID_PUBLIC_KEY;
+                if (!vapidKey) {
+                    showStatus('push-status', '❌ No VAPID key', 'error');
+                    return;
+                }
+
+                // Convert VAPID key
+                const applicationServerKey = urlBase64ToUint8Array(vapidKey);
+                
+                // Subscribe to push
+                const subscription = await swRegistration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: applicationServerKey
+                });
+
+                showStatus('push-status', '✅ Push subscription successful!', 'success');
+                
+                // Show subscription details
+                console.log('Push Subscription:', subscription);
+
+            } catch (error) {
+                showStatus('push-status', `❌ Push Error: ${error.message}`, 'error');
+                console.error('Full error:', error);
+            }
+        }
+
+        // VAPID key conversion utility
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding)
+                .replace(/-/g, '+')
+                .replace(/_/g, '/');
+
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+    </script>
+</body>
+</html>

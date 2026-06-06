@@ -1,100 +1,118 @@
 /**
- * SamKass - Push Notification Subscription Handler
- * Handles browser push notification permission and subscription
+ * SamKass Push Notifications
+ * Handles browser push notification subscription and management
  */
 
-(function() {
-  'use strict';
+// VAPID public key from config
+const VAPID_PUBLIC_KEY = window.SamKassConfig?.VAPID_PUBLIC_KEY || 'YOUR_VAPID_PUBLIC_KEY_HERE';
 
-  const VAPID_PUBLIC_KEY = 'YOUR_VAPID_PUBLIC_KEY_HERE'; // Will be set from environment
+class PushNotificationManager {
+  constructor() {
+    this.isSupported = 'serviceWorker' in navigator && 'PushManager' in window;
+    this.isSubscribed = false;
+    this.subscription = null;
+  }
 
-  // Convert base64 VAPID key to Uint8Array
-  function urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding)
-      .replace(/\-/g, '+')
-      .replace(/_/g, '/');
-    
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-    
-    for (let i = 0; i < rawData.length; ++i) {
-      outputArray[i] = rawData.charCodeAt(i);
+  // Initialize push notifications after login
+  async initAfterLogin() {
+    if (!this.isSupported) {
+      console.warn('⚠️ Push notifications not supported in this browser');
+      return false;
     }
-    return outputArray;
-  }
 
-  // Check if push notifications are supported
-  function isPushSupported() {
-    return 'serviceWorker' in navigator && 'PushManager' in window;
-  }
-
-  // Get current push subscription
-  async function getCurrentSubscription() {
     try {
-      const registration = await navigator.serviceWorker.ready;
-      return await registration.pushManager.getSubscription();
-    } catch (error) {
-      console.error('Error getting subscription:', error);
-      return null;
-    }
-  }
-
-  // Subscribe to push notifications
-  async function subscribeToPush() {
-    try {
-      if (!isPushSupported()) {
-        console.warn('❌ Push notifications not supported');
-        return null;
+      // Register service worker if not already registered
+      const registration = await this.ensureServiceWorker();
+      
+      // Check if already subscribed
+      const existingSubscription = await registration.pushManager.getSubscription();
+      
+      if (existingSubscription) {
+        console.log('✅ Already subscribed to push notifications');
+        this.subscription = existingSubscription;
+        this.isSubscribed = true;
+        return true;
       }
 
       // Request notification permission
-      const permission = await Notification.requestPermission();
+      const permission = await this.requestPermission();
       
       if (permission !== 'granted') {
-        console.log('❌ Notification permission denied');
-        return null;
+        console.warn('⚠️ Notification permission denied');
+        return false;
       }
 
-      console.log('✅ Notification permission granted');
-
-      // Get service worker registration
-      const registration = await navigator.serviceWorker.ready;
-
-      // Check if already subscribed
-      let subscription = await registration.pushManager.getSubscription();
-
-      if (!subscription) {
-        // Subscribe to push notifications
-        subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-        });
-
-        console.log('✅ Successfully subscribed to push notifications');
-      } else {
-        console.log('✅ Already subscribed to push notifications');
-      }
-
-      // Send subscription to server
-      await sendSubscriptionToServer(subscription);
-
-      return subscription;
+      // Subscribe to push notifications
+      await this.subscribeToPush(registration);
+      return true;
 
     } catch (error) {
-      console.error('❌ Error subscribing to push:', error);
-      return null;
+      console.error('❌ Failed to initialize push notifications:', error);
+      return false;
     }
   }
 
-  // Send subscription to backend
-  async function sendSubscriptionToServer(subscription) {
-    try {
-      const token = localStorage.getItem('kf_session_token') || sessionStorage.getItem('kf_session_token');
+  // Ensure service worker is registered
+  async ensureServiceWorker() {
+    const registration = await navigator.serviceWorker.getRegistration();
+    
+    if (!registration) {
+      return await navigator.serviceWorker.register('/sw.js');
+    }
+    
+    return registration;
+  }
 
+  // Request notification permission
+  async requestPermission() {
+    if (Notification.permission === 'granted') {
+      return 'granted';
+    }
+
+    if (Notification.permission === 'denied') {
+      return 'denied';
+    }
+
+    // Request permission
+    return await Notification.requestPermission();
+  }
+
+  // Subscribe to push notifications
+  async subscribeToPush(registration) {
+    try {
+      // Convert VAPID key to Uint8Array
+      const applicationServerKey = this.urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+      
+      // Subscribe to push manager
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: applicationServerKey
+      });
+
+      console.log('✅ Successfully subscribed to push notifications');
+      this.subscription = subscription;
+      this.isSubscribed = true;
+
+      // Send subscription to server
+      await this.sendSubscriptionToServer(subscription);
+      
+      return subscription;
+
+    } catch (error) {
+      console.error('❌ Failed to subscribe to push notifications:', error);
+      throw error;
+    }
+  }
+
+  // Send subscription to server
+  async sendSubscriptionToServer(subscription) {
+    try {
+      // Get token from kf_session
+      const session = JSON.parse(localStorage.getItem('kf_session') || '{}');
+      const token = session.token;
+      
       if (!token) {
-        console.warn('⚠️ No auth token found');
-        return;
+        throw new Error('No auth token found');
       }
 
       const response = await fetch('/api/push/subscribe', {
@@ -110,113 +128,98 @@
 
       const result = await response.json();
 
-      if (response.ok) {
-        console.log('✅ Subscription saved to server:', result.message);
-      } else {
-        console.error('❌ Failed to save subscription:', result.error);
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to save subscription');
       }
 
+      console.log('✅ Subscription saved to server:', result);
+      return result;
+
     } catch (error) {
-      console.error('❌ Error sending subscription to server:', error);
+      console.error('❌ Failed to save subscription to server:', error);
+      throw error;
     }
   }
 
   // Unsubscribe from push notifications
-  async function unsubscribeFromPush() {
+  async unsubscribe() {
+    if (!this.subscription) {
+      return false;
+    }
+
     try {
-      const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
-
-      if (subscription) {
-        await subscription.unsubscribe();
-        console.log('✅ Successfully unsubscribed from push notifications');
-
-        // Notify server
-        const token = localStorage.getItem('kf_session_token') || sessionStorage.getItem('kf_session_token');
-        if (token) {
-          await fetch('/api/push/unsubscribe', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              endpoint: subscription.endpoint
-            })
-          });
-        }
+      // Unsubscribe from browser
+      await this.subscription.unsubscribe();
+      
+      // Notify server
+      const session = JSON.parse(localStorage.getItem('kf_session') || '{}');
+      const token = session.token;
+      
+      if (token) {
+        await fetch('/api/push/unsubscribe', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            endpoint: this.subscription.endpoint
+          })
+        });
       }
 
+      this.subscription = null;
+      this.isSubscribed = false;
+      
+      console.log('✅ Unsubscribed from push notifications');
       return true;
+
     } catch (error) {
-      console.error('❌ Error unsubscribing:', error);
+      console.error('❌ Failed to unsubscribe:', error);
       return false;
     }
   }
 
-  // Initialize push notifications on login
-  function initPushNotifications() {
-    if (!isPushSupported()) {
-      console.warn('⚠️ Push notifications not supported in this browser');
-      return;
-    }
+  // Convert VAPID key from base64 to Uint8Array
+  urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+      .replace(/-/g, '+')
+      .replace(/_/g, '/');
 
-    // Check if already subscribed
-    getCurrentSubscription().then(subscription => {
-      if (!subscription) {
-        // Not subscribed - ask user after a short delay
-        setTimeout(() => {
-          // Only ask if user is logged in
-          const token = localStorage.getItem('kf_session_token') || sessionStorage.getItem('kf_session_token');
-          if (token) {
-            subscribeToPush();
-          }
-        }, 3000); // Wait 3 seconds after login
-      } else {
-        console.log('✅ Already subscribed to push notifications');
-        // Re-send subscription to server in case it was lost
-        sendSubscriptionToServer(subscription);
-      }
-    });
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
   }
 
-  // Handle messages from service worker
+  // Check if push notifications are supported and enabled
+  getStatus() {
+    return {
+      supported: this.isSupported,
+      permission: Notification.permission,
+      subscribed: this.isSubscribed,
+      subscription: this.subscription
+    };
+  }
+}
+
+// Create global instance
+window.PushNotifications = new PushNotificationManager();
+
+// Auto-initialize after DOM loads
+document.addEventListener('DOMContentLoaded', () => {
+  // Listen for auth token messages from service worker
   navigator.serviceWorker.addEventListener('message', (event) => {
     if (event.data.type === 'GET_AUTH_TOKEN') {
-      // Service worker needs auth token
-      const token = localStorage.getItem('kf_session_token') || sessionStorage.getItem('kf_session_token');
+      const session = JSON.parse(localStorage.getItem('kf_session') || '{}');
+      const token = session.token;
       event.ports[0].postMessage({ token });
-    } else if (event.data.type === 'PAYMENT_ACTION_SUCCESS') {
-      // Payment action was successful - refresh data
-      console.log('✅ Payment action completed:', event.data.action);
-      
-      // Trigger data reload if app is open
-      if (window.Store && window.navigateTo) {
-        window.Store.loadAll();
-        window.navigateTo('collection'); // Navigate to collection page
-      }
-    } else if (event.data.type === 'NOTIF_OPEN_COLLECTION') {
-      // Notification tapped - open collection page
-      if (window.navigateTo) {
-        window.navigateTo('collection');
-      }
     }
   });
+});
 
-  // Expose functions globally
-  window.PushNotifications = {
-    subscribe: subscribeToPush,
-    unsubscribe: unsubscribeFromPush,
-    isSupported: isPushSupported,
-    getCurrentSubscription: getCurrentSubscription,
-    init: initPushNotifications
-  };
-
-  // Auto-initialize when DOM is ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initPushNotifications);
-  } else {
-    initPushNotifications();
-  }
-
-})();
+console.log('✅ Push Notifications Manager loaded');

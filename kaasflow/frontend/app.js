@@ -644,6 +644,15 @@ function saveSessionIsolated(token, user) {
     clearAllUserData();
   }
   localStorage.setItem('kf_session', JSON.stringify({ token, user }));
+  
+  // Initialize push notifications after successful login
+  if (window.PushNotifications) {
+    setTimeout(() => {
+      window.PushNotifications.initAfterLogin().catch(error => {
+        console.warn('⚠️ Could not initialize push notifications:', error);
+      });
+    }, 1000); // Small delay to ensure everything is loaded
+  }
 }
 
 // Google Sign-In is initialized via HTML (g_id_onload) and handled by handleGoogleLogin below
@@ -809,12 +818,63 @@ function init() {
       navigator.serviceWorker.register('./sw.js', { scope: './' })
         .then(() => {
           console.log('✅ INIT: Service worker registered');
-          // Listen for messages from SW (Paid / Pending button taps)
+          // Listen for messages from SW (Payment action button taps)
           navigator.serviceWorker.addEventListener('message', e => {
             const msg = e.data || {};
-            if      (msg.type === 'NOTIF_MARK_PAID')       handleNotifMarkPaid(msg.loanId, msg.emi);
-            else if (msg.type === 'NOTIF_MARK_PENDING')    handleNotifMarkPending(msg.loanId);
-            else if (msg.type === 'NOTIF_OPEN_COLLECTION') navigateTo('collection');
+            console.log('📨 App: Message from SW:', msg.type, msg);
+            
+            // Handle payment action success from Service Worker
+            if (msg.type === 'PAYMENT_ACTION_SUCCESS') {
+              console.log('✅ App: Payment action completed:', msg.action);
+              
+              const { action, loan_id, amount, client_name, result } = msg;
+              
+              // Update app data based on action
+              if (action === 'paid') {
+                console.log(`💾 App: Recording ₹${amount} as PAID for loan ${loan_id}`);
+                handleNotifMarkPaid(loan_id, amount);
+              } else if (action === 'unpaid') {
+                console.log(`💾 App: Marking loan ${loan_id} as UNPAID`);
+                handleNotifMarkPending(loan_id);
+              } else if (action === 'partly_paid') {
+                console.log(`💾 App: Recording ₹${amount} partial payment for loan ${loan_id}`);
+                handlePartialPayment(loan_id, amount);
+              }
+              
+              // Show success message
+              showToast(`✅ ${action.toUpperCase()} - ₹${amount} recorded for ${client_name}`, 'success');
+              
+              // Refresh the page to show updated data
+              console.log('🔄 App: Refreshing current page');
+              setTimeout(() => {
+                if (state.currentPage === 'collection' || state.currentPage === 'loans') {
+                  refreshCurrentPage();
+                }
+              }, 500);
+            }
+            
+            // Handle payment action errors
+            else if (msg.type === 'PAYMENT_ACTION_ERROR') {
+              console.error('❌ App: Payment action error:', msg.error);
+              showToast(`❌ Error: ${msg.error}`, 'error');
+            }
+            
+            // Handle notification clicks (body tap)
+            else if (msg.type === 'NOTIF_CLICK') {
+              console.log('🔔 App: Notification body clicked');
+              navigateTo('collection');
+            }
+            
+            // Legacy handlers for backward compatibility
+            else if (msg.type === 'NOTIF_MARK_PAID') {
+              handleNotifMarkPaid(msg.loanId, msg.emi);
+            }
+            else if (msg.type === 'NOTIF_MARK_PENDING') {
+              handleNotifMarkPending(msg.loanId);
+            }
+            else if (msg.type === 'NOTIF_OPEN_COLLECTION') {
+              navigateTo('collection');
+            }
           });
         })
         .catch((err) => {
@@ -894,6 +954,66 @@ function handleNotifMarkPaid(loanId, emiAmount) {
 function handleNotifMarkPending(loanId) {
   showToast('⏳ Marked as Pending. Reminder will stay active.', 'info');
   navigateTo('collection');
+}
+
+// ── Notification action: 💰 Partial Payment ──────────────────
+function handlePartialPayment(loanId, partialAmount) {
+  if (!loanId || !partialAmount) return;
+  
+  const loan = Store.loans().find(l => l.id === loanId);
+  if (!loan) { 
+    showToast('Loan not found', 'error'); 
+    return; 
+  }
+  
+  const stats = calcLoanStats(loan);
+  const amount = parseFloat(partialAmount);
+  
+  if (amount <= 0 || amount > stats.emi) {
+    showToast('Invalid partial payment amount', 'error');
+    return;
+  }
+  
+  // Record partial payment
+  const payment = {
+    id: uid(), 
+    loanId, 
+    amount, 
+    date: today(),
+    note: `Partial payment via notification (₹${amount} of ₹${stats.emi})`, 
+    createdAt: new Date().toISOString()
+  };
+  
+  const payments = Store.payments();
+  payments.push(payment);
+  Store.savePayments(payments);
+  
+  // Check if loan is now fully paid with this partial payment
+  const newStats = calcLoanStats(loan);
+  if (newStats.remaining - amount <= 0) {
+    const loans = Store.loans();
+    const idx = loans.findIndex(l => l.id === loanId);
+    if (idx !== -1) { 
+      loans[idx].status = 'completed'; 
+      Store.saveLoans(loans); 
+      showToast(`✅ Loan completed with partial payment of ₹${amount}!`, 'success');
+    }
+  } else {
+    showToast(`✅ Partial payment of ₹${amount} recorded (₹${(stats.emi - amount).toFixed(2)} remaining for this EMI)`, 'success');
+  }
+  
+  updateNotifBadge();
+  navigateTo('collection');
+}
+
+// ── Refresh current page after payment updates ───────────────
+function refreshCurrentPage() {
+  if (typeof navigateTo === 'function' && state.currentPage) {
+    // Re-render current page to show updated data
+    setTimeout(() => {
+      navigateTo(state.currentPage);
+    }, 100);
+  }
 }
 
 
@@ -2301,9 +2421,7 @@ function renderSettings(container) {
         <div class="section-title"><i class="fa-solid fa-database"></i>Data Management</div>
         <button class="btn-kf-outline pro-btn-outline w-100 mb-3" id="btn-settings-export-pdf" data-ocid="settings.export_pdf_button"><i class="fa-solid fa-file-pdf me-1"></i>Export Data (PDF)</button>
         <button class="btn-kf-outline pro-btn-outline w-100 mb-3" id="btn-load-dummy-clients" style="background: rgba(255, 165, 0, 0.1); border-color: orange; color: orange;"><i class="fa-solid fa-flask me-1"></i>Load Dummy Clients (18)</button>
-        <button class="btn-kf-outline pro-btn-outline w-100 mb-2" id="btn-test-basic-notification" style="background: rgba(255, 0, 128, 0.1); border-color: #ff0080; color: #ff0080;"><i class="fa-solid fa-star me-1"></i>Test Basic Notification</button>
-        <button class="btn-kf-outline pro-btn-outline w-100 mb-3" id="btn-test-simple-notification" style="background: rgba(76, 175, 26, 0.1); border-color: #4caf1a; color: #4caf1a;"><i class="fa-solid fa-rocket me-1"></i>Test Simple Notification</button>
-        <button class="btn-kf-outline pro-btn-outline w-100 mb-3" id="btn-test-notifications" style="background: rgba(0, 207, 255, 0.1); border-color: #00cfff; color: #00cfff;"><i class="fa-solid fa-bell me-1"></i>Test Loan Notifications</button>
+
         <button class="btn-kf-danger pro-btn-danger w-100" id="btn-clear-data" data-ocid="settings.clear_data_button"><i class="fa-solid fa-trash me-1"></i><span data-i18n="clearData">${t('clearData')}</span></button>
       </div>
 
@@ -2691,338 +2809,26 @@ create table if not exists payments (
 
   $('#btn-settings-export-pdf')?.addEventListener('click', () => exportAllDataAsPDF());
   
-  $('#btn-load-dummy-clients')?.addEventListener('click', () => {
-    if (confirm('This will create 18 dummy clients with overdue loans. Continue?')) {
-      loadDummyClientsWithOverdueLoans();
-      showToast('✅ 18 dummy clients with overdue loans created!', 'success');
-      setTimeout(() => {
-        navigateTo('clients');
-      }, 1000);
-    }
-  });
+  // Use document.getElementById for more reliable element selection
+  const btnLoadDummy = document.getElementById('btn-load-dummy-clients');
 
-  $('#btn-test-basic-notification')?.addEventListener('click', async () => {
-    console.log('\n⭐ ========== BASIC NOTIFICATION TEST ==========');
-    
-    try {
-      console.log('🔍 Checking basic notification support...');
-      
-      if (typeof Notification === 'undefined') {
-        console.error('❌ Notification constructor not found');
-        showToast('❌ Notifications not supported', 'error');
-        return;
+  if (btnLoadDummy) {
+    btnLoadDummy.addEventListener('click', () => {
+      if (confirm('This will create 18 dummy clients with overdue loans. Continue?')) {
+        loadDummyClientsWithOverdueLoans();
+        showToast('✅ 18 dummy clients with overdue loans created!', 'success');
+        setTimeout(() => {
+          navigateTo('clients');
+        }, 1000);
       }
+    });
+  }
 
-      console.log('✅ Notification constructor exists');
-      console.log('📱 Permission:', Notification.permission);
 
-      if (Notification.permission === 'denied') {
-        console.error('❌ Notifications denied by user');
-        showToast('❌ Notifications blocked in browser', 'error');
-        return;
-      }
 
-      if (Notification.permission !== 'granted') {
-        console.log('🔔 Requesting permission...');
-        const permission = await Notification.requestPermission();
-        console.log('📱 New permission:', permission);
-        
-        if (permission !== 'granted') {
-          showToast('❌ Permission not granted', 'error');
-          return;
-        }
-      }
 
-      console.log('🚀 Creating minimal notification...');
-      
-      // Create most basic notification possible
-      const basicNotif = new Notification('SamKass Basic Test');
-      
-      console.log('✅ Basic notification created');
-      showToast('✅ Basic notification sent!', 'success');
-
-      setTimeout(() => {
-        basicNotif.close();
-      }, 5000);
-
-      console.log('⭐ ==============================================\n');
-
-    } catch (error) {
-      console.error('❌ Basic notification failed:', error);
-      showToast(`❌ Basic Error: ${error.message}`, 'error');
-    }
-  });
-
-  $('#btn-test-simple-notification')?.addEventListener('click', async () => {
-    console.log('\n🧪 ========== SIMPLE NOTIFICATION TEST ==========');
-    
-    try {
-      // Step 1: Check if Notification API exists
-      if (!('Notification' in window)) {
-        const errorMsg = 'Notifications not supported in this browser';
-        console.error('❌ ' + errorMsg);
-        showToast('❌ ' + errorMsg, 'error');
-        return;
-      }
-
-      console.log('✅ Browser supports notifications');
-      console.log(`📱 Current permission: ${Notification.permission}`);
-      console.log(`🌐 User agent: ${navigator.userAgent.substring(0, 100)}...`);
-      console.log(`🔒 Is HTTPS: ${window.location.protocol === 'https:'}`);
-      console.log(`📍 Origin: ${window.location.origin}`);
-
-      // Step 2: Check current permission
-      if (Notification.permission === 'denied') {
-        const errorMsg = 'Notifications are blocked. Please enable in browser settings.';
-        console.error('❌ ' + errorMsg);
-        showToast('❌ ' + errorMsg, 'error');
-        console.log('💡 To enable: Chrome Settings → Privacy and Security → Site Settings → Notifications');
-        return;
-      }
-
-      // Step 3: Request permission if needed
-      if (Notification.permission !== 'granted') {
-        console.log('🔔 Requesting notification permission...');
-        showToast('🔔 Please allow notifications when browser asks', 'info');
-        
-        let permission;
-        try {
-          permission = await Notification.requestPermission();
-        } catch (permissionError) {
-          console.error('❌ Error requesting permission:', permissionError);
-          showToast('❌ Error requesting permission: ' + permissionError.message, 'error');
-          return;
-        }
-        
-        console.log(`📱 Permission result: ${permission}`);
-        
-        if (permission !== 'granted') {
-          const errorMsg = 'Notification permission denied. Please allow notifications.';
-          console.error('❌ ' + errorMsg);
-          showToast('❌ ' + errorMsg, 'error');
-          return;
-        }
-      }
-
-      console.log('✅ Permission granted, creating test notification...');
-
-      // Step 4: Create and show test notification
-      let testNotification;
-      try {
-        testNotification = new Notification('✅ SamKass Notifications Working!', {
-          body: 'Great! Your browser can show notifications. Click to close.',
-          icon: window.location.origin + '/logo.png',
-          badge: window.location.origin + '/logo.png',
-          requireInteraction: true,
-          tag: 'simple-test-' + Date.now(),
-          timestamp: Date.now()
-        });
-
-        console.log('✅ Notification object created successfully');
-
-        // Handle notification events
-        testNotification.onshow = () => {
-          console.log('👁️ Notification displayed');
-        };
-
-        testNotification.onclick = () => {
-          console.log('👆 Test notification clicked');
-          window.focus();
-          testNotification.close();
-        };
-
-        testNotification.onclose = () => {
-          console.log('🚪 Notification closed');
-        };
-
-        testNotification.onerror = (error) => {
-          console.error('❌ Notification error:', error);
-        };
-
-      } catch (notifError) {
-        console.error('❌ Error creating notification:', notifError);
-        console.error('Error details:', {
-          name: notifError.name,
-          message: notifError.message,
-          stack: notifError.stack
-        });
-        showToast('❌ Error creating notification: ' + notifError.message, 'error');
-        return;
-      }
-
-      showToast('✅ Test notification sent! Check if it appeared.', 'success');
-      console.log('✅ Simple notification test completed successfully');
-      console.log('🧪 ==============================================\n');
-
-    } catch (error) {
-      console.error('❌ FATAL ERROR in simple notification test:', error);
-      console.error('Error details:', {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-        toString: error.toString()
-      });
-      showToast(`❌ Fatal Error: ${error.message}`, 'error');
-      console.log('🧪 ============= TEST FAILED =============\n');
-    }
-  });
   
-  $('#btn-test-notifications')?.addEventListener('click', async () => {
-    try {
-      console.log('\n========== INSTANT NOTIFICATION TEST ==========');
-      
-      // FIRST: Try simple notification test
-      if (window.SimpleNotifications && window.SimpleNotifications.testNow) {
-        console.log('🧪 Testing basic notification first...');
-        const testWorked = await window.SimpleNotifications.testNow();
-        
-        if (!testWorked) {
-          console.error('❌ Basic notification test failed');
-          showToast('❌ Basic notifications are not working. Check browser settings!', 'error');
-          return;
-        }
-        
-        console.log('✅ Basic notification test PASSED');
-        showToast('✅ Basic notification works! Now testing loan notifications...', 'success');
-        
-        // Wait for user to see the test notification
-        setTimeout(() => {
-          continueWithLoanTest();
-        }, 2000);
-      } else {
-        console.error('❌ SimpleNotifications not available');
-        showToast('❌ Notification system not loaded', 'error');
-      }
 
-      function continueWithLoanTest() {
-        console.log('\n--- Starting Loan Notification Test ---');
-        
-        // Check SimpleNotifications
-        if (!window.SimpleNotifications) {
-          console.error('❌ SimpleNotifications not available');
-          showToast('❌ Notification system not loaded yet. Please wait and try again.', 'error');
-          return;
-        }
-        console.log('✅ SimpleNotifications available');
-
-        // Check Store
-        if (!window.Store) {
-          console.error('❌ Store not available');
-          showToast('❌ App data not loaded. Please wait and try again.', 'error');
-          return;
-        }
-        console.log('✅ Store available');
-
-        // Get data
-        const loans = window.Store.loans() || [];
-        const clients = window.Store.clients() || [];
-        console.log(`📊 Data: ${loans.length} loans, ${clients.length} clients`);
-
-        if (loans.length === 0 || clients.length === 0) {
-          console.log('ℹ️ No loan data - creating simple test notification instead');
-          
-          // Create a fake notification to test
-          setTimeout(() => {
-            const fakeNotification = new Notification('🔔 EMI Due — Test Client', {
-              body: '₹5000 is overdue. How was the collection?',
-              icon: '/logo.png',
-              requireInteraction: true,
-              tag: 'test-emi-notification'
-            });
-            
-            fakeNotification.onclick = () => {
-              window.focus();
-              fakeNotification.close();
-            };
-            
-            showToast('✅ Test EMI notification shown!', 'success');
-            console.log('✅ Test EMI notification created');
-          }, 500);
-          
-          return;
-        }
-
-        // Check loan structure
-        const firstLoan = loans[0];
-        console.log('\n📋 First Loan Structure:');
-        console.log('  - id:', firstLoan.id);
-        console.log('  - clientId:', firstLoan.clientId);
-        console.log('  - status:', firstLoan.status);
-        console.log('  - startDate:', firstLoan.startDate);
-        console.log('  - nextDueDate:', firstLoan.nextDueDate);
-        console.log('  - principal:', firstLoan.principal);
-
-        // Scan for overdue loans
-        console.log('\n🔍 Scanning loans for overdue items...');
-        const today = new Date().toISOString().split('T')[0];
-        console.log(`📅 Today's date: ${today}`);
-        let overdueCount = 0;
-
-        loans.forEach((loan, i) => {
-          if (loan.status !== 'active') {
-            console.log(`  ⊘ Loan ${i+1}: Status is ${loan.status} (skipped)`);
-            return;
-          }
-          const dueDate = loan.nextDueDate || loan.next_due_date;
-          const client = clients.find(c => c.id === loan.clientId);
-          if (!dueDate) {
-            console.log(`  ⊘ Loan ${i+1}: ${client?.name} - NO DUE DATE`);
-            return;
-          }
-          const daysOverdue = Math.floor((new Date(today) - new Date(dueDate)) / (1000 * 60 * 60 * 24));
-          if (dueDate <= today) {
-            console.log(`  ✅ Loan ${i+1}: ${client?.name} - Due: ${dueDate} (OVERDUE by ${daysOverdue} days)`);
-            overdueCount++;
-          } else {
-            console.log(`  ⏳ Loan ${i+1}: ${client?.name} - Due: ${dueDate} (not yet due in ${Math.abs(daysOverdue)} days)`);
-          }
-        });
-
-        console.log(`\n📊 Overdue loans found: ${overdueCount}`);
-
-        if (overdueCount === 0) {
-          console.log('ℹ️ No overdue loans found - creating test notification anyway');
-          
-          // Force create a notification
-          setTimeout(() => {
-            const fakeNotification = new Notification('🔔 EMI Due — Sample Client', {
-              body: '₹10000 would be overdue. This is a test!',
-              icon: '/logo.png',
-              requireInteraction: true,
-              tag: 'fake-overdue-notification'
-            });
-            
-            fakeNotification.onclick = () => {
-              window.focus();
-              fakeNotification.close();
-            };
-            
-            showToast('✅ Sample overdue notification shown!', 'success');
-          }, 500);
-          
-          console.log('========== END TEST ==========\n');
-          return;
-        }
-
-        console.log(`\n✅ Found ${overdueCount} overdue loans, triggering notifications...`);
-        
-        // Trigger actual loan notifications
-        setTimeout(() => {
-          console.log('🎬 Executing checkOverdue()...');
-          window.SimpleNotifications.checkOverdue();
-          console.log('✅ Loan notification check triggered');
-          console.log('========== END TEST ==========\n');
-          showToast(`✅ Notifications triggered for ${overdueCount} overdue loans!`, 'success');
-        }, 500);
-      }
-
-    } catch (error) {
-      console.error('❌ FATAL ERROR in notification test:', error);
-      console.error(error.stack);
-      showToast(`❌ Error: ${error.message}`, 'error');
-      console.log('========== END TEST (ERROR) ==========\n');
-    }
-  });
   
   $('#btn-clear-data').addEventListener('click', () => {
     state.deleteCallback = () => {
@@ -3806,7 +3612,161 @@ function confirmDelete(type, id) {
 let _swReg = null;
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.ready.then(r => { _swReg = r; });
+  
+  // Listen for messages from Service Worker
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    const msg = event.data;
+    console.log('📨 App received message:', msg.type);
+
+    if (msg.type === 'GET_TOKEN_FOR_SW') {
+      // SW requesting token
+      const session = getSession();
+      const token = session?.token || null;
+      console.log('📤 Sending token to SW');
+      if (event.ports && event.ports[0]) {
+        event.ports[0].postMessage({ token });
+      }
+    }
+
+    if (msg.type === 'PROMPT_PARTIAL_AMOUNT') {
+      // SW requesting partial amount from user
+      promptPartialAmountModal(msg.emi_amount, (amount) => {
+        if (event.ports && event.ports[0]) {
+          event.ports[0].postMessage({ amount });
+        }
+      });
+    }
+
+    if (msg.type === 'PAYMENT_RECORDED') {
+      // Payment successfully recorded
+      console.log('✅ Payment recorded:', msg.action, '₹' + msg.amount);
+      
+      // Auto-update the app
+      updatePaymentData(msg.loan_id, msg.action, msg.amount);
+      
+      // Show success message
+      showToast(`✅ ${msg.action.toUpperCase()} - ₹${msg.amount} for ${msg.client_name}`, 'success');
+      
+      // Refresh current page
+      setTimeout(() => {
+        if (state.currentPage === 'collection') {
+          navigateTo('collection');
+        }
+      }, 500);
+    }
+
+    if (msg.type === 'ERROR') {
+      showToast('❌ ' + msg.message, 'error');
+    }
+  });
 }
+
+// Update payment data in the app
+function updatePaymentData(loanId, action, amount) {
+  const loans = Store.loans();
+  const payments = Store.payments();
+  
+  const loan = loans.find(l => l.id === loanId);
+  if (!loan) return;
+
+  // Record the payment
+  const payment = {
+    id: uid(),
+    loanId: loanId,
+    amount: amount,
+    date: today(),
+    note: `${action.toUpperCase()} via notification`,
+    createdAt: new Date().toISOString()
+  };
+
+  payments.push(payment);
+  Store.savePayments(payments);
+
+  // Check if loan is completed
+  const stats = calcLoanStats(loan);
+  const remaining = stats.remaining - amount;
+
+  if (remaining <= 0 && action === 'paid') {
+    loan.status = 'completed';
+    loans[loans.indexOf(loan)] = loan;
+    Store.saveLoans(loans);
+  }
+
+  updateNotifBadge();
+  console.log('💾 Payment data updated in app');
+}
+
+// Prompt for partial payment amount
+function promptPartialAmountModal(emiAmount, callback) {
+  // Create modal
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  `;
+
+  modal.innerHTML = `
+    <div style="
+      background: white;
+      border-radius: 15px;
+      padding: 30px;
+      max-width: 400px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    ">
+      <h2 style="margin-top: 0; color: #333;">💰 Partial Payment</h2>
+      <p style="color: #666;">EMI Amount: <strong>₹${emiAmount}</strong></p>
+      
+      <input type="number" id="partial-amt" placeholder="Enter amount" 
+        min="1" max="${emiAmount}" step="0.01"
+        style="
+          width: 100%;
+          padding: 12px;
+          border: 2px solid #e9ecef;
+          border-radius: 8px;
+          font-size: 16px;
+          box-sizing: border-box;
+          margin-bottom: 15px;
+        ">
+      
+      <div style="display: flex; gap: 10px;">
+        <button onclick="this.parentElement.parentElement.parentElement.remove(); 
+          document.querySelector('#partial-amt-result').callback(0);" 
+          style="flex: 1; padding: 12px; background: #e9ecef; border: none; border-radius: 8px; cursor: pointer;">
+          Cancel
+        </button>
+        <button onclick="
+          const amt = parseFloat(document.querySelector('#partial-amt').value);
+          if(amt > 0 && amt <= ${emiAmount}) {
+            this.parentElement.parentElement.parentElement.remove();
+            document.querySelector('#partial-amt-result').callback(amt);
+          } else {
+            alert('Enter amount between 1 and ${emiAmount}');
+          }
+        " style="flex: 1; padding: 12px; background: #7ed321; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
+          Confirm
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  document.getElementById('partial-amt').focus();
+
+  // Store callback
+  const result = document.createElement('div');
+  result.id = 'partial-amt-result';
+  result.callback = callback;
+  document.body.appendChild(result);
+}
+
 
 /**
  * Request notification permission and schedule daily alert.

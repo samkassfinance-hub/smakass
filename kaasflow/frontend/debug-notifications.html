@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SamKass - Notification Diagnostics</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 20px; background: #f4f7f4; }
+        .diagnostic-card { background: white; padding: 20px; margin: 15px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .status { padding: 8px 12px; margin: 5px 0; border-radius: 4px; font-weight: bold; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button { background: #7ed321; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #6cb91a; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 12px; }
+        h1 { text-align: center; color: #333; }
+        h2 { color: #555; margin-top: 0; }
+    </style>
+</head>
+<body>
+    <h1>🔔 SamKass Notification System Diagnostics</h1>
+    
+    <div class="diagnostic-card">
+        <h2>Environment Information</h2>
+        <div id="env-info"></div>
+    </div>
+
+    <div class="diagnostic-card">
+        <h2>Browser Support</h2>
+        <div id="browser-support"></div>
+    </div>
+
+    <div class="diagnostic-card">
+        <h2>VAPID Configuration</h2>
+        <div id="vapid-config"></div>
+    </div>
+
+    <div class="diagnostic-card">
+        <h2>Service Worker</h2>
+        <div id="service-worker"></div>
+    </div>
+
+    <div class="diagnostic-card">
+        <h2>Notification Permission</h2>
+        <div id="notification-permission"></div>
+        <button onclick="testPermission()">Request Permission</button>
+    </div>
+
+    <div class="diagnostic-card">
+        <h2>Push Subscription Test</h2>
+        <div id="push-subscription"></div>
+        <button onclick="testPushSubscription()">Test Push Subscription</button>
+    </div>
+
+    <div class="diagnostic-card">
+        <h2>Simple Notification Test</h2>
+        <div id="simple-notification"></div>
+        <button onclick="testSimpleNotification()">Send Test Notification</button>
+    </div>
+
+    <div class="diagnostic-card">
+        <h2>SamKass App Integration</h2>
+        <div id="app-integration"></div>
+    </div>
+
+    <div class="diagnostic-card">
+        <h2>Debug Console</h2>
+        <div id="debug-console"></div>
+        <pre id="console-output"></pre>
+    </div>
+
+    <script>
+        let diagnostics = {
+            environment: {},
+            browserSupport: {},
+            vapidConfig: {},
+            serviceWorker: {},
+            permission: {},
+            pushSubscription: {},
+            appIntegration: {}
+        };
+
+        function logToConsole(message) {
+            const consoleOutput = document.getElementById('console-output');
+            const timestamp = new Date().toLocaleTimeString();
+            consoleOutput.innerHTML += `[${timestamp}] ${message}\n`;
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+
+        function updateStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML += `<div class="status ${type}">${message}</div>`;
+            logToConsole(`${type.toUpperCase()}: ${message}`);
+        }
+
+        function runAllDiagnostics() {
+            checkEnvironment();
+            checkBrowserSupport();
+            checkVAPIDConfig();
+            checkServiceWorker();
+            checkNotificationPermission();
+            checkAppIntegration();
+        }
+
+        function checkEnvironment() {
+            const info = {
+                url: window.location.href,
+                protocol: window.location.protocol,
+                host: window.location.host,
+                userAgent: navigator.userAgent,
+                platform: navigator.platform,
+                online: navigator.onLine,
+                secureContext: window.isSecureContext,
+                cookiesEnabled: navigator.cookieEnabled,
+                language: navigator.language,
+                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+            };
+
+            diagnostics.environment = info;
+
+            let html = '<pre>' + JSON.stringify(info, null, 2) + '</pre>';
+            
+            if (info.protocol !== 'https:' && info.host !== 'localhost') {
+                html += '<div class="status error">❌ HTTPS required for push notifications</div>';
+            } else {
+                html += '<div class="status success">✅ HTTPS protocol detected</div>';
+            }
+
+            if (!info.secureContext) {
+                html += '<div class="status error">❌ Not in secure context</div>';
+            } else {
+                html += '<div class="status success">✅ Secure context confirmed</div>';
+            }
+
+            document.getElementById('env-info').innerHTML = html;
+        }
+
+        function checkBrowserSupport() {
+            const support = {
+                notifications: 'Notification' in window,
+                serviceWorker: 'serviceWorker' in navigator,
+                pushManager: 'PushManager' in window,
+                promises: 'Promise' in window,
+                fetch: 'fetch' in window
+            };
+
+            diagnostics.browserSupport = support;
+
+            let html = '';
+            Object.entries(support).forEach(([feature, supported]) => {
+                const status = supported ? 'success' : 'error';
+                const icon = supported ? '✅' : '❌';
+                html += `<div class="status ${status}">${icon} ${feature}: ${supported}</div>`;
+            });
+
+            const allSupported = Object.values(support).every(s => s);
+            if (allSupported) {
+                html += '<div class="status success">✅ Browser fully supports push notifications</div>';
+            } else {
+                html += '<div class="status error">❌ Browser missing required features</div>';
+            }
+
+            document.getElementById('browser-support').innerHTML = html;
+        }
+
+        function checkVAPIDConfig() {
+            try {
+                // Try to load config from different sources
+                const sources = [
+                    () => window.SamKassConfig?.VAPID_PUBLIC_KEY,
+                    () => window.VAPID_PUBLIC_KEY,
+                    () => localStorage.getItem('VAPID_PUBLIC_KEY')
+                ];
+
+                let vapidKey = null;
+                let source = 'Not found';
+
+                for (let i = 0; i < sources.length; i++) {
+                    try {
+                        const key = sources[i]();
+                        if (key && key !== 'REPLACE_WITH_YOUR_VAPID_PUBLIC_KEY') {
+                            vapidKey = key;
+                            source = ['SamKassConfig', 'window.VAPID_PUBLIC_KEY', 'localStorage'][i];
+                            break;
+                        }
+                    } catch (e) {
+                        // Continue to next source
+                    }
+                }
+
+                let html = '';
+                
+                if (!vapidKey) {
+                    html += '<div class="status error">❌ VAPID public key not found</div>';
+                    html += '<div class="status info">Checked: window.SamKassConfig, window.VAPID_PUBLIC_KEY, localStorage</div>';
+                } else if (vapidKey === 'REPLACE_WITH_YOUR_VAPID_PUBLIC_KEY') {
+                    html += '<div class="status error">❌ VAPID key not configured (placeholder found)</div>';
+                } else {
+                    html += `<div class="status success">✅ VAPID key found from ${source}</div>`;
+                    html += `<div class="status info">Key length: ${vapidKey.length} characters</div>`;
+                    html += `<div class="status info">Key preview: ${vapidKey.substring(0, 50)}...</div>';
+                }
+
+                diagnostics.vapidConfig = { vapidKey, source };
+                document.getElementById('vapid-config').innerHTML = html;
+
+            } catch (error) {
+                updateStatus('vapid-config', `❌ Error checking VAPID config: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkServiceWorker() {
+            if (!('serviceWorker' in navigator)) {
+                updateStatus('service-worker', '❌ Service Worker not supported', 'error');
+                return;
+            }
+
+            try {
+                // Check if already registered
+                const registration = await navigator.serviceWorker.getRegistration();
+                
+                if (registration) {
+                    updateStatus('service-worker', '✅ Service Worker already registered', 'success');
+                    updateStatus('service-worker', `Scope: ${registration.scope}`, 'info');
+                    updateStatus('service-worker', `State: ${registration.active?.state || 'unknown'}`, 'info');
+                } else {
+                    updateStatus('service-worker', '⚠️ Service Worker not registered', 'warning');
+                    
+                    // Try to register
+                    try {
+                        const newRegistration = await navigator.serviceWorker.register('/sw.js');
+                        updateStatus('service-worker', '✅ Service Worker registered successfully', 'success');
+                        diagnostics.serviceWorker = { registered: true, scope: newRegistration.scope };
+                    } catch (regError) {
+                        updateStatus('service-worker', `❌ Failed to register SW: ${regError.message}`, 'error');
+                        diagnostics.serviceWorker = { registered: false, error: regError.message };
+                    }
+                }
+            } catch (error) {
+                updateStatus('service-worker', `❌ Error checking Service Worker: ${error.message}`, 'error');
+            }
+        }
+
+        function checkNotificationPermission() {
+            if (!('Notification' in window)) {
+                updateStatus('notification-permission', '❌ Notifications not supported', 'error');
+                return;
+            }
+
+            const permission = Notification.permission;
+            diagnostics.permission = { permission };
+
+            switch (permission) {
+                case 'granted':
+                    updateStatus('notification-permission', '✅ Notification permission granted', 'success');
+                    break;
+                case 'denied':
+                    updateStatus('notification-permission', '❌ Notification permission denied', 'error');
+                    updateStatus('notification-permission', 'User must manually enable in browser settings', 'warning');
+                    break;
+                case 'default':
+                    updateStatus('notification-permission', '⚠️ Notification permission not requested yet', 'warning');
+                    break;
+                default:
+                    updateStatus('notification-permission', `❓ Unknown permission state: ${permission}`, 'warning');
+            }
+        }
+
+        async function testPermission() {
+            if (!('Notification' in window)) {
+                updateStatus('notification-permission', '❌ Notifications not supported', 'error');
+                return;
+            }
+
+            try {
+                const permission = await Notification.requestPermission();
+                
+                if (permission === 'granted') {
+                    updateStatus('notification-permission', '✅ Permission granted!', 'success');
+                } else {
+                    updateStatus('notification-permission', '❌ Permission denied by user', 'error');
+                }
+                
+                diagnostics.permission = { permission };
+            } catch (error) {
+                updateStatus('notification-permission', `❌ Error requesting permission: ${error.message}`, 'error');
+            }
+        }
+
+        async function testPushSubscription() {
+            try {
+                if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                    updateStatus('push-subscription', '❌ Push notifications not supported', 'error');
+                    return;
+                }
+
+                const registration = await navigator.serviceWorker.getRegistration() || 
+                                   await navigator.serviceWorker.register('/sw.js');
+
+                const vapidKey = window.SamKassConfig?.VAPID_PUBLIC_KEY;
+                if (!vapidKey) {
+                    updateStatus('push-subscription', '❌ No VAPID key available', 'error');
+                    return;
+                }
+
+                // Convert VAPID key
+                const applicationServerKey = urlBase64ToUint8Array(vapidKey);
+                
+                const subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: applicationServerKey
+                });
+
+                updateStatus('push-subscription', '✅ Push subscription successful!', 'success');
+                updateStatus('push-subscription', `Endpoint: ${subscription.endpoint}`, 'info');
+                
+                diagnostics.pushSubscription = {
+                    success: true,
+                    endpoint: subscription.endpoint
+                };
+
+            } catch (error) {
+                updateStatus('push-subscription', `❌ Push subscription failed: ${error.message}`, 'error');
+                diagnostics.pushSubscription = { success: false, error: error.message };
+            }
+        }
+
+        async function testSimpleNotification() {
+            if (Notification.permission !== 'granted') {
+                updateStatus('simple-notification', '❌ Need notification permission first', 'error');
+                return;
+            }
+
+            try {
+                // Use Service Worker for action buttons
+                if ('serviceWorker' in navigator) {
+                    const registration = await navigator.serviceWorker.ready || await navigator.serviceWorker.register('/sw.js');
+                    
+                    const notificationOptions = {
+                        body: 'Service Worker notification with action buttons is working!',
+                        icon: '/logo.png',
+                        requireInteraction: true,
+                        tag: 'samkass-diagnostic-test',
+                        actions: [
+                            {
+                                action: 'paid',
+                                title: '✅ Paid',
+                                icon: '/logo.png'
+                            },
+                            {
+                                action: 'unpaid',
+                                title: '❌ Unpaid',
+                                icon: '/logo.png'
+                            },
+                            {
+                                action: 'partly_paid',
+                                title: '💰 Partial',
+                                icon: '/logo.png'
+                            }
+                        ],
+                        data: {
+                            test: true,
+                            loan_id: 'diagnostic-test',
+                            client_name: 'Test Client',
+                            amount: 5000
+                        }
+                    };
+
+                    await registration.showNotification('🔔 SamKass Test (With Action Buttons)', notificationOptions);
+                    updateStatus('simple-notification', '✅ Service Worker notification with action buttons sent!', 'success');
+                } else {
+                    // Fallback to simple notification
+                    const notification = new Notification('🔔 SamKass Diagnostic Test', {
+                        body: 'Simple notification is working! (No action buttons - Service Worker not available)',
+                        icon: '/logo.png',
+                        requireInteraction: true,
+                        tag: 'samkass-diagnostic-test'
+                    });
+
+                    notification.onclick = () => {
+                        updateStatus('simple-notification', '✅ Notification clicked!', 'success');
+                        notification.close();
+                    };
+
+                    updateStatus('simple-notification', '⚠️ Simple notification sent (no action buttons)', 'warning');
+                }
+
+            } catch (error) {
+                updateStatus('simple-notification', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        function checkAppIntegration() {
+            const checks = {
+                samKassConfig: !!window.SamKassConfig,
+                pushNotifications: !!window.PushNotifications,
+                simpleNotifications: !!window.SimpleNotifications,
+                store: !!window.Store,
+                testNotificationNow: typeof window.testNotificationNow === 'function'
+            };
+
+            diagnostics.appIntegration = checks;
+
+            let html = '';
+            Object.entries(checks).forEach(([feature, available]) => {
+                const status = available ? 'success' : 'warning';
+                const icon = available ? '✅' : '⚠️';
+                html += `<div class="status ${status}">${icon} ${feature}: ${available ? 'Available' : 'Not Available'}</div>`;
+            });
+
+            document.getElementById('app-integration').innerHTML = html;
+        }
+
+        // VAPID key conversion utility
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding)
+                .replace(/-/g, '+')
+                .replace(/_/g, '/');
+
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+
+        // Run diagnostics on load
+        window.onload = () => {
+            logToConsole('Starting SamKass notification diagnostics...');
+            runAllDiagnostics();
+            
+            // Add download diagnostics button
+            const debugConsole = document.getElementById('debug-console');
+            debugConsole.innerHTML = '<button onclick="downloadDiagnostics()">Download Diagnostic Report</button>';
+        };
+
+        function downloadDiagnostics() {
+            const report = {
+                timestamp: new Date().toISOString(),
+                url: window.location.href,
+                diagnostics: diagnostics,
+                userAgent: navigator.userAgent
+            };
+
+            const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `samkass-diagnostics-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Load config if available
+        if (typeof window.SamKassConfig === 'undefined') {
+            // Try to load config.js dynamically
+            const script = document.createElement('script');
+            script.src = 'config.js';
+            script.onerror = () => logToConsole('Could not load config.js');
+            document.head.appendChild(script);
+        }
+    </script>
+</body>
+</html>

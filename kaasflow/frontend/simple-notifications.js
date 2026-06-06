@@ -52,35 +52,97 @@
       const title = `🔔 EMI Due — ${client.name}`;
       const body = `₹${emiAmount} is overdue. How was the collection?`;
       
-      const notification = new Notification(title, {
-        body: body,
-        icon: '/logo.png',
-        badge: '/logo.png',
-        requireInteraction: true,
-        tag: `loan-due-${loan.id}`,
-        data: {
-          loan_id: loan.id,
-          client_id: client.id,
-          client_name: client.name,
-          amount: emiAmount
-        }
-      });
+      // Use Service Worker for notifications with action buttons
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(registration => {
+          const notificationOptions = {
+            body: body,
+            icon: '/logo.png',
+            badge: '/logo.png',
+            requireInteraction: true,
+            tag: `loan-due-${loan.id}`,
+            actions: [
+              {
+                action: 'paid',
+                title: '✅ Paid',
+                icon: '/logo.png'
+              },
+              {
+                action: 'unpaid',
+                title: '❌ Unpaid',
+                icon: '/logo.png'
+              },
+              {
+                action: 'partly_paid',
+                title: '💰 Partial',
+                icon: '/logo.png'
+              }
+            ],
+            data: {
+              loan_id: loan.id,
+              client_id: client.id,
+              client_name: client.name,
+              amount: emiAmount
+            }
+          };
 
-      // Handle notification click
-      notification.onclick = function(event) {
-        event.preventDefault();
-        window.focus();
-        
-        // Navigate to collection page
-        if (window.navigateTo) {
-          window.navigateTo('collection');
-        }
-        
-        notification.close();
-      };
+          registration.showNotification(title, notificationOptions);
+          console.log(`✅ Service Worker notification displayed for ${client.name} (₹${emiAmount})`);
+        }).catch(error => {
+          console.error('❌ Service Worker notification failed:', error);
+          // Fallback to simple notification
+          const notification = new Notification(title, {
+            body: body,
+            icon: '/logo.png',
+            badge: '/logo.png',
+            requireInteraction: true,
+            tag: `loan-due-${loan.id}`,
+            data: {
+              loan_id: loan.id,
+              client_id: client.id,
+              client_name: client.name,
+              amount: emiAmount
+            }
+          });
 
-      console.log(`✅ Notification displayed for ${client.name} (₹${emiAmount})`);
-      return notification;
+          notification.onclick = function(event) {
+            event.preventDefault();
+            window.focus();
+            if (window.navigateTo) {
+              window.navigateTo('collection');
+            }
+            notification.close();
+          };
+        });
+      } else {
+        // Fallback for browsers without Service Worker
+        const notification = new Notification(title, {
+          body: body,
+          icon: '/logo.png',
+          badge: '/logo.png',
+          requireInteraction: true,
+          tag: `loan-due-${loan.id}`,
+          data: {
+            loan_id: loan.id,
+            client_id: client.id,
+            client_name: client.name,
+            amount: emiAmount
+          }
+        });
+
+        notification.onclick = function(event) {
+          event.preventDefault();
+          window.focus();
+          if (window.navigateTo) {
+            window.navigateTo('collection');
+          }
+          notification.close();
+        };
+
+        console.log(`✅ Simple notification displayed for ${client.name} (₹${emiAmount})`);
+      }
+
+      return true;
     } catch (error) {
       console.error('❌ Error creating notification:', error);
       return null;
@@ -274,9 +336,9 @@
     console.log('📅 [NOTIF] Next periodic check in 30 minutes');
   }
 
-  // TEST: Force show a notification immediately
+  // TEST: Force show a notification immediately with action buttons
   async function testNotificationNow() {
-    console.log('🧪 [TEST] Force showing test notification...');
+    console.log('🧪 [TEST] Force showing test notification with action buttons...');
     
     if (Notification.permission !== 'granted') {
       const permission = await Notification.requestPermission();
@@ -287,20 +349,60 @@
     }
 
     try {
-      const testNotification = new Notification('🔔 SamKass Test Notification', {
-        body: 'If you see this, notifications are working!',
-        icon: '/logo.png',
-        requireInteraction: true,
-        tag: 'test-notification'
-      });
+      // Use Service Worker for action buttons
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.ready || await navigator.serviceWorker.register('/sw.js');
+        
+        const notificationOptions = {
+          body: 'Test notification with action buttons - click the buttons to test!',
+          icon: '/logo.png',
+          requireInteraction: true,
+          tag: 'test-notification-with-actions',
+          actions: [
+            {
+              action: 'paid',
+              title: '✅ Paid',
+              icon: '/logo.png'
+            },
+            {
+              action: 'unpaid', 
+              title: '❌ Unpaid',
+              icon: '/logo.png'
+            },
+            {
+              action: 'partly_paid',
+              title: '💰 Partial',
+              icon: '/logo.png'
+            }
+          ],
+          data: {
+            test: true,
+            loan_id: 'test-123',
+            client_name: 'Test Client',
+            amount: 5000
+          }
+        };
 
-      testNotification.onclick = () => {
-        window.focus();
-        testNotification.close();
-      };
+        await registration.showNotification('🔔 SamKass Test (With Action Buttons)', notificationOptions);
+        console.log('✅ [TEST] Service Worker notification with action buttons shown');
+        return true;
+      } else {
+        // Fallback to simple notification
+        const testNotification = new Notification('🔔 SamKass Test Notification', {
+          body: 'Service Worker not available - no action buttons',
+          icon: '/logo.png',
+          requireInteraction: true,
+          tag: 'test-notification'
+        });
 
-      console.log('✅ [TEST] Test notification shown successfully');
-      return true;
+        testNotification.onclick = () => {
+          window.focus();
+          testNotification.close();
+        };
+
+        console.log('⚠️ [TEST] Simple notification shown (no action buttons - Service Worker not available)');
+        return true;
+      }
     } catch (error) {
       console.error('❌ [TEST] Failed to show notification:', error);
       return false;
@@ -320,7 +422,7 @@
 
   console.log('✅ [NOTIF] SimpleNotifications exposed to window');
 
-  // Add global console helper
+  // Add global console helper with action buttons
   window.testNotificationNow = async () => {
     console.log('🧪 Manual notification test from console...');
     
@@ -337,19 +439,61 @@
       }
     }
 
-    const testNotif = new Notification('🔔 Manual Test from Console', {
-      body: 'This notification was triggered from browser console!',
-      icon: '/logo.png',
-      requireInteraction: true,
-      tag: 'manual-console-test'
-    });
+    try {
+      // Use Service Worker for action buttons
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.ready || await navigator.serviceWorker.register('/sw.js');
+        
+        await registration.showNotification('🔔 Manual Test from Console', {
+          body: 'This notification has action buttons! Click them to test.',
+          icon: '/logo.png',
+          requireInteraction: true,
+          tag: 'manual-console-test',
+          actions: [
+            {
+              action: 'paid',
+              title: '✅ Paid',
+              icon: '/logo.png'
+            },
+            {
+              action: 'unpaid',
+              title: '❌ Unpaid', 
+              icon: '/logo.png'
+            },
+            {
+              action: 'partly_paid',
+              title: '💰 Partial',
+              icon: '/logo.png'
+            }
+          ],
+          data: {
+            test: true,
+            loan_id: 'console-test-123',
+            client_name: 'Console Test Client',
+            amount: 1000
+          }
+        });
 
-    testNotif.onclick = () => {
-      window.focus();
-      testNotif.close();
-    };
+        console.log('✅ Manual Service Worker notification with action buttons sent');
+      } else {
+        // Fallback
+        const testNotif = new Notification('🔔 Manual Test from Console', {
+          body: 'This notification was triggered from browser console! (No action buttons - Service Worker not available)',
+          icon: '/logo.png',
+          requireInteraction: true,
+          tag: 'manual-console-test'
+        });
 
-    console.log('✅ Manual test notification sent');
+        testNotif.onclick = () => {
+          window.focus();
+          testNotif.close();
+        };
+
+        console.log('⚠️ Manual simple notification sent (no action buttons)');
+      }
+    } catch (error) {
+      console.error('❌ Error sending notification:', error);
+    }
   };
 
   // Add environment debug function

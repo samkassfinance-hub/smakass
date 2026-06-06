@@ -62,6 +62,16 @@ def delete(table: str, filters: dict):
 
 # ─── Domain helpers ─────────────────────────────────────────────
 
+@lru_cache(maxsize=1)
+def get_supabase_client():
+    """Get a properly initialized Supabase client"""
+    from supabase import create_client, Client
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        raise ValueError("Supabase credentials not configured")
+    return create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# ─── Domain helpers ─────────────────────────────────────────────
+
 class SupabaseDB:
 
     # ── Users ──────────────────────────────────────────────────

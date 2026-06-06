@@ -35,16 +35,7 @@ def get_due_loans():
         
         # Get loans where next_due_date is today or tomorrow
         response = supabase.table('loans').select('''
-            id,
-            client_id,
-            principal,
-            interest_rate,
-            interest_type,
-            duration,
-            type,
-            start_date,
-            next_due_date,
-            status,
+            *,
             clients (
                 id,
                 name,

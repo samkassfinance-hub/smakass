@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SamKass - Test Action Buttons</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f4f7f4;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #7ed321;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+            font-size: 16px;
+        }
+        button:hover { background: #6cb91a; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .status { 
+            padding: 10px; 
+            margin: 10px 0; 
+            border-radius: 5px; 
+            font-weight: bold;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; font-size: 12px; }
+        h1 { text-align: center; color: #333; }
+    </style>
+</head>
+<body>
+    <h1>🔔 SamKass Action Button Test</h1>
+    
+    <div class="card">
+        <h2>Test Notification with Action Buttons</h2>
+        <p>This will show a notification with 3 action buttons: <strong>Paid</strong>, <strong>Unpaid</strong>, and <strong>Partly Paid</strong></p>
+        
+        <button onclick="requestPermission()" id="permission-btn">1. Request Permission</button>
+        <button onclick="registerServiceWorker()" id="sw-btn" disabled>2. Register Service Worker</button>
+        <button onclick="testActionButtons()" id="test-btn" disabled>3. Test Action Buttons</button>
+        
+        <div id="status"></div>
+    </div>
+
+    <div class="card">
+        <h2>Action Button Results</h2>
+        <p>When you click action buttons on the notification, the results will appear here:</p>
+        <div id="action-results"></div>
+    </div>
+
+    <div class="card">
+        <h2>Console Log</h2>
+        <pre id="console-log"></pre>
+    </div>
+
+    <!-- Load config -->
+    <script src="config.js"></script>
+    
+    <script>
+        let hasPermission = false;
+        let swRegistered = false;
+        let registration = null;
+
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const consoleLog = document.getElementById('console-log');
+            consoleLog.innerHTML += `[${timestamp}] ${message}\n`;
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+            console.log(message);
+        }
+
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+            log(`STATUS (${type}): ${message}`);
+        }
+
+        function showActionResult(action, data) {
+            const resultsDiv = document.getElementById('action-results');
+            const timestamp = new Date().toLocaleTimeString();
+            resultsDiv.innerHTML += `
+                <div class="status success">
+                    [${timestamp}] Action "${action}" clicked!<br>
+                    Data: ${JSON.stringify(data, null, 2)}
+                </div>
+            `;
+        }
+
+        async function requestPermission() {
+            log('Requesting notification permission...');
+            
+            if (!('Notification' in window)) {
+                showStatus('❌ Notifications not supported in this browser', 'error');
+                return;
+            }
+
+            try {
+                const permission = await Notification.requestPermission();
+                log(`Permission result: ${permission}`);
+                
+                if (permission === 'granted') {
+                    hasPermission = true;
+                    showStatus('✅ Permission granted!', 'success');
+                    document.getElementById('sw-btn').disabled = false;
+                } else {
+                    showStatus('❌ Permission denied', 'error');
+                }
+            } catch (error) {
+                showStatus(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function registerServiceWorker() {
+            log('Registering Service Worker...');
+            
+            if (!('serviceWorker' in navigator)) {
+                showStatus('❌ Service Worker not supported', 'error');
+                return;
+            }
+
+            try {
+                registration = await navigator.serviceWorker.register('/sw.js');
+                await navigator.serviceWorker.ready;
+                
+                swRegistered = true;
+                showStatus('✅ Service Worker registered successfully!', 'success');
+                document.getElementById('test-btn').disabled = false;
+                
+                log('Service Worker ready for notifications with action buttons');
+                
+                // Listen for messages from Service Worker (action button clicks)
+                navigator.serviceWorker.addEventListener('message', (event) => {
+                    log(`Received message from Service Worker: ${JSON.stringify(event.data)}`);
+                    
+                    if (event.data.type === 'PAYMENT_ACTION_SUCCESS') {
+                        showActionResult(event.data.action, event.data.data);
+                    }
+                });
+                
+            } catch (error) {
+                showStatus(`❌ Service Worker registration failed: ${error.message}`, 'error');
+                log(`SW Error: ${error}`);
+            }
+        }
+
+        async function testActionButtons() {
+            log('Testing notification with action buttons...');
+            
+            if (!hasPermission || !swRegistered || !registration) {
+                showStatus('⚠️ Complete steps 1 and 2 first', 'warning');
+                return;
+            }
+
+            try {
+                const notificationOptions = {
+                    body: 'Click one of the action buttons to test the functionality!',
+                    icon: '/logo.png',
+                    badge: '/logo.png',
+                    requireInteraction: true,
+                    tag: 'action-button-test',
+                    actions: [
+                        {
+                            action: 'paid',
+                            title: '✅ Paid',
+                            icon: '/logo.png'
+                        },
+                        {
+                            action: 'unpaid',
+                            title: '❌ Unpaid',
+                            icon: '/logo.png'
+                        },
+                        {
+                            action: 'partly_paid',
+                            title: '💰 Partial',
+                            icon: '/logo.png'
+                        }
+                    ],
+                    data: {
+                        test: true,
+                        loan_id: 'test-123',
+                        client_id: 'client-456',
+                        client_name: 'John Doe',
+                        amount: 5000,
+                        timestamp: new Date().toISOString()
+                    }
+                };
+
+                await registration.showNotification('🔔 Test Action Buttons - Click One!', notificationOptions);
+                
+                showStatus('✅ Notification with action buttons sent! Click an action button on the notification.', 'success');
+                log('Action button notification displayed');
+                
+            } catch (error) {
+                showStatus(`❌ Error sending notification: ${error.message}`, 'error');
+                log(`Notification Error: ${error}`);
+            }
+        }
+
+        // Initialize
+        window.onload = () => {
+            log('=== SamKass Action Button Test Initialized ===');
+            log(`VAPID Key available: ${!!window.SamKassConfig?.VAPID_PUBLIC_KEY}`);
+            log(`Notification support: ${'Notification' in window}`);
+            log(`Service Worker support: ${'serviceWorker' in navigator}`);
+            log(`Current permission: ${Notification?.permission || 'unknown'}`);
+            
+            if (Notification?.permission === 'granted') {
+                hasPermission = true;
+                showStatus('✅ Permission already granted', 'success');
+                document.getElementById('sw-btn').disabled = false;
+            } else {
+                showStatus('⚠️ Click "Request Permission" to start', 'info');
+            }
+        };
+
+        // Handle Service Worker messages
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                if (event.data && event.data.type) {
+                    switch (event.data.type) {
+                        case 'PAYMENT_ACTION_SUCCESS':
+                            showActionResult(event.data.action, event.data.data);
+                            break;
+                        case 'NOTIF_OPEN_COLLECTION':
+                            log('Notification clicked - should open collection page');
+                            break;
+                        default:
+                            log(`Unknown message type: ${event.data.type}`);
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
