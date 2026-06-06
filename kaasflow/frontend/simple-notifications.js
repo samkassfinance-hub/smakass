@@ -174,19 +174,34 @@
             return;
           }
 
-          // Check due date
-          const dueDate = loan.nextDueDate || loan.next_due_date;
+          // Check due date - try multiple field names
+          let dueDate = loan.nextDueDate || loan.next_due_date;
+          
+          // FALLBACK: If no due date field, try to calculate it
+          if (!dueDate && loan.startDate) {
+            // Simple fallback: assume first payment is due 1 month after start date
+            try {
+              const startDate = new Date(loan.startDate);
+              startDate.setMonth(startDate.getMonth() + 1);
+              dueDate = startDate.toISOString().split('T')[0];
+              console.log(`📅 [NOTIF] Loan ${loan.id}: Calculated due date = ${dueDate}`);
+            } catch (e) {
+              console.warn(`⚠️ [NOTIF] Loan ${loan.id}: Could not calculate due date`);
+              return;
+            }
+          }
+          
           if (!dueDate) {
-            console.warn(`⚠️ [NOTIF] Loan ${loan.id}: No due date set`);
+            console.warn(`⚠️ [NOTIF] Loan ${loan.id}: No due date available`);
             return;
           }
 
-          // Check if due or overdue
+          // Check if due or overdue (TODAY or in the PAST)
           const isDueOrOverdue = dueDate <= today;
 
           if (isDueOrOverdue) {
             foundCount++;
-            console.log(`✅ [NOTIF] Loan ${loan.id}: OVERDUE - Due: ${dueDate}, Client: ${client.name}`);
+            console.log(`✅ [NOTIF] Loan ${loan.id}: OVERDUE - Due: ${dueDate}, Today: ${today}, Client: ${client.name}`);
             
             // Calculate EMI
             const emiAmount = calculateEMI(loan);
@@ -197,6 +212,8 @@
               const result = showLoanDueNotification(loan, client, emiAmount);
               if (result) shownCount++;
             }, foundCount * 800); // 0.8 second delay between notifications
+          } else {
+            console.log(`⏳ [NOTIF] Loan ${loan.id}: Not yet due (Due: ${dueDate}, Today: ${today})`);
           }
         } catch (error) {
           console.error(`❌ [NOTIF] Error processing loan ${index}:`, error);

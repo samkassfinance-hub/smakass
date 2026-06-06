@@ -2736,8 +2736,19 @@ create table if not exists payments (
       if (loans.length === 0 || clients.length === 0) {
         showToast('❌ No loans or clients found. Load dummy data first!', 'error');
         console.warn('⚠️ Insufficient data for notifications');
+        console.log('📌 Hint: Click "Load Dummy Clients (18)" to create test data\n');
         return;
       }
+
+      // Step 4b: Check loan structure
+      const firstLoan = loans[0];
+      console.log('\n📋 First Loan Structure:');
+      console.log('  - id:', firstLoan.id);
+      console.log('  - clientId:', firstLoan.clientId);
+      console.log('  - status:', firstLoan.status);
+      console.log('  - startDate:', firstLoan.startDate);
+      console.log('  - nextDueDate:', firstLoan.nextDueDate);
+      console.log('  - principal:', firstLoan.principal);
 
       // Step 5: Check Notification API support
       if (!('Notification' in window)) {
@@ -2762,29 +2773,42 @@ create table if not exists payments (
 
       // Step 7: Check for overdue loans
       showToast('🔔 Checking for overdue loans...', 'info');
-      console.log('🔍 Scanning loans for overdue items...');
+      console.log('\n🔍 Scanning loans for overdue items...');
       
       const today = new Date().toISOString().split('T')[0];
+      console.log(`📅 Today's date: ${today}`);
       let overdueCount = 0;
 
       loans.forEach((loan, i) => {
-        if (loan.status !== 'active') return;
+        if (loan.status !== 'active') {
+          console.log(`  ⊘ Loan ${i+1}: Status is ${loan.status} (skipped)`);
+          return;
+        }
         const dueDate = loan.nextDueDate || loan.next_due_date;
-        if (dueDate && dueDate <= today) {
-          const client = clients.find(c => c.id === loan.clientId);
-          console.log(`  ✅ Loan ${i+1}: ${client?.name} - Due: ${dueDate}`);
+        const client = clients.find(c => c.id === loan.clientId);
+        if (!dueDate) {
+          console.log(`  ⊘ Loan ${i+1}: ${client?.name} - NO DUE DATE`);
+          return;
+        }
+        const daysOverdue = Math.floor((new Date(today) - new Date(dueDate)) / (1000 * 60 * 60 * 24));
+        if (dueDate <= today) {
+          console.log(`  ✅ Loan ${i+1}: ${client?.name} - Due: ${dueDate} (OVERDUE by ${daysOverdue} days)`);
           overdueCount++;
+        } else {
+          console.log(`  ⏳ Loan ${i+1}: ${client?.name} - Due: ${dueDate} (not yet due in ${Math.abs(daysOverdue)} days)`);
         }
       });
 
+      console.log(`\n📊 Overdue loans found: ${overdueCount}`);
+
       if (overdueCount === 0) {
         console.log('ℹ️ No overdue loans found');
-        showToast('ℹ️ No overdue loans found. Create dummy clients first!', 'info');
-        console.log('📌 Hint: Click "Load Dummy Clients (18)" to create test data\n');
+        showToast('ℹ️ No overdue loans found. Try loading dummy clients again!', 'info');
+        console.log('========== END TEST ==========\n');
         return;
       }
 
-      console.log(`📋 Found ${overdueCount} overdue loans, triggering notifications...`);
+      console.log(`\n✅ Found ${overdueCount} overdue loans, triggering notifications...`);
       
       // Step 8: Trigger check
       setTimeout(() => {
@@ -3264,10 +3288,13 @@ function loadDummyClientsWithOverdueLoans() {
       createdAt: new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0]
     });
 
-    // Create overdue loan
+    // Create overdue loan with EXPLICIT nextDueDate
     const loanId = 'dummy-loan-' + Date.now() + '-' + index;
-    const daysAgo = 15 + Math.floor(Math.random() * 30); // 15-45 days ago
-    const startDate = new Date(today.getTime() - (daysAgo * 24 * 60 * 60 * 1000));
+    const daysAgo = 15 + Math.floor(Math.random() * 30); // 15-45 days ago for due date
+    const daysAgoStart = daysAgo + 45; // Start date even earlier
+    
+    const startDate = new Date(today.getTime() - (daysAgoStart * 24 * 60 * 60 * 1000));
+    const nextDueDate = new Date(today.getTime() - (daysAgo * 24 * 60 * 60 * 1000)); // This is the KEY - set next due date to past
     const principal = 10000 + (index * 5000); // Vary loan amounts
     
     loans.push({
@@ -3279,6 +3306,7 @@ function loadDummyClientsWithOverdueLoans() {
       duration: 12,
       type: 'monthly',
       startDate: startDate.toISOString().split('T')[0],
+      nextDueDate: nextDueDate.toISOString().split('T')[0], // IMPORTANT: Set explicit due date
       status: 'active',
       createdAt: startDate.toISOString().split('T')[0]
     });
@@ -3291,15 +3319,12 @@ function loadDummyClientsWithOverdueLoans() {
   localStorage.setItem(LS.clients, JSON.stringify([...existingClients, ...clients]));
   localStorage.setItem(LS.loans, JSON.stringify([...existingLoans, ...loans]));
   
-  // Trigger sync and notifications
+  // Trigger sync
   triggerAutoSync();
   
-  // Force check for overdue payments and trigger notifications
-  setTimeout(() => {
-    checkDuePaymentsAndNotify();
-  }, 500);
-  
-  console.log('✅ Loaded 18 dummy clients with overdue loans');
+  console.log('✅ Loaded 18 dummy clients with OVERDUE loans');
+  console.log(`📅 All loans have nextDueDate set to 15-45 days ago`);
+  console.log(`📊 Ready for notification testing`);
 }
 
 // ── EXPORT / IMPORT ───────────────────────────────────────────
