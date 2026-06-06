@@ -33,6 +33,7 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
 # Import and register auth routes
 from auth.routes import auth_bp
 from razorpay_integration import payment_routes
+from routes.push import push_bp
 
 import os
 from supabase import create_client, Client
@@ -51,11 +52,22 @@ if SUPABASE_URL and SUPABASE_KEY:
     except Exception as e:
         print(f"Warning: Failed to initialize Supabase client: {e}")
         supabase = None
+        
 app.register_blueprint(auth_bp, url_prefix='/api')
 app.register_blueprint(auth_bp, url_prefix='/auth', name='auth_prefix')
+app.register_blueprint(push_bp, url_prefix='/api')
 
 # Register payment routes
 payment_routes(app)
+
+# Start notification scheduler (only in production/local, not in Vercel serverless)
+if not os.environ.get('VERCEL'):
+    try:
+        from notification_scheduler import start_scheduler
+        start_scheduler()
+        print("✅ Notification scheduler started")
+    except Exception as e:
+        print(f"⚠️ Could not start scheduler: {e}")
 
 @app.route('/health', methods=['GET'])
 def health_check():

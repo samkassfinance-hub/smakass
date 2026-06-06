@@ -13,37 +13,101 @@ self.addEventListener('activate', e  => e.waitUntil(clients.claim()));
 /* ── Notification Click ──────────────────────────────────── */
 self.addEventListener('notificationclick', e => {
   const notification = e.notification;
-  const action       = e.action;            // 'paid' | 'pending' | '' (body tap)
+  const action       = e.action;            // 'paid' | 'unpaid' | 'partly_paid' | '' (body tap)
   const data         = notification.data || {};
 
   notification.close();
 
-  const openOrFocus = (msgType, extra = {}) => {
-    return clients
-      .matchAll({ type: 'window', includeUncontrolled: true })
-      .then(wins => {
-        const msg = { type: msgType, ...data, ...extra };
-        if (wins.length > 0) {
-          // App window already open — focus it and send message
-          wins[0].focus();
-          wins[0].postMessage(msg);
-        } else {
-          // App is closed — open it; it will read pending action from URL
-          const params = new URLSearchParams({ kf_action: msgType, ...data, ...extra });
-          return clients.openWindow('/?' + params.toString());
-        }
+  // Get auth token from client
+  const getAuthToken = async () => {
+    const allClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+    if (allClients.length > 0) {
+      // Request token from client
+      return new Promise((resolve) => {
+        const messageChannel = new MessageChannel();
+        messageChannel.port1.onmessage = (event) => {
+          resolve(event.data.token);
+        };
+        allClients[0].postMessage({ type: 'GET_AUTH_TOKEN' }, [messageChannel.port2]);
       });
+    }
+    return null;
+  };
+
+  const handlePaymentAction = async (actionType, amount = null) => {
+    try {
+      const token = await getAuthToken();
+      
+      if (!token) {
+        console.error('❌ No auth token available');
+        return;
+      }
+
+      const payload = {
+        loan_id: data.loan_id,
+        action: actionType,
+        amount: amount || data.amount
+      };
+
+      const response = await fetch('/api/notify-action', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        console.log('✅ Payment action processed:', result);
+        
+        // Notify all clients to refresh data
+        const allClients = await clients.matchAll({ type: 'window' });
+        allClients.forEach(client => {
+          client.postMessage({
+            type: 'PAYMENT_ACTION_SUCCESS',
+            action: actionType,
+            data: result
+          });
+        });
+      } else {
+        console.error('❌ Payment action failed:', result.error);
+      }
+    } catch (error) {
+      console.error('❌ Error handling payment action:', error);
+    }
   };
 
   if (action === 'paid') {
-    // User tapped ✅ Paid in the notification bar
-    e.waitUntil(openOrFocus('NOTIF_MARK_PAID'));
-  } else if (action === 'pending') {
-    // User tapped ⏳ Pending in the notification bar
-    e.waitUntil(openOrFocus('NOTIF_MARK_PENDING'));
-  } else {
-    // User tapped the notification body — just open the Collection page
-    e.waitUntil(openOrFocus('NOTIF_OPEN_COLLECTION'));
+    // ✅ User clicked PAID button
+    e.waitUntil(handlePaymentAction('paid'));
+  } 
+  else if (action === 'unpaid') {
+    // ❌ User clicked UNPAID button
+    e.waitUntil(handlePaymentAction('unpaid', 0));
+  } 
+  else if (action === 'partly_paid') {
+    // 💰 User clicked PARTLY PAID button - open partial payment page
+    e.waitUntil(
+      clients.openWindow(
+        `/notify-partial.html?loan_id=${data.loan_id}&client_name=${encodeURIComponent(data.client_name)}&amount=${data.amount}`
+      )
+    );
+  } 
+  else {
+    // User tapped notification body - open app to collection page
+    e.waitUntil(
+      clients.matchAll({ type: 'window', includeUncontrolled: true }).then(wins => {
+        if (wins.length > 0) {
+          wins[0].focus();
+          wins[0].postMessage({ type: 'NOTIF_OPEN_COLLECTION' });
+        } else {
+          return clients.openWindow('/?page=collection');
+        }
+      })
+    );
   }
 });
 

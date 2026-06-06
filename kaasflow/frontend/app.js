@@ -2296,6 +2296,8 @@ function renderSettings(container) {
       <div class="kf-card pro-card" data-ocid="settings.data_card">
         <div class="section-title"><i class="fa-solid fa-database"></i>Data Management</div>
         <button class="btn-kf-outline pro-btn-outline w-100 mb-3" id="btn-settings-export-pdf" data-ocid="settings.export_pdf_button"><i class="fa-solid fa-file-pdf me-1"></i>Export Data (PDF)</button>
+        <button class="btn-kf-outline pro-btn-outline w-100 mb-3" id="btn-load-dummy-clients" style="background: rgba(255, 165, 0, 0.1); border-color: orange; color: orange;"><i class="fa-solid fa-flask me-1"></i>Load Dummy Clients (18)</button>
+        <button class="btn-kf-outline pro-btn-outline w-100 mb-3" id="btn-test-notifications" style="background: rgba(0, 207, 255, 0.1); border-color: #00cfff; color: #00cfff;"><i class="fa-solid fa-bell me-1"></i>Test Notifications</button>
         <button class="btn-kf-danger pro-btn-danger w-100" id="btn-clear-data" data-ocid="settings.clear_data_button"><i class="fa-solid fa-trash me-1"></i><span data-i18n="clearData">${t('clearData')}</span></button>
       </div>
 
@@ -2479,7 +2481,7 @@ function renderSettings(container) {
             </div>
             
             <p class="text-muted-kf fs-sm mb-4" style="line-height: 1.6; background: rgba(255,255,255,0.03); border: 1px solid var(--kf-card-border); border-radius: 12px; padding: 12px;">
-              If you would like to use your own private storage for your financier data, you can connect your personal data securely. Once connected, all future data will automatically sync to your private storage. If you need this service CONTACT whatsapp number: <strong>7904987242</strong> or mail <strong>{ mohansampath098@gmail.com }</strong>
+              If you would like to use your own private storage for your financier data, you can connect your personal data securely. Once connected, all future data will automatically sync to your private storage. If you need this service CONTACT whatsapp number: <strong>7904987242</strong> or mail <strong>{ samkassfinance@gmail.com }</strong>
             </p>
 
             <div class="d-flex align-items-center gap-2 mb-4 p-2" style="background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px dashed var(--kf-card-border)">
@@ -2682,6 +2684,34 @@ create table if not exists payments (
   });
 
   $('#btn-settings-export-pdf')?.addEventListener('click', () => exportAllDataAsPDF());
+  
+  $('#btn-load-dummy-clients')?.addEventListener('click', () => {
+    if (confirm('This will create 18 dummy clients with overdue loans. Continue?')) {
+      loadDummyClientsWithOverdueLoans();
+      showToast('✅ 18 dummy clients with overdue loans created!', 'success');
+      setTimeout(() => {
+        navigateTo('clients');
+      }, 1000);
+    }
+  });
+  
+  $('#btn-test-notifications')?.addEventListener('click', async () => {
+    if (window.SimpleNotifications) {
+      // Request permission first
+      const hasPermission = await window.SimpleNotifications.requestPermission();
+      if (hasPermission) {
+        showToast('🔔 Checking for overdue loans...', 'info');
+        setTimeout(() => {
+          window.SimpleNotifications.checkOverdue();
+        }, 500);
+      } else {
+        showToast('❌ Please allow notifications in your browser settings', 'error');
+      }
+    } else {
+      showToast('❌ Notification system not loaded', 'error');
+    }
+  });
+  
   $('#btn-clear-data').addEventListener('click', () => {
     state.deleteCallback = () => {
       requirePinToProceed('Clear Data', () => {
@@ -3110,6 +3140,75 @@ function downloadLoanDetailsPDF(loanId) {
 // [NEW] PDF / Word Download Requirements: Collection Details PDF
 function downloadCollectionDetailsPDF(loanId) {
     downloadLoanDetailsPDF(loanId);
+}
+
+// ── LOAD DUMMY DATA FOR TESTING ──────────────────────────────
+function loadDummyClientsWithOverdueLoans() {
+  const dummyNames = [
+    'Ravi Kumar', 'Priya Sharma', 'Amit Patel', 'Sneha Reddy',
+    'Vikram Singh', 'Anjali Gupta', 'Rahul Verma', 'Pooja Nair',
+    'Suresh Rao', 'Meena Krishnan', 'Arjun Mehta', 'Divya Joshi',
+    'Karthik Iyer', 'Lakshmi Menon', 'Rohan Das', 'Kavita Pillai',
+    'Manoj Agarwal', 'Sita Yadav'
+  ];
+
+  const clients = [];
+  const loans = [];
+  
+  // Generate dates between 15-45 days ago (all past due)
+  const today = new Date();
+  
+  dummyNames.forEach((name, index) => {
+    // Create client
+    const clientId = 'dummy-client-' + Date.now() + '-' + index;
+    const phone = '98' + String(Math.floor(10000000 + Math.random() * 90000000)).substring(0, 8);
+    
+    clients.push({
+      id: clientId,
+      name: name,
+      phone: phone,
+      address: 'Test Address ' + (index + 1),
+      idNum: '',
+      occupation: 'Business',
+      createdAt: new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0]
+    });
+
+    // Create overdue loan
+    const loanId = 'dummy-loan-' + Date.now() + '-' + index;
+    const daysAgo = 15 + Math.floor(Math.random() * 30); // 15-45 days ago
+    const startDate = new Date(today.getTime() - (daysAgo * 24 * 60 * 60 * 1000));
+    const principal = 10000 + (index * 5000); // Vary loan amounts
+    
+    loans.push({
+      id: loanId,
+      clientId: clientId,
+      principal: principal,
+      interestRate: 2,
+      interestType: 'percentage',
+      duration: 12,
+      type: 'monthly',
+      startDate: startDate.toISOString().split('T')[0],
+      status: 'active',
+      createdAt: startDate.toISOString().split('T')[0]
+    });
+  });
+
+  // Save to localStorage
+  const existingClients = Store.clients();
+  const existingLoans = Store.loans();
+  
+  localStorage.setItem(LS.clients, JSON.stringify([...existingClients, ...clients]));
+  localStorage.setItem(LS.loans, JSON.stringify([...existingLoans, ...loans]));
+  
+  // Trigger sync and notifications
+  triggerAutoSync();
+  
+  // Force check for overdue payments and trigger notifications
+  setTimeout(() => {
+    checkDuePaymentsAndNotify();
+  }, 500);
+  
+  console.log('✅ Loaded 18 dummy clients with overdue loans');
 }
 
 // ── EXPORT / IMPORT ───────────────────────────────────────────
