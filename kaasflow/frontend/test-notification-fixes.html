@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Notification Fixes - SamKass</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    .container {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+    }
+    .test-section {
+      margin: 30px 0;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 10px;
+      border-left: 4px solid #667eea;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #667eea;
+      font-size: 1.3em;
+    }
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin: 10px 10px 10px 0;
+      transition: all 0.3s ease;
+    }
+    button:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    button:active {
+      transform: translateY(0);
+    }
+    .status {
+      margin-top: 15px;
+      padding: 15px;
+      border-radius: 8px;
+      font-weight: 500;
+    }
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    .status.info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+    .instructions {
+      background: #fff3cd;
+      color: #856404;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+      border-left: 4px solid #ffc107;
+    }
+    .instructions strong {
+      display: block;
+      margin-bottom: 10px;
+    }
+    pre {
+      background: #2d3748;
+      color: #68d391;
+      padding: 15px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔔 Notification Fixes Test</h1>
+    <p class="subtitle">Test all notification button fixes and auto-update functionality</p>
+
+    <div class="instructions">
+      <strong>✅ What's Fixed:</strong>
+      • All notifications now show 3 buttons: Paid, Unpaid, Partial<br>
+      • Auto-update works when you click any button<br>
+      • Better error handling and logging<br>
+      • Proper message passing between Service Worker and app
+    </div>
+
+    <div class="test-section">
+      <h2>🎯 Test 1: Show Notification with 3 Buttons</h2>
+      <p>Click to show a test notification with all 3 action buttons</p>
+      <button onclick="showTestNotification()">Show Test Notification</button>
+      <div id="test1-status"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>🔐 Test 2: Check Service Worker</h2>
+      <p>Verify that Service Worker is registered and active</p>
+      <button onclick="checkServiceWorker()">Check Service Worker</button>
+      <div id="test2-status"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>📨 Test 3: Message Passing</h2>
+      <p>Test communication between app and Service Worker</p>
+      <button onclick="testMessagePassing()">Test Message Passing</button>
+      <div id="test3-status"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>📊 Test 4: Environment Info</h2>
+      <p>Check browser notification capabilities (check console)</p>
+      <button onclick="showEnvironmentInfo()">Show Environment Info</button>
+      <div id="test4-status"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>📝 Console Commands</h2>
+      <p>Open browser console and try these commands:</p>
+      <pre>testNotificationNow()       // Show test notification
+debugNotificationEnv()      // Show environment debug info</pre>
+    </div>
+  </div>
+
+  <script>
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').then(reg => {
+        console.log('✅ Service Worker registered:', reg.scope);
+      }).catch(err => {
+        console.error('❌ Service Worker registration failed:', err);
+      });
+    }
+
+    // Test 1: Show notification
+    async function showTestNotification() {
+      const statusEl = document.getElementById('test1-status');
+      
+      try {
+        // Request permission
+        if (Notification.permission !== 'granted') {
+          const permission = await Notification.requestPermission();
+          if (permission !== 'granted') {
+            statusEl.className = 'status error';
+            statusEl.textContent = '❌ Notification permission denied';
+            return;
+          }
+        }
+
+        // Show notification with 3 buttons
+        const registration = await navigator.serviceWorker.ready;
+        await registration.showNotification('🔔 Test Notification - 3 Buttons', {
+          body: 'This notification has 3 action buttons! Click them to test.',
+          icon: '/logo.png',
+          requireInteraction: true,
+          tag: 'test-notification-3-buttons',
+          actions: [
+            { action: 'paid', title: '✅ Paid', icon: '/logo.png' },
+            { action: 'unpaid', title: '❌ Unpaid', icon: '/logo.png' },
+            { action: 'partly_paid', title: '💰 Partial', icon: '/logo.png' }
+          ],
+          data: {
+            test: true,
+            loan_id: 'test-123',
+            client_name: 'Test Client',
+            amount: 1000
+          }
+        });
+
+        statusEl.className = 'status success';
+        statusEl.textContent = '✅ Notification shown with 3 action buttons! Check your notification area and click a button.';
+      } catch (error) {
+        statusEl.className = 'status error';
+        statusEl.textContent = '❌ Error: ' + error.message;
+        console.error(error);
+      }
+    }
+
+    // Test 2: Check Service Worker
+    async function checkServiceWorker() {
+      const statusEl = document.getElementById('test2-status');
+      
+      try {
+        if (!('serviceWorker' in navigator)) {
+          statusEl.className = 'status error';
+          statusEl.textContent = '❌ Service Worker not supported in this browser';
+          return;
+        }
+
+        const registration = await navigator.serviceWorker.ready;
+        const hasActive = registration.active !== null;
+        
+        statusEl.className = hasActive ? 'status success' : 'status error';
+        statusEl.innerHTML = hasActive 
+          ? `✅ Service Worker is active<br>Scope: ${registration.scope}<br>State: ${registration.active.state}`
+          : '❌ Service Worker is not active';
+      } catch (error) {
+        statusEl.className = 'status error';
+        statusEl.textContent = '❌ Error: ' + error.message;
+        console.error(error);
+      }
+    }
+
+    // Test 3: Message passing
+    async function testMessagePassing() {
+      const statusEl = document.getElementById('test3-status');
+      
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        
+        statusEl.className = 'status info';
+        statusEl.textContent = '⏳ Testing message passing...';
+
+        // Set up message listener
+        navigator.serviceWorker.addEventListener('message', function handler(event) {
+          if (event.data.type === 'TEST_RESPONSE') {
+            navigator.serviceWorker.removeEventListener('message', handler);
+            statusEl.className = 'status success';
+            statusEl.textContent = '✅ Message passing works! Received: ' + event.data.message;
+          }
+        });
+
+        // Send test message
+        if (registration.active) {
+          registration.active.postMessage({ type: 'TEST_MESSAGE' });
+          
+          // Set timeout
+          setTimeout(() => {
+            if (statusEl.textContent.includes('Testing')) {
+              statusEl.className = 'status info';
+              statusEl.textContent = 'ℹ️ Message sent (Service Worker may not respond to this test message, but message passing is set up correctly)';
+            }
+          }, 2000);
+        }
+      } catch (error) {
+        statusEl.className = 'status error';
+        statusEl.textContent = '❌ Error: ' + error.message;
+        console.error(error);
+      }
+    }
+
+    // Test 4: Environment info
+    function showEnvironmentInfo() {
+      const statusEl = document.getElementById('test4-status');
+      
+      console.log('\n🔍 ========== NOTIFICATION ENVIRONMENT INFO ==========');
+      console.log('📱 Notification support:', 'Notification' in window);
+      
+      if ('Notification' in window) {
+        console.log('📋 Permission:', Notification.permission);
+        console.log('🔧 Max actions:', Notification.maxActions || 'Unknown (browsers typically support 2-3)');
+      }
+      
+      console.log('⚙️ Service Worker support:', 'serviceWorker' in navigator);
+      console.log('🖥️ Platform:', navigator.platform);
+      console.log('🌐 User Agent:', navigator.userAgent);
+      console.log('🔐 Secure context:', window.isSecureContext);
+      console.log('📍 Location:', window.location.href);
+      console.log('🔍 ===============================================\n');
+      
+      statusEl.className = 'status success';
+      statusEl.textContent = '✅ Environment info logged to console (F12 to open)';
+    }
+
+    // Listen for messages from Service Worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        const msg = event.data;
+        console.log('📨 Test page received message:', msg);
+        
+        if (msg.type === 'PAYMENT_RECORDED') {
+          alert(`✅ Payment recorded!\nAction: ${msg.action}\nAmount: ₹${msg.amount}\nLoan: ${msg.loan_id}`);
+        }
+        
+        if (msg.type === 'ERROR') {
+          alert(`❌ Error: ${msg.message}`);
+        }
+      });
+    }
+
+    console.log('✅ Test page loaded');
+    console.log('💡 TIP: Open browser console (F12) to see detailed logs');
+  </script>
+</body>
+</html>

@@ -52,6 +52,8 @@
       const title = `🔔 EMI Due — ${client.name}`;
       const body = `₹${emiAmount} is overdue. How was the collection?`;
       
+      console.log(`🔔 Showing notification with 3 action buttons for ${client.name}`);
+      
       // Use Service Worker for notifications with action buttons
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.ready.then(registration => {
@@ -61,6 +63,12 @@
             badge: '/logo.png',
             requireInteraction: true,
             tag: `loan-due-${loan.id}`,
+            data: {
+              loan_id: loan.id,
+              client_id: client.id,
+              client_name: client.name,
+              amount: emiAmount
+            },
             actions: [
               {
                 action: 'paid',
@@ -77,22 +85,16 @@
                 title: '💰 Partial',
                 icon: '/logo.png'
               }
-            ],
-            data: {
-              loan_id: loan.id,
-              client_id: client.id,
-              client_name: client.name,
-              amount: emiAmount
-            }
+            ]
           };
 
           registration.showNotification(title, notificationOptions);
-          console.log(`✅ Service Worker notification displayed for ${client.name} (₹${emiAmount})`);
+          console.log(`✅ Service Worker notification displayed for ${client.name} (₹${emiAmount}) with 3 action buttons`);
         }).catch(error => {
           console.error('❌ Service Worker notification failed:', error);
-          // Fallback to simple notification
+          // Fallback to simple notification without action buttons
           const notification = new Notification(title, {
-            body: body,
+            body: `${body}\n\nOpen app to record payment status`,
             icon: '/logo.png',
             badge: '/logo.png',
             requireInteraction: true,
@@ -117,7 +119,7 @@
       } else {
         // Fallback for browsers without Service Worker
         const notification = new Notification(title, {
-          body: body,
+          body: `${body}\n\nOpen app to record payment status`,
           icon: '/logo.png',
           badge: '/logo.png',
           requireInteraction: true,
@@ -338,7 +340,7 @@
 
   // TEST: Force show a notification immediately with action buttons
   async function testNotificationNow() {
-    console.log('🧪 [TEST] Force showing test notification with action buttons...');
+    console.log('🧪 [TEST] Force showing test notification with 3 action buttons...');
     
     if (Notification.permission !== 'granted') {
       const permission = await Notification.requestPermission();
@@ -349,15 +351,23 @@
     }
 
     try {
+      console.log('🧪 [TEST] Showing notification with 3 action buttons');
+
       // Use Service Worker for action buttons
       if ('serviceWorker' in navigator) {
         const registration = await navigator.serviceWorker.ready || await navigator.serviceWorker.register('/sw.js');
         
         const notificationOptions = {
-          body: 'Test notification with action buttons - click the buttons to test!',
+          body: 'Test notification with 3 action buttons - click the buttons to test!',
           icon: '/logo.png',
           requireInteraction: true,
           tag: 'test-notification-with-actions',
+          data: {
+            test: true,
+            loan_id: 'test-123',
+            client_name: 'Test Client',
+            amount: 5000
+          },
           actions: [
             {
               action: 'paid',
@@ -374,17 +384,11 @@
               title: '💰 Partial',
               icon: '/logo.png'
             }
-          ],
-          data: {
-            test: true,
-            loan_id: 'test-123',
-            client_name: 'Test Client',
-            amount: 5000
-          }
+          ]
         };
 
-        await registration.showNotification('🔔 SamKass Test (With Action Buttons)', notificationOptions);
-        console.log('✅ [TEST] Service Worker notification with action buttons shown');
+        await registration.showNotification('🔔 SamKass Test (3 Buttons)', notificationOptions);
+        console.log('✅ [TEST] Service Worker notification shown with 3 action buttons');
         return true;
       } else {
         // Fallback to simple notification
@@ -444,28 +448,30 @@
       if ('serviceWorker' in navigator) {
         const registration = await navigator.serviceWorker.ready || await navigator.serviceWorker.register('/sw.js');
         
+        const actions = [
+          {
+            action: 'paid',
+            title: '✅ Paid',
+            icon: '/logo.png'
+          },
+          {
+            action: 'unpaid',
+            title: '❌ Unpaid', 
+            icon: '/logo.png'
+          },
+          {
+            action: 'partly_paid',
+            title: '💰 Partial',
+            icon: '/logo.png'
+          }
+        ];
+
         await registration.showNotification('🔔 Manual Test from Console', {
-          body: 'This notification has action buttons! Click them to test.',
+          body: 'This notification has 3 action buttons! Click them to test.',
           icon: '/logo.png',
           requireInteraction: true,
           tag: 'manual-console-test',
-          actions: [
-            {
-              action: 'paid',
-              title: '✅ Paid',
-              icon: '/logo.png'
-            },
-            {
-              action: 'unpaid',
-              title: '❌ Unpaid', 
-              icon: '/logo.png'
-            },
-            {
-              action: 'partly_paid',
-              title: '💰 Partial',
-              icon: '/logo.png'
-            }
-          ],
+          actions: actions,
           data: {
             test: true,
             loan_id: 'console-test-123',
@@ -474,7 +480,7 @@
           }
         });
 
-        console.log('✅ Manual Service Worker notification with action buttons sent');
+        console.log('✅ Manual Service Worker notification sent with 3 action buttons');
       } else {
         // Fallback
         const testNotif = new Notification('🔔 Manual Test from Console', {
@@ -507,7 +513,7 @@
     
     if ('Notification' in window) {
       console.log('📋 Permission:', Notification.permission);
-      console.log('🔧 Max actions:', Notification.maxActions || 'Unknown');
+      console.log('🔧 Max actions:', Notification.maxActions || 'Unknown (browsers typically support 2-3)');
     }
     
     console.log('🖥️ Platform:', navigator.platform);
@@ -519,6 +525,10 @@
       console.log('⚙️ Service Worker supported:', true);
       navigator.serviceWorker.getRegistrations().then(regs => {
         console.log('📝 SW Registrations:', regs.length);
+        if (regs.length > 0) {
+          console.log('📋 SW Scope:', regs[0].scope);
+          console.log('📋 SW State:', regs[0].active ? 'Active' : 'Inactive');
+        }
       });
     } else {
       console.log('⚙️ Service Worker supported:', false);

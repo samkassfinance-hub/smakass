@@ -815,9 +815,15 @@ function init() {
     // ── Register Service Worker for notification action buttons ──
     if ('serviceWorker' in navigator) {
       console.log('📡 INIT: Registering service worker...');
-      navigator.serviceWorker.register('./sw.js', { scope: './' })
-        .then(() => {
-          console.log('✅ INIT: Service worker registered');
+      // Use absolute path for service worker registration
+      const swPath = '/sw.js';
+      console.log(`📡 INIT: Registering service worker at: ${swPath}`);
+      navigator.serviceWorker.register(swPath, { scope: '/' })
+        .then(registration => {
+          console.log('✅ INIT: Service worker registered successfully');
+          console.log('📡 INIT: SW Scope:', registration.scope);
+          console.log('📡 INIT: SW State:', registration.active ? 'Active' : 'Waiting');
+          
           // Listen for messages from SW (Payment action button taps)
           navigator.serviceWorker.addEventListener('message', e => {
             const msg = e.data || {};
@@ -3611,18 +3617,21 @@ function confirmDelete(type, id) {
 // Holds the SW registration so we can call showNotification() with actions
 let _swReg = null;
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.ready.then(r => { _swReg = r; });
+  navigator.serviceWorker.ready.then(r => { 
+    _swReg = r; 
+    console.log('📡 App: Service Worker is ready');
+  });
   
   // Listen for messages from Service Worker
   navigator.serviceWorker.addEventListener('message', (event) => {
     const msg = event.data;
-    console.log('📨 App received message:', msg.type);
+    console.log('📨 App received message from SW:', msg.type, msg);
 
     if (msg.type === 'GET_TOKEN_FOR_SW') {
       // SW requesting token
       const session = getSession();
       const token = session?.token || null;
-      console.log('📤 Sending token to SW');
+      console.log('📤 App: Sending token to SW:', token ? '✅ Token exists' : '❌ No token');
       if (event.ports && event.ports[0]) {
         event.ports[0].postMessage({ token });
       }
@@ -3630,7 +3639,9 @@ if ('serviceWorker' in navigator) {
 
     if (msg.type === 'PROMPT_PARTIAL_AMOUNT') {
       // SW requesting partial amount from user
+      console.log('💰 App: Prompting user for partial amount, EMI:', msg.emi_amount);
       promptPartialAmountModal(msg.emi_amount, (amount) => {
+        console.log('💰 App: User entered amount:', amount);
         if (event.ports && event.ports[0]) {
           event.ports[0].postMessage({ amount });
         }
@@ -3639,61 +3650,159 @@ if ('serviceWorker' in navigator) {
 
     if (msg.type === 'PAYMENT_RECORDED') {
       // Payment successfully recorded
-      console.log('✅ Payment recorded:', msg.action, '₹' + msg.amount);
+      console.log('✅ PAYMENT_RECORDED message received:', msg);
+      console.log('💰 Payment details:', {
+        action: msg.action,
+        amount: msg.amount,
+        loan_id: msg.loan_id,
+        client_name: msg.client_name
+      });
       
-      // Auto-update the app
-      updatePaymentData(msg.loan_id, msg.action, msg.amount);
-      
-      // Show success message
-      showToast(`✅ ${msg.action.toUpperCase()} - ₹${msg.amount} for ${msg.client_name}`, 'success');
-      
-      // Refresh current page
-      setTimeout(() => {
-        if (state.currentPage === 'collection') {
-          navigateTo('collection');
-        }
-      }, 500);
+      // Auto-update the app data
+      try {
+        console.log('🔄 Starting auto-update of app data...');
+        updatePaymentData(msg.loan_id, msg.action, msg.amount);
+        console.log('✅ App data updated successfully');
+        
+        // Show success message
+        const actionLabel = msg.action === 'paid' ? 'PAID' : 
+                           msg.action === 'unpaid' ? 'UNPAID' : 
+                           'PARTIAL PAID';
+        
+        showToast(`✅ ${actionLabel} - ₹${msg.amount} for ${msg.client_name}`, 'success');
+        
+        // Refresh current page to show updated data
+        console.log('🔄 Current page:', state.page);
+        setTimeout(() => {
+          if (state.page === 'collection' && typeof navigateTo === 'function') {
+            console.log('🔄 Refreshing collection page...');
+            navigateTo('collection');
+          } else if (state.page === 'home' && typeof navigateTo === 'function') {
+            console.log('🔄 Refreshing home page...');
+            navigateTo('home');
+          } else if (state.page === 'loans' && typeof navigateTo === 'function') {
+            console.log('🔄 Refreshing loans page...');
+            navigateTo('loans');
+          } else {
+            console.log('📍 Current page:', state.page, '- refreshing anyway...');
+            if (typeof navigateTo === 'function') {
+              navigateTo(state.page);
+            }
+          }
+        }, 500);
+      } catch (error) {
+        console.error('❌ Failed to update app data:', error);
+        console.error('❌ Error stack:', error.stack);
+        showToast('❌ Failed to update app data: ' + error.message, 'error');
+      }
     }
 
     if (msg.type === 'ERROR') {
+      console.error('❌ Error from SW:', msg.message);
       showToast('❌ ' + msg.message, 'error');
+    }
+
+    if (msg.type === 'INFO') {
+      console.log('ℹ️ Info from SW:', msg.message);
+      showToast('ℹ️ ' + msg.message, 'info');
     }
   });
 }
 
 // Update payment data in the app
 function updatePaymentData(loanId, action, amount) {
+  console.log(`💾 updatePaymentData called: loanId=${loanId}, action=${action}, amount=${amount}`);
+  
+  // Skip update for 'unpaid' action as no payment is recorded
+  if (action === 'unpaid') {
+    console.log('ℹ️ Action is UNPAID - no data update needed');
+    return;
+  }
+  
   const loans = Store.loans();
   const payments = Store.payments();
   
+  console.log(`💾 Current state - ${loans.length} loans, ${payments.length} payments`);
+  
   const loan = loans.find(l => l.id === loanId);
-  if (!loan) return;
+  if (!loan) {
+    console.error(`❌ Loan not found: ${loanId}`);
+    throw new Error(`Loan ${loanId} not found in local storage`);
+  }
+  
+  console.log(`✅ Found loan:`, loan);
 
   // Record the payment
   const payment = {
     id: uid(),
     loanId: loanId,
-    amount: amount,
+    clientId: loan.clientId,
+    amount: parseFloat(amount),
     date: today(),
+    mode: 'Cash',
     note: `${action.toUpperCase()} via notification`,
     createdAt: new Date().toISOString()
   };
 
+  console.log(`💾 Adding payment:`, payment);
   payments.push(payment);
   Store.savePayments(payments);
+  console.log(`✅ Payment saved. Total payments now: ${Store.payments().length}`);
 
-  // Check if loan is completed
+  // Calculate loan stats and update loan
   const stats = calcLoanStats(loan);
-  const remaining = stats.remaining - amount;
+  const newRemaining = stats.remaining - amount;
+  console.log(`📊 Loan stats: remaining=${stats.remaining}, new remaining=${newRemaining}`);
 
-  if (remaining <= 0 && action === 'paid') {
-    loan.status = 'completed';
-    loans[loans.indexOf(loan)] = loan;
+  // Update loan based on action
+  const loanIndex = loans.findIndex(l => l.id === loanId);
+  if (loanIndex !== -1) {
+    if (action === 'paid') {
+      // Full payment - update next due date
+      const currentDueDate = new Date(loan.nextDueDate || loan.next_due_date);
+      let nextDueDate;
+      
+      if (loan.type === 'weekly') {
+        nextDueDate = new Date(currentDueDate.getTime() + (7 * 24 * 60 * 60 * 1000));
+      } else {
+        // Monthly
+        nextDueDate = new Date(currentDueDate);
+        nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+      }
+      
+      loan.nextDueDate = nextDueDate.toISOString().split('T')[0];
+      loan.next_due_date = loan.nextDueDate; // Support both field names
+      
+      console.log(`📅 Updated next due date to: ${loan.nextDueDate}`);
+      
+      // Check if loan is completed
+      if (newRemaining <= 0) {
+        loan.status = 'completed';
+        console.log(`✅ Loan marked as completed`);
+      }
+    } else if (action === 'partly_paid') {
+      // Partial payment - next due date stays the same
+      console.log(`💰 Partial payment recorded - next due date remains: ${loan.nextDueDate || loan.next_due_date}`);
+      
+      // Check if total paid now covers the loan
+      if (newRemaining <= 0) {
+        loan.status = 'completed';
+        console.log(`✅ Loan marked as completed (fully paid with partial payments)`);
+      }
+    }
+    
+    loans[loanIndex] = loan;
     Store.saveLoans(loans);
+    console.log(`✅ Loan updated in storage`);
   }
 
-  updateNotifBadge();
-  console.log('💾 Payment data updated in app');
+  // Update notification badge
+  if (typeof updateNotifBadge === 'function') {
+    console.log('🔔 Updating notification badge...');
+    updateNotifBadge();
+  }
+  
+  console.log('✅ Payment data updated successfully in app - localStorage updated, ready for page refresh');
 }
 
 // Prompt for partial payment amount

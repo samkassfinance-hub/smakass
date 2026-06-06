@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Auto-Update - SamKass</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 900px;
+      margin: 30px auto;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    .container {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    h1 { color: #333; margin-bottom: 10px; }
+    .subtitle { color: #666; margin-bottom: 30px; font-size: 1.1em; }
+    
+    .status-box {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+      border-left: 5px solid #667eea;
+    }
+    .status-box h3 {
+      margin-top: 0;
+      color: #667eea;
+    }
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #e9ecef;
+    }
+    .status-item:last-child { border-bottom: none; }
+    .status-label { font-weight: 600; color: #495057; }
+    .status-value { color: #28a745; font-weight: 700; }
+    
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin: 10px 10px 10px 0;
+      transition: all 0.3s ease;
+    }
+    button:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    button.secondary {
+      background: #6c757d;
+    }
+    button.secondary:hover {
+      background: #5a6268;
+    }
+    
+    .alert {
+      padding: 15px 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      font-weight: 500;
+    }
+    .alert-success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .alert-warning {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeaa7;
+    }
+    .alert-info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+    
+    .test-steps {
+      background: #fff8e1;
+      padding: 20px;
+      border-radius: 10px;
+      margin: 20px 0;
+      border-left: 5px solid #ffc107;
+    }
+    .test-steps h3 {
+      margin-top: 0;
+      color: #f57c00;
+    }
+    .test-steps ol {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+    .test-steps li {
+      margin: 10px 0;
+      line-height: 1.6;
+    }
+    
+    pre {
+      background: #2d3748;
+      color: #68d391;
+      padding: 15px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 14px;
+    }
+    
+    .log-box {
+      background: #1a1a1a;
+      color: #00ff00;
+      padding: 20px;
+      border-radius: 8px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      margin: 20px 0;
+    }
+    .log-box .log-line {
+      margin: 5px 0;
+      padding: 5px;
+      border-left: 3px solid transparent;
+    }
+    .log-box .log-success { border-left-color: #28a745; color: #28a745; }
+    .log-box .log-error { border-left-color: #dc3545; color: #dc3545; }
+    .log-box .log-info { border-left-color: #17a2b8; color: #17a2b8; }
+    .log-box .log-warning { border-left-color: #ffc107; color: #ffc107; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔄 Auto-Update Test Page</h1>
+    <p class="subtitle">Test that notification button clicks automatically update the app</p>
+
+    <div class="alert alert-info">
+      <strong>📋 How to Test:</strong> Open your main app in another tab, then trigger notifications here and verify they auto-update in the main app.
+    </div>
+
+    <div class="status-box">
+      <h3>📊 Current Storage Status</h3>
+      <div id="storage-status">Loading...</div>
+      <button onclick="refreshStatus()">🔄 Refresh Status</button>
+    </div>
+
+    <div class="test-steps">
+      <h3>✅ Testing Steps</h3>
+      <ol>
+        <li><strong>Open Main App:</strong> Open your SamKass app in another tab (index.html)</li>
+        <li><strong>Navigate to Collection:</strong> Go to the Collection page in the main app</li>
+        <li><strong>Note Current Count:</strong> See how many loans/payments are shown</li>
+        <li><strong>Trigger Test Notification:</strong> Click the button below</li>
+        <li><strong>Click Notification Button:</strong> Click "Paid", "Unpaid", or "Partial" on the notification</li>
+        <li><strong>Check Main App:</strong> The collection page should automatically refresh and show updated data</li>
+        <li><strong>Verify Console:</strong> Check browser console (F12) to see auto-update logs</li>
+      </ol>
+    </div>
+
+    <div class="status-box">
+      <h3>🧪 Test Actions</h3>
+      <button onclick="createTestNotification()">📬 Create Test Notification (3 Buttons)</button>
+      <button onclick="simulatePaymentRecorded()" class="secondary">🔔 Simulate Payment Recorded Message</button>
+      <button onclick="viewConsole()" class="secondary">📝 Open Console Logs</button>
+      <div id="test-result" style="margin-top: 15px;"></div>
+    </div>
+
+    <div class="status-box">
+      <h3>📜 Real-Time Logs</h3>
+      <div id="log-box" class="log-box"></div>
+      <button onclick="clearLogs()" class="secondary">🗑️ Clear Logs</button>
+    </div>
+
+    <div class="alert alert-warning">
+      <strong>⚠️ Important:</strong> Make sure you're logged in and have active loans in your main app. The auto-update will only work if:
+      <ul style="margin: 10px 0;">
+        <li>Service Worker is registered</li>
+        <li>Main app is open in another tab/window</li>
+        <li>User is logged in with valid token</li>
+        <li>Loan ID exists in localStorage</li>
+      </ul>
+    </div>
+
+    <div class="status-box">
+      <h3>🔍 Debug Console Commands</h3>
+      <pre>// Check current loans
+console.log(Store.loans());
+
+// Check current payments
+console.log(Store.payments());
+
+// Check current page
+console.log(state.page);
+
+// Manually trigger notification
+testNotificationNow();
+
+// Check Service Worker
+navigator.serviceWorker.ready.then(r => console.log('SW:', r));</pre>
+    </div>
+  </div>
+
+  <script>
+    let logLines = [];
+
+    function addLog(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      logLines.push({ time: timestamp, message, type });
+      
+      const logBox = document.getElementById('log-box');
+      const logLine = document.createElement('div');
+      logLine.className = `log-line log-${type}`;
+      logLine.textContent = `[${timestamp}] ${message}`;
+      logBox.appendChild(logLine);
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    function clearLogs() {
+      logLines = [];
+      document.getElementById('log-box').innerHTML = '';
+      addLog('Logs cleared', 'info');
+    }
+
+    // Register Service Worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').then(reg => {
+        addLog('Service Worker registered successfully', 'success');
+      }).catch(err => {
+        addLog('Service Worker registration failed: ' + err.message, 'error');
+      });
+
+      // Listen for messages
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        const msg = event.data;
+        addLog(`Message from SW: ${msg.type}`, 'info');
+        
+        if (msg.type === 'PAYMENT_RECORDED') {
+          addLog(`✅ Payment recorded: ${msg.action} - ₹${msg.amount}`, 'success');
+          setTimeout(refreshStatus, 1000);
+        }
+      });
+    }
+
+    function refreshStatus() {
+      try {
+        const clients = JSON.parse(localStorage.getItem('kf_clients') || '[]');
+        const loans = JSON.parse(localStorage.getItem('kf_loans') || '[]');
+        const payments = JSON.parse(localStorage.getItem('kf_payments') || '[]');
+        
+        const activeLoans = loans.filter(l => l.status === 'active');
+        const today = new Date().toISOString().split('T')[0];
+        const overdueLoans = activeLoans.filter(l => {
+          const dueDate = l.nextDueDate || l.next_due_date;
+          return dueDate && dueDate <= today;
+        });
+
+        document.getElementById('storage-status').innerHTML = `
+          <div class="status-item">
+            <span class="status-label">Total Clients:</span>
+            <span class="status-value">${clients.length}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Total Loans:</span>
+            <span class="status-value">${loans.length}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Active Loans:</span>
+            <span class="status-value">${activeLoans.length}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Overdue Loans:</span>
+            <span class="status-value" style="color: ${overdueLoans.length > 0 ? '#dc3545' : '#28a745'}">${overdueLoans.length}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Total Payments:</span>
+            <span class="status-value">${payments.length}</span>
+          </div>
+        `;
+        
+        addLog('Storage status refreshed', 'success');
+      } catch (error) {
+        addLog('Error refreshing status: ' + error.message, 'error');
+      }
+    }
+
+    async function createTestNotification() {
+      try {
+        if (Notification.permission !== 'granted') {
+          const permission = await Notification.requestPermission();
+          if (permission !== 'granted') {
+            addLog('Notification permission denied', 'error');
+            return;
+          }
+        }
+
+        const loans = JSON.parse(localStorage.getItem('kf_loans') || '[]');
+        const activeLoans = loans.filter(l => l.status === 'active');
+        
+        if (activeLoans.length === 0) {
+          addLog('No active loans found. Create a loan in the main app first.', 'warning');
+          document.getElementById('test-result').innerHTML = 
+            '<div class="alert alert-warning">⚠️ No active loans found. Please create a loan in the main app first.</div>';
+          return;
+        }
+
+        const testLoan = activeLoans[0];
+        const clients = JSON.parse(localStorage.getItem('kf_clients') || '[]');
+        const client = clients.find(c => c.id === testLoan.clientId);
+
+        addLog(`Creating test notification for loan: ${testLoan.id}`, 'info');
+
+        const registration = await navigator.serviceWorker.ready;
+        await registration.showNotification('🧪 Test Auto-Update Notification', {
+          body: 'Click any button to test auto-update functionality',
+          icon: '/logo.png',
+          requireInteraction: true,
+          tag: 'test-auto-update',
+          actions: [
+            { action: 'paid', title: '✅ Paid', icon: '/logo.png' },
+            { action: 'unpaid', title: '❌ Unpaid', icon: '/logo.png' },
+            { action: 'partly_paid', title: '💰 Partial', icon: '/logo.png' }
+          ],
+          data: {
+            loan_id: testLoan.id,
+            client_id: testLoan.clientId,
+            client_name: client ? client.name : 'Test Client',
+            amount: 1000
+          }
+        });
+
+        addLog('✅ Test notification created with 3 buttons', 'success');
+        document.getElementById('test-result').innerHTML = 
+          '<div class="alert alert-success">✅ Notification created! Click a button on the notification and watch the main app update.</div>';
+      } catch (error) {
+        addLog('Error creating notification: ' + error.message, 'error');
+        document.getElementById('test-result').innerHTML = 
+          `<div class="alert alert-warning">❌ Error: ${error.message}</div>`;
+      }
+    }
+
+    function simulatePaymentRecorded() {
+      try {
+        const loans = JSON.parse(localStorage.getItem('kf_loans') || '[]');
+        const activeLoans = loans.filter(l => l.status === 'active');
+        
+        if (activeLoans.length === 0) {
+          addLog('No active loans to simulate', 'warning');
+          return;
+        }
+
+        const testLoan = activeLoans[0];
+        const clients = JSON.parse(localStorage.getItem('kf_clients') || '[]');
+        const client = clients.find(c => c.id === testLoan.clientId);
+
+        addLog('Simulating PAYMENT_RECORDED message...', 'info');
+
+        // Broadcast message to all tabs
+        const bc = new BroadcastChannel('samkass_updates');
+        bc.postMessage({
+          type: 'PAYMENT_RECORDED',
+          action: 'paid',
+          loan_id: testLoan.id,
+          client_name: client ? client.name : 'Test Client',
+          amount: 1000
+        });
+        
+        addLog('PAYMENT_RECORDED message broadcasted', 'success');
+        document.getElementById('test-result').innerHTML = 
+          '<div class="alert alert-info">ℹ️ Message sent. Check if main app updates.</div>';
+      } catch (error) {
+        addLog('Error simulating message: ' + error.message, 'error');
+      }
+    }
+
+    function viewConsole() {
+      addLog('Opening browser console...', 'info');
+      alert('Press F12 or Right-Click > Inspect to open the browser console and see detailed logs.');
+    }
+
+    // Initial status load
+    addLog('Test page loaded', 'success');
+    refreshStatus();
+  </script>
+</body>
+</html>

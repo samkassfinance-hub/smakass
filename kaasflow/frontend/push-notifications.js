@@ -214,10 +214,17 @@ window.PushNotifications = new PushNotificationManager();
 document.addEventListener('DOMContentLoaded', () => {
   // Listen for auth token messages from service worker
   navigator.serviceWorker.addEventListener('message', (event) => {
-    if (event.data.type === 'GET_AUTH_TOKEN') {
+    const msg = event.data;
+    console.log('📨 PushManager: Message from SW:', msg.type);
+    
+    if (msg.type === 'GET_TOKEN_FOR_SW' || msg.type === 'GET_AUTH_TOKEN') {
+      // SW requesting token
       const session = JSON.parse(localStorage.getItem('kf_session') || '{}');
       const token = session.token;
-      event.ports[0].postMessage({ token });
+      console.log('📤 PushManager: Sending token to SW');
+      if (event.ports && event.ports[0]) {
+        event.ports[0].postMessage({ token });
+      }
     }
   });
 });
