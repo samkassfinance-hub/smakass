@@ -6,26 +6,39 @@
 (function() {
   'use strict';
 
+  let isInitialized = false;
+  let hasPermission = false;
+
   // Request notification permission
   async function requestNotificationPermission() {
     if (!('Notification' in window)) {
-      console.warn('❌ Notifications not supported');
+      console.warn('❌ Notifications not supported in this browser');
       return false;
     }
 
     if (Notification.permission === 'granted') {
       console.log('✅ Notification permission already granted');
+      hasPermission = true;
       return true;
     }
 
-    if (Notification.permission !== 'denied') {
-      const permission = await Notification.requestPermission();
-      console.log('📱 Notification permission:', permission);
-      return permission === 'granted';
+    if (Notification.permission === 'denied') {
+      console.warn('❌ Notification permission previously denied by user');
+      hasPermission = false;
+      return false;
     }
 
-    console.warn('❌ Notification permission denied');
-    return false;
+    // Permission is 'default' - ask user
+    try {
+      const permission = await Notification.requestPermission();
+      console.log('📱 Notification permission result:', permission);
+      hasPermission = permission === 'granted';
+      return hasPermission;
+    } catch (error) {
+      console.error('❌ Error requesting notification permission:', error);
+      hasPermission = false;
+      return false;
+    }
   }
 
   // Show notification for overdue loan
@@ -35,188 +48,259 @@
       return null;
     }
 
-    const title = `EMI Due — ${client.name}`;
-    const body = `₹${emiAmount} is overdue. How was the collection?`;
-    
-    const notification = new Notification(title, {
-      body: body,
-      icon: '/logo.png',
-      badge: '/logo.png',
-      requireInteraction: true,
-      tag: `loan-due-${loan.id}`,
-      data: {
-        loan_id: loan.id,
-        client_id: client.id,
-        client_name: client.name,
-        amount: emiAmount
-      }
-    });
-
-    // Handle notification click
-    notification.onclick = function(event) {
-      event.preventDefault();
-      window.focus();
+    try {
+      const title = `🔔 EMI Due — ${client.name}`;
+      const body = `₹${emiAmount} is overdue. How was the collection?`;
       
-      // Navigate to collection page
-      if (window.navigateTo) {
-        window.navigateTo('collection');
-      }
-      
-      notification.close();
-    };
+      const notification = new Notification(title, {
+        body: body,
+        icon: '/logo.png',
+        badge: '/logo.png',
+        requireInteraction: true,
+        tag: `loan-due-${loan.id}`,
+        data: {
+          loan_id: loan.id,
+          client_id: client.id,
+          client_name: client.name,
+          amount: emiAmount
+        }
+      });
 
-    console.log(`✅ Notification shown for ${client.name}`);
-    return notification;
+      // Handle notification click
+      notification.onclick = function(event) {
+        event.preventDefault();
+        window.focus();
+        
+        // Navigate to collection page
+        if (window.navigateTo) {
+          window.navigateTo('collection');
+        }
+        
+        notification.close();
+      };
+
+      console.log(`✅ Notification displayed for ${client.name} (₹${emiAmount})`);
+      return notification;
+    } catch (error) {
+      console.error('❌ Error creating notification:', error);
+      return null;
+    }
   }
 
   // Calculate EMI for a loan
   function calculateEMI(loan) {
-    const principal = loan.principal || 0;
-    const interestRate = loan.interestRate || 0;
-    const interestType = loan.interestType || 'percentage';
-    const duration = loan.duration || 0;
-    const type = loan.type || 'monthly';
+    try {
+      const principal = loan.principal || 0;
+      const interestRate = loan.interestRate || 0;
+      const interestType = loan.interestType || 'percentage';
+      const duration = loan.duration || 0;
+      const type = loan.type || 'monthly';
 
-    // Calculate monthly interest
-    let monthlyInterest;
-    if (interestType === 'fixed') {
-      monthlyInterest = interestRate;
-    } else {
-      monthlyInterest = (principal * interestRate) / 100;
+      // Calculate monthly interest
+      let monthlyInterest;
+      if (interestType === 'fixed') {
+        monthlyInterest = interestRate;
+      } else {
+        monthlyInterest = (principal * interestRate) / 100;
+      }
+
+      if (!duration || duration <= 0) {
+        return monthlyInterest;
+      }
+
+      const totalInterest = monthlyInterest * duration;
+      const totalPayable = principal + totalInterest;
+
+      // Calculate installments
+      const installments = type === 'weekly' ? duration * 4 : duration;
+      const emi = totalPayable / installments;
+      
+      return Math.round(emi * 100) / 100;
+    } catch (error) {
+      console.error('❌ Error calculating EMI:', error);
+      return 0;
     }
-
-    if (!duration || duration <= 0) {
-      return monthlyInterest;
-    }
-
-    const totalInterest = monthlyInterest * duration;
-    const totalPayable = principal + totalInterest;
-
-    // Calculate installments
-    const installments = type === 'weekly' ? duration * 4 : duration;
-    const emi = totalPayable / installments;
-    
-    return Math.round(emi * 100) / 100;
   }
 
   // Check for overdue loans and show notifications
   async function checkAndNotifyOverdueLoans() {
     try {
-      console.log('🔍 Checking overdue loans...');
+      console.log('🔍 [NOTIF] Checking for overdue loans...');
       
+      // Check if app is ready
       if (!window.Store) {
-        console.error('❌ Store not available');
-        return;
+        console.warn('⚠️ [NOTIF] Store not available yet - app may not be initialized');
+        return { found: 0, shown: 0, error: 'Store not ready' };
       }
 
+      // Check permission
+      if (Notification.permission !== 'granted') {
+        console.warn('⚠️ [NOTIF] Notification permission not granted');
+        return { found: 0, shown: 0, error: 'Permission not granted' };
+      }
+
+      // Get data
       const loans = window.Store.loans();
       const clients = window.Store.clients();
 
-      console.log(`📊 Found ${loans.length} loans and ${clients.length} clients`);
+      console.log(`📊 [NOTIF] Data loaded: ${loans.length} loans, ${clients.length} clients`);
 
-      if (!loans || !clients || loans.length === 0) {
-        console.warn('⚠️ No loan data available');
-        return;
+      if (!loans || !clients) {
+        console.warn('⚠️ [NOTIF] Store methods returned null/undefined');
+        return { found: 0, shown: 0, error: 'Invalid store data' };
+      }
+
+      if (loans.length === 0 || clients.length === 0) {
+        console.log('ℹ️ [NOTIF] No data to check (loans or clients empty)');
+        return { found: 0, shown: 0, error: 'No data' };
       }
 
       const today = new Date().toISOString().split('T')[0];
-      let notificationCount = 0;
+      let foundCount = 0;
+      let shownCount = 0;
 
       // Find overdue or due today loans
-      loans.forEach(loan => {
-        if (loan.status !== 'active') return;
+      loans.forEach((loan, index) => {
+        try {
+          // Skip inactive/completed loans
+          if (loan.status !== 'active') {
+            return;
+          }
 
-        const client = clients.find(c => c.id === loan.clientId);
-        if (!client) return;
+          // Find client
+          const client = clients.find(c => c.id === loan.clientId);
+          if (!client) {
+            console.warn(`⚠️ [NOTIF] Loan ${loan.id}: Client not found`);
+            return;
+          }
 
-        // Check due date
-        const dueDate = loan.nextDueDate || loan.next_due_date;
-        if (!dueDate) return;
+          // Check due date
+          const dueDate = loan.nextDueDate || loan.next_due_date;
+          if (!dueDate) {
+            console.warn(`⚠️ [NOTIF] Loan ${loan.id}: No due date set`);
+            return;
+          }
 
-        const isDueOrOverdue = dueDate <= today;
+          // Check if due or overdue
+          const isDueOrOverdue = dueDate <= today;
 
-        if (isDueOrOverdue) {
-          console.log(`⏰ Loan ${loan.id} for ${client.name} is due/overdue on ${dueDate}`);
-          // Calculate EMI
-          const emiAmount = calculateEMI(loan);
-          
-          setTimeout(() => {
-            showLoanDueNotification(loan, client, emiAmount);
-          }, notificationCount * 1000); // Stagger notifications by 1 second
-          
-          notificationCount++;
+          if (isDueOrOverdue) {
+            foundCount++;
+            console.log(`✅ [NOTIF] Loan ${loan.id}: OVERDUE - Due: ${dueDate}, Client: ${client.name}`);
+            
+            // Calculate EMI
+            const emiAmount = calculateEMI(loan);
+            console.log(`💰 [NOTIF] Loan ${loan.id}: Calculated EMI = ₹${emiAmount}`);
+            
+            // Show notification after staggered delay
+            setTimeout(() => {
+              const result = showLoanDueNotification(loan, client, emiAmount);
+              if (result) shownCount++;
+            }, foundCount * 800); // 0.8 second delay between notifications
+          }
+        } catch (error) {
+          console.error(`❌ [NOTIF] Error processing loan ${index}:`, error);
         }
       });
 
-      if (notificationCount > 0) {
-        console.log(`✅ Found and queued ${notificationCount} overdue loan notifications`);
-      } else {
-        console.log('✅ No overdue loans found');
-      }
+      console.log(`📋 [NOTIF] Summary - Found: ${foundCount}, Shown: ${shownCount}`);
+      return { found: foundCount, shown: shownCount, error: null };
 
     } catch (error) {
-      console.error('❌ Error checking overdue loans:', error);
+      console.error('❌ [NOTIF] Fatal error in checkAndNotifyOverdueLoans:', error);
+      return { found: 0, shown: 0, error: error.message };
     }
   }
 
   // Initialize notifications
   async function initNotifications() {
-    console.log('🔔 Initializing simple notifications...');
-
-    // Request permission
-    const hasPermission = await requestNotificationPermission();
-
-    if (!hasPermission) {
-      console.warn('⚠️ Notification permission not granted');
+    console.log('🔔 [NOTIF] ========== INITIALIZING NOTIFICATIONS ==========');
+    
+    if (isInitialized) {
+      console.log('ℹ️ [NOTIF] Already initialized');
       return;
     }
 
-    console.log('✅ Notification permission granted');
+    // Check browser support
+    if (!('Notification' in window)) {
+      console.error('❌ [NOTIF] Browser does not support notifications');
+      return;
+    }
 
-    // Check for overdue loans when app loads
-    console.log('⏳ Will check for overdue loans in 3 seconds...');
+    console.log('📱 [NOTIF] Browser supports notifications');
+
+    // Request permission
+    hasPermission = await requestNotificationPermission();
+
+    if (!hasPermission) {
+      console.warn('⚠️ [NOTIF] User did not grant notification permission');
+      return;
+    }
+
+    isInitialized = true;
+    console.log('✅ [NOTIF] Initialization successful');
+    console.log('🔔 [NOTIF] ================================================\n');
+
+    // Check for overdue loans when app loads (3 second delay for data to load)
+    console.log('⏳ [NOTIF] Scheduling initial check in 3 seconds...');
     setTimeout(() => {
-      console.log('🔔 Running initial overdue check...');
+      console.log('🔔 [NOTIF] Running INITIAL overdue check...');
       checkAndNotifyOverdueLoans();
     }, 3000);
 
     // Check every 30 minutes while app is open
     setInterval(() => {
-      console.log('🔔 Running periodic overdue check...');
+      console.log('🔔 [NOTIF] Running PERIODIC overdue check (30min interval)...');
       checkAndNotifyOverdueLoans();
     }, 30 * 60 * 1000);
 
-    console.log('✅ Notifications initialized');
+    console.log('📅 [NOTIF] Next periodic check in 30 minutes');
   }
 
-  // Expose globally
+  // Expose globally for manual testing
   window.SimpleNotifications = {
     init: initNotifications,
     checkOverdue: checkAndNotifyOverdueLoans,
     showNotification: showLoanDueNotification,
-    requestPermission: requestNotificationPermission
+    requestPermission: requestNotificationPermission,
+    isInitialized: () => isInitialized,
+    hasPermission: () => hasPermission
   };
 
-  // Auto-initialize when Store is ready
+  console.log('✅ [NOTIF] SimpleNotifications exposed to window');
+
+  // Wait for Store to be available, then initialize
+  // Store is available immediately, but we need to wait for user to be logged in
   function waitForStore() {
-    if (window.Store) {
-      console.log('✅ Store found, initializing notifications');
-      initNotifications();
-    } else {
-      console.log('⏳ Waiting for Store...');
-      setTimeout(waitForStore, 500);
+    if (!window.Store) {
+      console.log('⏳ [NOTIF] Waiting for Store to be available...');
+      setTimeout(waitForStore, 1000);
+      return;
     }
+
+    // Store exists, now wait for actual user session
+    const session = window.Store.session();
+    if (!session || !session.email) {
+      console.log('⏳ [NOTIF] Waiting for user to be logged in...');
+      setTimeout(waitForStore, 2000);
+      return;
+    }
+
+    console.log(`✅ [NOTIF] User logged in: ${session.email}`);
+    console.log('✅ [NOTIF] Store ready, initializing notifications');
+    initNotifications();
   }
 
-  // Wait for DOM and Store
+  // Start waiting for Store
   if (document.readyState === 'loading') {
+    console.log('📄 [NOTIF] DOM still loading, waiting for DOMContentLoaded...');
     document.addEventListener('DOMContentLoaded', () => {
-      console.log('📄 DOM loaded, checking Store...');
-      setTimeout(waitForStore, 1000);
+      console.log('📄 [NOTIF] DOMContentLoaded fired, checking for Store...');
+      setTimeout(waitForStore, 500);
     });
   } else {
-    console.log('📄 DOM already ready, checking Store...');
-    setTimeout(waitForStore, 1000);
+    console.log('📄 [NOTIF] DOM already ready, checking for Store...');
+    setTimeout(waitForStore, 500);
   }
 
 })();

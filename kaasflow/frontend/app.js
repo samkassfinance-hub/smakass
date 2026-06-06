@@ -2701,39 +2701,105 @@ create table if not exists payments (
   
   $('#btn-test-notifications')?.addEventListener('click', async () => {
     try {
+      console.log('\n========== TEST NOTIFICATIONS BUTTON CLICKED ==========');
+      
+      // Step 1: Check SimpleNotifications
       if (!window.SimpleNotifications) {
-        showToast('❌ Notification system not loaded yet. Please wait a moment and try again.', 'error');
-        console.error('SimpleNotifications not available');
+        console.error('❌ SimpleNotifications not available');
+        showToast('❌ Notification system not loaded yet. Please wait and try again.', 'error');
         return;
       }
+      console.log('✅ SimpleNotifications available');
 
+      // Step 2: Check Store
       if (!window.Store) {
-        showToast('❌ App data not loaded yet. Please wait a moment and try again.', 'error');
-        console.error('Store not available');
+        console.error('❌ Store not available');
+        showToast('❌ App data not loaded. Please wait and try again.', 'error');
         return;
       }
+      console.log('✅ Store available');
 
+      // Step 3: Check user session
+      const session = window.Store.session();
+      if (!session || !session.email) {
+        console.error('❌ No user session');
+        showToast('❌ Please log in first.', 'error');
+        return;
+      }
+      console.log(`✅ User session: ${session.email}`);
+
+      // Step 4: Get data
       const loans = window.Store.loans() || [];
       const clients = window.Store.clients() || [];
+      console.log(`📊 Loans: ${loans.length}, Clients: ${clients.length}`);
 
       if (loans.length === 0 || clients.length === 0) {
-        showToast('❌ No clients or loans found. Please add some data first.', 'error');
+        showToast('❌ No loans or clients found. Load dummy data first!', 'error');
+        console.warn('⚠️ Insufficient data for notifications');
         return;
       }
 
-      // Request permission first
-      const hasPermission = await window.SimpleNotifications.requestPermission();
-      if (hasPermission) {
-        showToast('🔔 Checking for overdue loans...', 'info');
-        setTimeout(() => {
-          window.SimpleNotifications.checkOverdue();
-        }, 500);
-      } else {
-        showToast('❌ Please allow notifications in your browser settings', 'error');
+      // Step 5: Check Notification API support
+      if (!('Notification' in window)) {
+        console.error('❌ Notifications not supported in this browser');
+        showToast('❌ Your browser does not support notifications.', 'error');
+        return;
       }
+      console.log(`✅ Notifications supported`);
+      console.log(`📱 Current permission: ${Notification.permission}`);
+
+      // Step 6: Request permission
+      console.log('🔔 Requesting notification permission...');
+      const hasPermission = await window.SimpleNotifications.requestPermission();
+      
+      if (!hasPermission) {
+        console.warn('⚠️ Permission denied or blocked');
+        showToast('❌ Please allow notifications in browser settings', 'error');
+        return;
+      }
+
+      console.log('✅ Permission granted');
+
+      // Step 7: Check for overdue loans
+      showToast('🔔 Checking for overdue loans...', 'info');
+      console.log('🔍 Scanning loans for overdue items...');
+      
+      const today = new Date().toISOString().split('T')[0];
+      let overdueCount = 0;
+
+      loans.forEach((loan, i) => {
+        if (loan.status !== 'active') return;
+        const dueDate = loan.nextDueDate || loan.next_due_date;
+        if (dueDate && dueDate <= today) {
+          const client = clients.find(c => c.id === loan.clientId);
+          console.log(`  ✅ Loan ${i+1}: ${client?.name} - Due: ${dueDate}`);
+          overdueCount++;
+        }
+      });
+
+      if (overdueCount === 0) {
+        console.log('ℹ️ No overdue loans found');
+        showToast('ℹ️ No overdue loans found. Create dummy clients first!', 'info');
+        console.log('📌 Hint: Click "Load Dummy Clients (18)" to create test data\n');
+        return;
+      }
+
+      console.log(`📋 Found ${overdueCount} overdue loans, triggering notifications...`);
+      
+      // Step 8: Trigger check
+      setTimeout(() => {
+        console.log('🎬 Executing checkOverdue()...');
+        const result = window.SimpleNotifications.checkOverdue();
+        console.log('✅ Notification check triggered');
+        console.log('========== END TEST ==========\n');
+        showToast(`✅ Notifications triggered for ${overdueCount} overdue loans!`, 'success');
+      }, 500);
+
     } catch (error) {
-      console.error('❌ Test notifications error:', error);
+      console.error('❌ FATAL ERROR in test notifications:', error);
+      console.error(error.stack);
       showToast(`❌ Error: ${error.message}`, 'error');
+      console.log('========== END TEST (ERROR) ==========\n');
     }
   });
   
