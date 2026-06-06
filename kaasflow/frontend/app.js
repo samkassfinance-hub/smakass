@@ -438,6 +438,9 @@ const Store = {
   saveSession: v => Store.set('session', v),
 };
 
+// Expose Store and calcLoanStats globally for simple-notifications.js
+window.Store = Store;
+
 // ── TOAST ──────────────────────────────────────────────────────
 function showToast(msg, type = 'success') {
   const icons = { success: 'fa-circle-check', error: 'fa-circle-xmark', info: 'fa-circle-info' };
@@ -1274,6 +1277,7 @@ function calcLoanStats(loan) {
   const daysOverdue = isOverdue ? daysDiff(today(), nextDueDate) : 0;
   return { emi, totalPayable, totalInterest, totalPaid, remaining, progress, nextDueDate, isOverdue, daysOverdue };
 }
+window.calcLoanStats = calcLoanStats;
 
 function calcNextDue(loan, payments = null) {
   if (!loan.duration || loan.duration <= 0) return null;
@@ -2696,7 +2700,27 @@ create table if not exists payments (
   });
   
   $('#btn-test-notifications')?.addEventListener('click', async () => {
-    if (window.SimpleNotifications) {
+    try {
+      if (!window.SimpleNotifications) {
+        showToast('❌ Notification system not loaded yet. Please wait a moment and try again.', 'error');
+        console.error('SimpleNotifications not available');
+        return;
+      }
+
+      if (!window.Store) {
+        showToast('❌ App data not loaded yet. Please wait a moment and try again.', 'error');
+        console.error('Store not available');
+        return;
+      }
+
+      const loans = window.Store.loans() || [];
+      const clients = window.Store.clients() || [];
+
+      if (loans.length === 0 || clients.length === 0) {
+        showToast('❌ No clients or loans found. Please add some data first.', 'error');
+        return;
+      }
+
       // Request permission first
       const hasPermission = await window.SimpleNotifications.requestPermission();
       if (hasPermission) {
@@ -2707,8 +2731,9 @@ create table if not exists payments (
       } else {
         showToast('❌ Please allow notifications in your browser settings', 'error');
       }
-    } else {
-      showToast('❌ Notification system not loaded', 'error');
+    } catch (error) {
+      console.error('❌ Test notifications error:', error);
+      showToast(`❌ Error: ${error.message}`, 'error');
     }
   });
   

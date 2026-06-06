@@ -69,19 +69,52 @@
     return notification;
   }
 
+  // Calculate EMI for a loan
+  function calculateEMI(loan) {
+    const principal = loan.principal || 0;
+    const interestRate = loan.interestRate || 0;
+    const interestType = loan.interestType || 'percentage';
+    const duration = loan.duration || 0;
+    const type = loan.type || 'monthly';
+
+    // Calculate monthly interest
+    let monthlyInterest;
+    if (interestType === 'fixed') {
+      monthlyInterest = interestRate;
+    } else {
+      monthlyInterest = (principal * interestRate) / 100;
+    }
+
+    if (!duration || duration <= 0) {
+      return monthlyInterest;
+    }
+
+    const totalInterest = monthlyInterest * duration;
+    const totalPayable = principal + totalInterest;
+
+    // Calculate installments
+    const installments = type === 'weekly' ? duration * 4 : duration;
+    const emi = totalPayable / installments;
+    
+    return Math.round(emi * 100) / 100;
+  }
+
   // Check for overdue loans and show notifications
   async function checkAndNotifyOverdueLoans() {
     try {
+      console.log('🔍 Checking overdue loans...');
+      
       if (!window.Store) {
-        console.warn('⚠️ Store not initialized yet');
+        console.error('❌ Store not available');
         return;
       }
 
       const loans = window.Store.loans();
       const clients = window.Store.clients();
-      const payments = window.Store.payments();
 
-      if (!loans || !clients) {
+      console.log(`📊 Found ${loans.length} loans and ${clients.length} clients`);
+
+      if (!loans || !clients || loans.length === 0) {
         console.warn('⚠️ No loan data available');
         return;
       }
@@ -96,18 +129,17 @@
         const client = clients.find(c => c.id === loan.clientId);
         if (!client) return;
 
-        // Calculate loan stats
-        const stats = window.calcLoanStats ? window.calcLoanStats(loan) : null;
-        
-        if (!stats || !stats.nextDueDate) return;
+        // Check due date
+        const dueDate = loan.nextDueDate || loan.next_due_date;
+        if (!dueDate) return;
 
-        // Check if overdue or due today
-        const dueDate = stats.nextDueDate;
         const isDueOrOverdue = dueDate <= today;
 
-        if (isDueOrOverdue && stats.remaining > 0) {
-          // Show notification
-          const emiAmount = stats.emi || 0;
+        if (isDueOrOverdue) {
+          console.log(`⏰ Loan ${loan.id} for ${client.name} is due/overdue on ${dueDate}`);
+          // Calculate EMI
+          const emiAmount = calculateEMI(loan);
+          
           setTimeout(() => {
             showLoanDueNotification(loan, client, emiAmount);
           }, notificationCount * 1000); // Stagger notifications by 1 second
@@ -117,7 +149,7 @@
       });
 
       if (notificationCount > 0) {
-        console.log(`✅ Showed ${notificationCount} overdue loan notifications`);
+        console.log(`✅ Found and queued ${notificationCount} overdue loan notifications`);
       } else {
         console.log('✅ No overdue loans found');
       }
@@ -139,13 +171,18 @@
       return;
     }
 
+    console.log('✅ Notification permission granted');
+
     // Check for overdue loans when app loads
+    console.log('⏳ Will check for overdue loans in 3 seconds...');
     setTimeout(() => {
+      console.log('🔔 Running initial overdue check...');
       checkAndNotifyOverdueLoans();
     }, 3000);
 
     // Check every 30 minutes while app is open
     setInterval(() => {
+      console.log('🔔 Running periodic overdue check...');
       checkAndNotifyOverdueLoans();
     }, 30 * 60 * 1000);
 
@@ -162,17 +199,24 @@
 
   // Auto-initialize when Store is ready
   function waitForStore() {
-    if (window.Store && window.calcLoanStats) {
+    if (window.Store) {
+      console.log('✅ Store found, initializing notifications');
       initNotifications();
     } else {
+      console.log('⏳ Waiting for Store...');
       setTimeout(waitForStore, 500);
     }
   }
 
+  // Wait for DOM and Store
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', waitForStore);
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('📄 DOM loaded, checking Store...');
+      setTimeout(waitForStore, 1000);
+    });
   } else {
-    waitForStore();
+    console.log('📄 DOM already ready, checking Store...');
+    setTimeout(waitForStore, 1000);
   }
 
 })();
