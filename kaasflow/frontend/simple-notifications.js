@@ -352,7 +352,39 @@
     console.log('✅ Manual test notification sent');
   };
 
+  // Add environment debug function
+  window.debugNotificationEnv = () => {
+    console.log('\n🔍 ========== NOTIFICATION ENVIRONMENT DEBUG ==========');
+    console.log('🌐 User Agent:', navigator.userAgent);
+    console.log('📍 Location:', window.location.href);
+    console.log('🔒 Protocol:', window.location.protocol);
+    console.log('🏠 Origin:', window.location.origin);
+    console.log('📱 Notification support:', 'Notification' in window);
+    
+    if ('Notification' in window) {
+      console.log('📋 Permission:', Notification.permission);
+      console.log('🔧 Max actions:', Notification.maxActions || 'Unknown');
+    }
+    
+    console.log('🖥️ Platform:', navigator.platform);
+    console.log('📶 Online:', navigator.onLine);
+    console.log('🔐 Secure context:', window.isSecureContext);
+    
+    // Service worker info
+    if ('serviceWorker' in navigator) {
+      console.log('⚙️ Service Worker supported:', true);
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        console.log('📝 SW Registrations:', regs.length);
+      });
+    } else {
+      console.log('⚙️ Service Worker supported:', false);
+    }
+    
+    console.log('🔍 =================================================\n');
+  };
+
   console.log('💡 TIP: Type "testNotificationNow()" in console to test notifications anytime');
+  console.log('💡 TIP: Type "debugNotificationEnv()" to check your browser environment');
 
   // Wait for Store to be available, then initialize
   // Store is available immediately, but we need to wait for user to be logged in

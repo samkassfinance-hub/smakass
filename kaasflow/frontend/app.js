@@ -2301,6 +2301,7 @@ function renderSettings(container) {
         <div class="section-title"><i class="fa-solid fa-database"></i>Data Management</div>
         <button class="btn-kf-outline pro-btn-outline w-100 mb-3" id="btn-settings-export-pdf" data-ocid="settings.export_pdf_button"><i class="fa-solid fa-file-pdf me-1"></i>Export Data (PDF)</button>
         <button class="btn-kf-outline pro-btn-outline w-100 mb-3" id="btn-load-dummy-clients" style="background: rgba(255, 165, 0, 0.1); border-color: orange; color: orange;"><i class="fa-solid fa-flask me-1"></i>Load Dummy Clients (18)</button>
+        <button class="btn-kf-outline pro-btn-outline w-100 mb-2" id="btn-test-basic-notification" style="background: rgba(255, 0, 128, 0.1); border-color: #ff0080; color: #ff0080;"><i class="fa-solid fa-star me-1"></i>Test Basic Notification</button>
         <button class="btn-kf-outline pro-btn-outline w-100 mb-3" id="btn-test-simple-notification" style="background: rgba(76, 175, 26, 0.1); border-color: #4caf1a; color: #4caf1a;"><i class="fa-solid fa-rocket me-1"></i>Test Simple Notification</button>
         <button class="btn-kf-outline pro-btn-outline w-100 mb-3" id="btn-test-notifications" style="background: rgba(0, 207, 255, 0.1); border-color: #00cfff; color: #00cfff;"><i class="fa-solid fa-bell me-1"></i>Test Loan Notifications</button>
         <button class="btn-kf-danger pro-btn-danger w-100" id="btn-clear-data" data-ocid="settings.clear_data_button"><i class="fa-solid fa-trash me-1"></i><span data-i18n="clearData">${t('clearData')}</span></button>
@@ -2700,55 +2701,169 @@ create table if not exists payments (
     }
   });
 
+  $('#btn-test-basic-notification')?.addEventListener('click', async () => {
+    console.log('\n⭐ ========== BASIC NOTIFICATION TEST ==========');
+    
+    try {
+      console.log('🔍 Checking basic notification support...');
+      
+      if (typeof Notification === 'undefined') {
+        console.error('❌ Notification constructor not found');
+        showToast('❌ Notifications not supported', 'error');
+        return;
+      }
+
+      console.log('✅ Notification constructor exists');
+      console.log('📱 Permission:', Notification.permission);
+
+      if (Notification.permission === 'denied') {
+        console.error('❌ Notifications denied by user');
+        showToast('❌ Notifications blocked in browser', 'error');
+        return;
+      }
+
+      if (Notification.permission !== 'granted') {
+        console.log('🔔 Requesting permission...');
+        const permission = await Notification.requestPermission();
+        console.log('📱 New permission:', permission);
+        
+        if (permission !== 'granted') {
+          showToast('❌ Permission not granted', 'error');
+          return;
+        }
+      }
+
+      console.log('🚀 Creating minimal notification...');
+      
+      // Create most basic notification possible
+      const basicNotif = new Notification('SamKass Basic Test');
+      
+      console.log('✅ Basic notification created');
+      showToast('✅ Basic notification sent!', 'success');
+
+      setTimeout(() => {
+        basicNotif.close();
+      }, 5000);
+
+      console.log('⭐ ==============================================\n');
+
+    } catch (error) {
+      console.error('❌ Basic notification failed:', error);
+      showToast(`❌ Basic Error: ${error.message}`, 'error');
+    }
+  });
+
   $('#btn-test-simple-notification')?.addEventListener('click', async () => {
     console.log('\n🧪 ========== SIMPLE NOTIFICATION TEST ==========');
     
     try {
+      // Step 1: Check if Notification API exists
       if (!('Notification' in window)) {
-        showToast('❌ Your browser does not support notifications', 'error');
-        console.error('❌ Notifications not supported');
+        const errorMsg = 'Notifications not supported in this browser';
+        console.error('❌ ' + errorMsg);
+        showToast('❌ ' + errorMsg, 'error');
         return;
       }
 
       console.log('✅ Browser supports notifications');
       console.log(`📱 Current permission: ${Notification.permission}`);
+      console.log(`🌐 User agent: ${navigator.userAgent.substring(0, 100)}...`);
+      console.log(`🔒 Is HTTPS: ${window.location.protocol === 'https:'}`);
+      console.log(`📍 Origin: ${window.location.origin}`);
 
-      // Request permission
+      // Step 2: Check current permission
+      if (Notification.permission === 'denied') {
+        const errorMsg = 'Notifications are blocked. Please enable in browser settings.';
+        console.error('❌ ' + errorMsg);
+        showToast('❌ ' + errorMsg, 'error');
+        console.log('💡 To enable: Chrome Settings → Privacy and Security → Site Settings → Notifications');
+        return;
+      }
+
+      // Step 3: Request permission if needed
       if (Notification.permission !== 'granted') {
         console.log('🔔 Requesting notification permission...');
-        const permission = await Notification.requestPermission();
+        showToast('🔔 Please allow notifications when browser asks', 'info');
+        
+        let permission;
+        try {
+          permission = await Notification.requestPermission();
+        } catch (permissionError) {
+          console.error('❌ Error requesting permission:', permissionError);
+          showToast('❌ Error requesting permission: ' + permissionError.message, 'error');
+          return;
+        }
+        
         console.log(`📱 Permission result: ${permission}`);
         
         if (permission !== 'granted') {
-          showToast('❌ Please allow notifications in browser settings', 'error');
+          const errorMsg = 'Notification permission denied. Please allow notifications.';
+          console.error('❌ ' + errorMsg);
+          showToast('❌ ' + errorMsg, 'error');
           return;
         }
       }
 
-      console.log('✅ Permission granted, showing test notification...');
+      console.log('✅ Permission granted, creating test notification...');
 
-      // Show test notification
-      const testNotification = new Notification('✅ SamKass Notifications Working!', {
-        body: 'Great! Your browser can show notifications. Click to close.',
-        icon: '/logo.png',
-        badge: '/logo.png',
-        requireInteraction: true,
-        tag: 'simple-test'
-      });
+      // Step 4: Create and show test notification
+      let testNotification;
+      try {
+        testNotification = new Notification('✅ SamKass Notifications Working!', {
+          body: 'Great! Your browser can show notifications. Click to close.',
+          icon: window.location.origin + '/logo.png',
+          badge: window.location.origin + '/logo.png',
+          requireInteraction: true,
+          tag: 'simple-test-' + Date.now(),
+          timestamp: Date.now()
+        });
 
-      testNotification.onclick = () => {
-        console.log('👆 Test notification clicked');
-        window.focus();
-        testNotification.close();
-      };
+        console.log('✅ Notification object created successfully');
+
+        // Handle notification events
+        testNotification.onshow = () => {
+          console.log('👁️ Notification displayed');
+        };
+
+        testNotification.onclick = () => {
+          console.log('👆 Test notification clicked');
+          window.focus();
+          testNotification.close();
+        };
+
+        testNotification.onclose = () => {
+          console.log('🚪 Notification closed');
+        };
+
+        testNotification.onerror = (error) => {
+          console.error('❌ Notification error:', error);
+        };
+
+      } catch (notifError) {
+        console.error('❌ Error creating notification:', notifError);
+        console.error('Error details:', {
+          name: notifError.name,
+          message: notifError.message,
+          stack: notifError.stack
+        });
+        showToast('❌ Error creating notification: ' + notifError.message, 'error');
+        return;
+      }
 
       showToast('✅ Test notification sent! Check if it appeared.', 'success');
-      console.log('✅ Simple notification test completed');
+      console.log('✅ Simple notification test completed successfully');
       console.log('🧪 ==============================================\n');
 
     } catch (error) {
-      console.error('❌ Simple notification test failed:', error);
-      showToast(`❌ Error: ${error.message}`, 'error');
+      console.error('❌ FATAL ERROR in simple notification test:', error);
+      console.error('Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        toString: error.toString()
+      });
+      showToast(`❌ Fatal Error: ${error.message}`, 'error');
+      console.log('🧪 ============= TEST FAILED =============\n');
     }
   });
   
