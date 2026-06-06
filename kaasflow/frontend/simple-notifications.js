@@ -274,6 +274,39 @@
     console.log('📅 [NOTIF] Next periodic check in 30 minutes');
   }
 
+  // TEST: Force show a notification immediately
+  async function testNotificationNow() {
+    console.log('🧪 [TEST] Force showing test notification...');
+    
+    if (Notification.permission !== 'granted') {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        console.error('❌ [TEST] Permission denied');
+        return false;
+      }
+    }
+
+    try {
+      const testNotification = new Notification('🔔 SamKass Test Notification', {
+        body: 'If you see this, notifications are working!',
+        icon: '/logo.png',
+        requireInteraction: true,
+        tag: 'test-notification'
+      });
+
+      testNotification.onclick = () => {
+        window.focus();
+        testNotification.close();
+      };
+
+      console.log('✅ [TEST] Test notification shown successfully');
+      return true;
+    } catch (error) {
+      console.error('❌ [TEST] Failed to show notification:', error);
+      return false;
+    }
+  }
+
   // Expose globally for manual testing
   window.SimpleNotifications = {
     init: initNotifications,
@@ -281,10 +314,45 @@
     showNotification: showLoanDueNotification,
     requestPermission: requestNotificationPermission,
     isInitialized: () => isInitialized,
-    hasPermission: () => hasPermission
+    hasPermission: () => hasPermission,
+    testNow: testNotificationNow
   };
 
   console.log('✅ [NOTIF] SimpleNotifications exposed to window');
+
+  // Add global console helper
+  window.testNotificationNow = async () => {
+    console.log('🧪 Manual notification test from console...');
+    
+    if (!('Notification' in window)) {
+      console.error('❌ Notifications not supported');
+      return;
+    }
+
+    if (Notification.permission !== 'granted') {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        console.error('❌ Permission denied');
+        return;
+      }
+    }
+
+    const testNotif = new Notification('🔔 Manual Test from Console', {
+      body: 'This notification was triggered from browser console!',
+      icon: '/logo.png',
+      requireInteraction: true,
+      tag: 'manual-console-test'
+    });
+
+    testNotif.onclick = () => {
+      window.focus();
+      testNotif.close();
+    };
+
+    console.log('✅ Manual test notification sent');
+  };
+
+  console.log('💡 TIP: Type "testNotificationNow()" in console to test notifications anytime');
 
   // Wait for Store to be available, then initialize
   // Store is available immediately, but we need to wait for user to be logged in
@@ -295,20 +363,12 @@
       return;
     }
 
-    // Store exists, now wait for actual user session
-    const session = window.Store.session();
-    if (!session || !session.email) {
-      console.log('⏳ [NOTIF] Waiting for user to be logged in...');
-      setTimeout(waitForStore, 2000);
-      return;
-    }
-
-    console.log(`✅ [NOTIF] User logged in: ${session.email}`);
-    console.log('✅ [NOTIF] Store ready, initializing notifications');
+    console.log('✅ [NOTIF] Store found, but not checking login status');
+    console.log('✅ [NOTIF] Initializing notifications immediately');
     initNotifications();
   }
 
-  // Start waiting for Store
+  // Start waiting for Store - SIMPLIFIED TO NOT WAIT FOR LOGIN
   if (document.readyState === 'loading') {
     console.log('📄 [NOTIF] DOM still loading, waiting for DOMContentLoaded...');
     document.addEventListener('DOMContentLoaded', () => {

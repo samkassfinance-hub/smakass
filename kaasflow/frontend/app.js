@@ -2301,7 +2301,8 @@ function renderSettings(container) {
         <div class="section-title"><i class="fa-solid fa-database"></i>Data Management</div>
         <button class="btn-kf-outline pro-btn-outline w-100 mb-3" id="btn-settings-export-pdf" data-ocid="settings.export_pdf_button"><i class="fa-solid fa-file-pdf me-1"></i>Export Data (PDF)</button>
         <button class="btn-kf-outline pro-btn-outline w-100 mb-3" id="btn-load-dummy-clients" style="background: rgba(255, 165, 0, 0.1); border-color: orange; color: orange;"><i class="fa-solid fa-flask me-1"></i>Load Dummy Clients (18)</button>
-        <button class="btn-kf-outline pro-btn-outline w-100 mb-3" id="btn-test-notifications" style="background: rgba(0, 207, 255, 0.1); border-color: #00cfff; color: #00cfff;"><i class="fa-solid fa-bell me-1"></i>Test Notifications</button>
+        <button class="btn-kf-outline pro-btn-outline w-100 mb-3" id="btn-test-simple-notification" style="background: rgba(76, 175, 26, 0.1); border-color: #4caf1a; color: #4caf1a;"><i class="fa-solid fa-rocket me-1"></i>Test Simple Notification</button>
+        <button class="btn-kf-outline pro-btn-outline w-100 mb-3" id="btn-test-notifications" style="background: rgba(0, 207, 255, 0.1); border-color: #00cfff; color: #00cfff;"><i class="fa-solid fa-bell me-1"></i>Test Loan Notifications</button>
         <button class="btn-kf-danger pro-btn-danger w-100" id="btn-clear-data" data-ocid="settings.clear_data_button"><i class="fa-solid fa-trash me-1"></i><span data-i18n="clearData">${t('clearData')}</span></button>
       </div>
 
@@ -2698,129 +2699,210 @@ create table if not exists payments (
       }, 1000);
     }
   });
+
+  $('#btn-test-simple-notification')?.addEventListener('click', async () => {
+    console.log('\n🧪 ========== SIMPLE NOTIFICATION TEST ==========');
+    
+    try {
+      if (!('Notification' in window)) {
+        showToast('❌ Your browser does not support notifications', 'error');
+        console.error('❌ Notifications not supported');
+        return;
+      }
+
+      console.log('✅ Browser supports notifications');
+      console.log(`📱 Current permission: ${Notification.permission}`);
+
+      // Request permission
+      if (Notification.permission !== 'granted') {
+        console.log('🔔 Requesting notification permission...');
+        const permission = await Notification.requestPermission();
+        console.log(`📱 Permission result: ${permission}`);
+        
+        if (permission !== 'granted') {
+          showToast('❌ Please allow notifications in browser settings', 'error');
+          return;
+        }
+      }
+
+      console.log('✅ Permission granted, showing test notification...');
+
+      // Show test notification
+      const testNotification = new Notification('✅ SamKass Notifications Working!', {
+        body: 'Great! Your browser can show notifications. Click to close.',
+        icon: '/logo.png',
+        badge: '/logo.png',
+        requireInteraction: true,
+        tag: 'simple-test'
+      });
+
+      testNotification.onclick = () => {
+        console.log('👆 Test notification clicked');
+        window.focus();
+        testNotification.close();
+      };
+
+      showToast('✅ Test notification sent! Check if it appeared.', 'success');
+      console.log('✅ Simple notification test completed');
+      console.log('🧪 ==============================================\n');
+
+    } catch (error) {
+      console.error('❌ Simple notification test failed:', error);
+      showToast(`❌ Error: ${error.message}`, 'error');
+    }
+  });
   
   $('#btn-test-notifications')?.addEventListener('click', async () => {
     try {
-      console.log('\n========== TEST NOTIFICATIONS BUTTON CLICKED ==========');
+      console.log('\n========== INSTANT NOTIFICATION TEST ==========');
       
-      // Step 1: Check SimpleNotifications
-      if (!window.SimpleNotifications) {
+      // FIRST: Try simple notification test
+      if (window.SimpleNotifications && window.SimpleNotifications.testNow) {
+        console.log('🧪 Testing basic notification first...');
+        const testWorked = await window.SimpleNotifications.testNow();
+        
+        if (!testWorked) {
+          console.error('❌ Basic notification test failed');
+          showToast('❌ Basic notifications are not working. Check browser settings!', 'error');
+          return;
+        }
+        
+        console.log('✅ Basic notification test PASSED');
+        showToast('✅ Basic notification works! Now testing loan notifications...', 'success');
+        
+        // Wait for user to see the test notification
+        setTimeout(() => {
+          continueWithLoanTest();
+        }, 2000);
+      } else {
         console.error('❌ SimpleNotifications not available');
-        showToast('❌ Notification system not loaded yet. Please wait and try again.', 'error');
-        return;
-      }
-      console.log('✅ SimpleNotifications available');
-
-      // Step 2: Check Store
-      if (!window.Store) {
-        console.error('❌ Store not available');
-        showToast('❌ App data not loaded. Please wait and try again.', 'error');
-        return;
-      }
-      console.log('✅ Store available');
-
-      // Step 3: Check user session
-      const session = window.Store.session();
-      if (!session || !session.email) {
-        console.error('❌ No user session');
-        showToast('❌ Please log in first.', 'error');
-        return;
-      }
-      console.log(`✅ User session: ${session.email}`);
-
-      // Step 4: Get data
-      const loans = window.Store.loans() || [];
-      const clients = window.Store.clients() || [];
-      console.log(`📊 Loans: ${loans.length}, Clients: ${clients.length}`);
-
-      if (loans.length === 0 || clients.length === 0) {
-        showToast('❌ No loans or clients found. Load dummy data first!', 'error');
-        console.warn('⚠️ Insufficient data for notifications');
-        console.log('📌 Hint: Click "Load Dummy Clients (18)" to create test data\n');
-        return;
+        showToast('❌ Notification system not loaded', 'error');
       }
 
-      // Step 4b: Check loan structure
-      const firstLoan = loans[0];
-      console.log('\n📋 First Loan Structure:');
-      console.log('  - id:', firstLoan.id);
-      console.log('  - clientId:', firstLoan.clientId);
-      console.log('  - status:', firstLoan.status);
-      console.log('  - startDate:', firstLoan.startDate);
-      console.log('  - nextDueDate:', firstLoan.nextDueDate);
-      console.log('  - principal:', firstLoan.principal);
-
-      // Step 5: Check Notification API support
-      if (!('Notification' in window)) {
-        console.error('❌ Notifications not supported in this browser');
-        showToast('❌ Your browser does not support notifications.', 'error');
-        return;
-      }
-      console.log(`✅ Notifications supported`);
-      console.log(`📱 Current permission: ${Notification.permission}`);
-
-      // Step 6: Request permission
-      console.log('🔔 Requesting notification permission...');
-      const hasPermission = await window.SimpleNotifications.requestPermission();
-      
-      if (!hasPermission) {
-        console.warn('⚠️ Permission denied or blocked');
-        showToast('❌ Please allow notifications in browser settings', 'error');
-        return;
-      }
-
-      console.log('✅ Permission granted');
-
-      // Step 7: Check for overdue loans
-      showToast('🔔 Checking for overdue loans...', 'info');
-      console.log('\n🔍 Scanning loans for overdue items...');
-      
-      const today = new Date().toISOString().split('T')[0];
-      console.log(`📅 Today's date: ${today}`);
-      let overdueCount = 0;
-
-      loans.forEach((loan, i) => {
-        if (loan.status !== 'active') {
-          console.log(`  ⊘ Loan ${i+1}: Status is ${loan.status} (skipped)`);
+      function continueWithLoanTest() {
+        console.log('\n--- Starting Loan Notification Test ---');
+        
+        // Check SimpleNotifications
+        if (!window.SimpleNotifications) {
+          console.error('❌ SimpleNotifications not available');
+          showToast('❌ Notification system not loaded yet. Please wait and try again.', 'error');
           return;
         }
-        const dueDate = loan.nextDueDate || loan.next_due_date;
-        const client = clients.find(c => c.id === loan.clientId);
-        if (!dueDate) {
-          console.log(`  ⊘ Loan ${i+1}: ${client?.name} - NO DUE DATE`);
+        console.log('✅ SimpleNotifications available');
+
+        // Check Store
+        if (!window.Store) {
+          console.error('❌ Store not available');
+          showToast('❌ App data not loaded. Please wait and try again.', 'error');
           return;
         }
-        const daysOverdue = Math.floor((new Date(today) - new Date(dueDate)) / (1000 * 60 * 60 * 24));
-        if (dueDate <= today) {
-          console.log(`  ✅ Loan ${i+1}: ${client?.name} - Due: ${dueDate} (OVERDUE by ${daysOverdue} days)`);
-          overdueCount++;
-        } else {
-          console.log(`  ⏳ Loan ${i+1}: ${client?.name} - Due: ${dueDate} (not yet due in ${Math.abs(daysOverdue)} days)`);
+        console.log('✅ Store available');
+
+        // Get data
+        const loans = window.Store.loans() || [];
+        const clients = window.Store.clients() || [];
+        console.log(`📊 Data: ${loans.length} loans, ${clients.length} clients`);
+
+        if (loans.length === 0 || clients.length === 0) {
+          console.log('ℹ️ No loan data - creating simple test notification instead');
+          
+          // Create a fake notification to test
+          setTimeout(() => {
+            const fakeNotification = new Notification('🔔 EMI Due — Test Client', {
+              body: '₹5000 is overdue. How was the collection?',
+              icon: '/logo.png',
+              requireInteraction: true,
+              tag: 'test-emi-notification'
+            });
+            
+            fakeNotification.onclick = () => {
+              window.focus();
+              fakeNotification.close();
+            };
+            
+            showToast('✅ Test EMI notification shown!', 'success');
+            console.log('✅ Test EMI notification created');
+          }, 500);
+          
+          return;
         }
-      });
 
-      console.log(`\n📊 Overdue loans found: ${overdueCount}`);
+        // Check loan structure
+        const firstLoan = loans[0];
+        console.log('\n📋 First Loan Structure:');
+        console.log('  - id:', firstLoan.id);
+        console.log('  - clientId:', firstLoan.clientId);
+        console.log('  - status:', firstLoan.status);
+        console.log('  - startDate:', firstLoan.startDate);
+        console.log('  - nextDueDate:', firstLoan.nextDueDate);
+        console.log('  - principal:', firstLoan.principal);
 
-      if (overdueCount === 0) {
-        console.log('ℹ️ No overdue loans found');
-        showToast('ℹ️ No overdue loans found. Try loading dummy clients again!', 'info');
-        console.log('========== END TEST ==========\n');
-        return;
+        // Scan for overdue loans
+        console.log('\n🔍 Scanning loans for overdue items...');
+        const today = new Date().toISOString().split('T')[0];
+        console.log(`📅 Today's date: ${today}`);
+        let overdueCount = 0;
+
+        loans.forEach((loan, i) => {
+          if (loan.status !== 'active') {
+            console.log(`  ⊘ Loan ${i+1}: Status is ${loan.status} (skipped)`);
+            return;
+          }
+          const dueDate = loan.nextDueDate || loan.next_due_date;
+          const client = clients.find(c => c.id === loan.clientId);
+          if (!dueDate) {
+            console.log(`  ⊘ Loan ${i+1}: ${client?.name} - NO DUE DATE`);
+            return;
+          }
+          const daysOverdue = Math.floor((new Date(today) - new Date(dueDate)) / (1000 * 60 * 60 * 24));
+          if (dueDate <= today) {
+            console.log(`  ✅ Loan ${i+1}: ${client?.name} - Due: ${dueDate} (OVERDUE by ${daysOverdue} days)`);
+            overdueCount++;
+          } else {
+            console.log(`  ⏳ Loan ${i+1}: ${client?.name} - Due: ${dueDate} (not yet due in ${Math.abs(daysOverdue)} days)`);
+          }
+        });
+
+        console.log(`\n📊 Overdue loans found: ${overdueCount}`);
+
+        if (overdueCount === 0) {
+          console.log('ℹ️ No overdue loans found - creating test notification anyway');
+          
+          // Force create a notification
+          setTimeout(() => {
+            const fakeNotification = new Notification('🔔 EMI Due — Sample Client', {
+              body: '₹10000 would be overdue. This is a test!',
+              icon: '/logo.png',
+              requireInteraction: true,
+              tag: 'fake-overdue-notification'
+            });
+            
+            fakeNotification.onclick = () => {
+              window.focus();
+              fakeNotification.close();
+            };
+            
+            showToast('✅ Sample overdue notification shown!', 'success');
+          }, 500);
+          
+          console.log('========== END TEST ==========\n');
+          return;
+        }
+
+        console.log(`\n✅ Found ${overdueCount} overdue loans, triggering notifications...`);
+        
+        // Trigger actual loan notifications
+        setTimeout(() => {
+          console.log('🎬 Executing checkOverdue()...');
+          window.SimpleNotifications.checkOverdue();
+          console.log('✅ Loan notification check triggered');
+          console.log('========== END TEST ==========\n');
+          showToast(`✅ Notifications triggered for ${overdueCount} overdue loans!`, 'success');
+        }, 500);
       }
-
-      console.log(`\n✅ Found ${overdueCount} overdue loans, triggering notifications...`);
-      
-      // Step 8: Trigger check
-      setTimeout(() => {
-        console.log('🎬 Executing checkOverdue()...');
-        const result = window.SimpleNotifications.checkOverdue();
-        console.log('✅ Notification check triggered');
-        console.log('========== END TEST ==========\n');
-        showToast(`✅ Notifications triggered for ${overdueCount} overdue loans!`, 'success');
-      }, 500);
 
     } catch (error) {
-      console.error('❌ FATAL ERROR in test notifications:', error);
+      console.error('❌ FATAL ERROR in notification test:', error);
       console.error(error.stack);
       showToast(`❌ Error: ${error.message}`, 'error');
       console.log('========== END TEST (ERROR) ==========\n');
