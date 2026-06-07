@@ -824,64 +824,8 @@ function init() {
           console.log('📡 INIT: SW Scope:', registration.scope);
           console.log('📡 INIT: SW State:', registration.active ? 'Active' : 'Waiting');
           
-          // Listen for messages from SW (Payment action button taps)
-          navigator.serviceWorker.addEventListener('message', e => {
-            const msg = e.data || {};
-            console.log('📨 App: Message from SW:', msg.type, msg);
-            
-            // Handle payment action success from Service Worker
-            if (msg.type === 'PAYMENT_ACTION_SUCCESS') {
-              console.log('✅ App: Payment action completed:', msg.action);
-              
-              const { action, loan_id, amount, client_name, result } = msg;
-              
-              // Update app data based on action
-              if (action === 'paid') {
-                console.log(`💾 App: Recording ₹${amount} as PAID for loan ${loan_id}`);
-                handleNotifMarkPaid(loan_id, amount);
-              } else if (action === 'unpaid') {
-                console.log(`💾 App: Marking loan ${loan_id} as UNPAID`);
-                handleNotifMarkPending(loan_id);
-              } else if (action === 'partly_paid') {
-                console.log(`💾 App: Recording ₹${amount} partial payment for loan ${loan_id}`);
-                handlePartialPayment(loan_id, amount);
-              }
-              
-              // Show success message
-              showToast(`✅ ${action.toUpperCase()} - ₹${amount} recorded for ${client_name}`, 'success');
-              
-              // Refresh the page to show updated data
-              console.log('🔄 App: Refreshing current page');
-              setTimeout(() => {
-                if (state.currentPage === 'collection' || state.currentPage === 'loans') {
-                  refreshCurrentPage();
-                }
-              }, 500);
-            }
-            
-            // Handle payment action errors
-            else if (msg.type === 'PAYMENT_ACTION_ERROR') {
-              console.error('❌ App: Payment action error:', msg.error);
-              showToast(`❌ Error: ${msg.error}`, 'error');
-            }
-            
-            // Handle notification clicks (body tap)
-            else if (msg.type === 'NOTIF_CLICK') {
-              console.log('🔔 App: Notification body clicked');
-              navigateTo('collection');
-            }
-            
-            // Legacy handlers for backward compatibility
-            else if (msg.type === 'NOTIF_MARK_PAID') {
-              handleNotifMarkPaid(msg.loanId, msg.emi);
-            }
-            else if (msg.type === 'NOTIF_MARK_PENDING') {
-              handleNotifMarkPending(msg.loanId);
-            }
-            else if (msg.type === 'NOTIF_OPEN_COLLECTION') {
-              navigateTo('collection');
-            }
-          });
+          // Service Worker message handling is done by the global listener at the bottom of this file
+          // This prevents duplicate message handlers
         })
         .catch((err) => {
           console.warn('⚠️ INIT: Service worker registration failed:', err);
@@ -2055,6 +1999,19 @@ function renderCollection(container) {
       renderCollectionList(Store.loans().filter(l => l.status === 'active'), Store.clients(), today());
     });
   });
+  
+  // Listen for payment updates from notifications
+  const paymentUpdateHandler = (event) => {
+    console.log('🔔 Collection page: Payment update event received', event.detail);
+    const freshLoans = Store.loans().filter(l => l.status === 'active');
+    const freshClients = Store.clients();
+    renderCollectionList(freshLoans, freshClients, today());
+  };
+  
+  // Remove old listener if exists
+  window.removeEventListener('payment-updated', paymentUpdateHandler);
+  // Add new listener
+  window.addEventListener('payment-updated', paymentUpdateHandler);
 }
 
 function renderCollectionList(loans, clients, todayStr) {
@@ -3671,25 +3628,12 @@ if ('serviceWorker' in navigator) {
         
         showToast(`✅ ${actionLabel} - ₹${msg.amount} for ${msg.client_name}`, 'success');
         
-        // Refresh current page to show updated data
-        console.log('🔄 Current page:', state.page);
+        // FORCE PAGE RELOAD to show updated data
+        console.log('🔄 Forcing page reload in 1 second...');
         setTimeout(() => {
-          if (state.page === 'collection' && typeof navigateTo === 'function') {
-            console.log('🔄 Refreshing collection page...');
-            navigateTo('collection');
-          } else if (state.page === 'home' && typeof navigateTo === 'function') {
-            console.log('🔄 Refreshing home page...');
-            navigateTo('home');
-          } else if (state.page === 'loans' && typeof navigateTo === 'function') {
-            console.log('🔄 Refreshing loans page...');
-            navigateTo('loans');
-          } else {
-            console.log('📍 Current page:', state.page, '- refreshing anyway...');
-            if (typeof navigateTo === 'function') {
-              navigateTo(state.page);
-            }
-          }
-        }, 500);
+          console.log('🔄 Reloading page now...');
+          window.location.reload();
+        }, 1000);
       } catch (error) {
         console.error('❌ Failed to update app data:', error);
         console.error('❌ Error stack:', error.stack);
@@ -3713,12 +3657,6 @@ if ('serviceWorker' in navigator) {
 function updatePaymentData(loanId, action, amount) {
   console.log(`💾 updatePaymentData called: loanId=${loanId}, action=${action}, amount=${amount}`);
   
-  // Skip update for 'unpaid' action as no payment is recorded
-  if (action === 'unpaid') {
-    console.log('ℹ️ Action is UNPAID - no data update needed');
-    return;
-  }
-  
   const loans = Store.loans();
   const payments = Store.payments();
   
@@ -3732,7 +3670,33 @@ function updatePaymentData(loanId, action, amount) {
   
   console.log(`✅ Found loan:`, loan);
 
-  // Record the payment
+  // Handle UNPAID action - create a record without payment
+  if (action === 'unpaid') {
+    console.log('❌ Action is UNPAID - recording unpaid status');
+    
+    // Record unpaid status
+    const unpaidRecord = {
+      id: uid(),
+      loanId: loanId,
+      clientId: loan.clientId,
+      amount: 0,
+      status: 'unpaid',
+      date: today(),
+      mode: 'N/A',
+      note: 'Marked as UNPAID via notification',
+      createdAt: new Date().toISOString()
+    };
+    
+    payments.push(unpaidRecord);
+    Store.savePayments(payments);
+    console.log(`✅ Unpaid record saved. Total payments now: ${Store.payments().length}`);
+    
+    // Next due date stays the same (no update needed for unpaid)
+    console.log('📅 Next due date remains: ' + (loan.nextDueDate || loan.next_due_date));
+    return;
+  }
+
+  // For PAID and PARTLY_PAID, record the payment
   const payment = {
     id: uid(),
     loanId: loanId,
@@ -3807,73 +3771,167 @@ function updatePaymentData(loanId, action, amount) {
 
 // Prompt for partial payment amount
 function promptPartialAmountModal(emiAmount, callback) {
-  // Create modal
+  // Create modal backdrop
   const modal = document.createElement('div');
+  modal.className = 'partial-payment-modal-backdrop';
   modal.style.cssText = `
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0,0,0,0.5);
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 9999;
+    animation: fadeIn 0.2s ease;
   `;
 
-  modal.innerHTML = `
-    <div style="
-      background: white;
-      border-radius: 15px;
-      padding: 30px;
-      max-width: 400px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-    ">
-      <h2 style="margin-top: 0; color: #333;">💰 Partial Payment</h2>
-      <p style="color: #666;">EMI Amount: <strong>₹${emiAmount}</strong></p>
+  const modalCard = document.createElement('div');
+  modalCard.className = 'partial-payment-modal-card';
+  modalCard.style.cssText = `
+    background: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: 20px;
+    padding: 30px 25px;
+    max-width: 380px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    animation: slideUp 0.3s ease;
+  `;
+
+  modalCard.innerHTML = `
+    <div style="text-align: center;">
+      <div style="font-size: 3rem; margin-bottom: 10px;">💰</div>
+      <h2 style="margin: 0 0 8px 0; color: var(--text-primary); font-size: 1.4rem; font-weight: 700;">Partial Payment</h2>
+      <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 0.9rem;">
+        EMI Amount: <strong style="color: var(--green-light);">₹${emiAmount.toFixed(2)}</strong>
+      </p>
       
-      <input type="number" id="partial-amt" placeholder="Enter amount" 
-        min="1" max="${emiAmount}" step="0.01"
-        style="
-          width: 100%;
-          padding: 12px;
-          border: 2px solid #e9ecef;
-          border-radius: 8px;
-          font-size: 16px;
-          box-sizing: border-box;
-          margin-bottom: 15px;
-        ">
+      <div style="margin-bottom: 20px;">
+        <input 
+          type="number" 
+          id="partial-amt-input" 
+          placeholder="Enter partial amount" 
+          min="1" 
+          max="${emiAmount}" 
+          step="0.01"
+          class="kf-input"
+          style="
+            width: 100%;
+            padding: 14px 16px;
+            background: var(--bg-input);
+            border: 2px solid var(--border-default);
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            box-sizing: border-box;
+            text-align: center;
+            font-family: 'JetBrains Mono', monospace;
+          ">
+      </div>
       
       <div style="display: flex; gap: 10px;">
-        <button onclick="this.parentElement.parentElement.parentElement.remove(); 
-          document.querySelector('#partial-amt-result').callback(0);" 
-          style="flex: 1; padding: 12px; background: #e9ecef; border: none; border-radius: 8px; cursor: pointer;">
+        <button 
+          id="partial-cancel-btn"
+          class="btn-kf-outline"
+          style="
+            flex: 1; 
+            padding: 14px 20px; 
+            background: var(--bg-input); 
+            border: 1px solid var(--border-default); 
+            color: var(--text-muted);
+            border-radius: 12px; 
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+          ">
           Cancel
         </button>
-        <button onclick="
-          const amt = parseFloat(document.querySelector('#partial-amt').value);
-          if(amt > 0 && amt <= ${emiAmount}) {
-            this.parentElement.parentElement.parentElement.remove();
-            document.querySelector('#partial-amt-result').callback(amt);
-          } else {
-            alert('Enter amount between 1 and ${emiAmount}');
-          }
-        " style="flex: 1; padding: 12px; background: #7ed321; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
+        <button 
+          id="partial-confirm-btn"
+          class="btn-kf-primary"
+          style="
+            flex: 1; 
+            padding: 14px 20px; 
+            background: linear-gradient(135deg, #7ed321, #2e8b00); 
+            color: white; 
+            border: none; 
+            border-radius: 12px; 
+            cursor: pointer; 
+            font-weight: 700;
+            font-size: 0.95rem;
+            box-shadow: 0 4px 15px rgba(76, 175, 26, 0.3);
+            transition: all 0.3s;
+          ">
           Confirm
         </button>
       </div>
     </div>
   `;
 
+  modal.appendChild(modalCard);
   document.body.appendChild(modal);
-  document.getElementById('partial-amt').focus();
 
-  // Store callback
-  const result = document.createElement('div');
-  result.id = 'partial-amt-result';
-  result.callback = callback;
-  document.body.appendChild(result);
+  const input = document.getElementById('partial-amt-input');
+  const cancelBtn = document.getElementById('partial-cancel-btn');
+  const confirmBtn = document.getElementById('partial-confirm-btn');
+
+  // Focus input
+  setTimeout(() => input.focus(), 100);
+
+  // Handle cancel
+  const handleCancel = () => {
+    modal.style.animation = 'fadeOut 0.2s ease';
+    setTimeout(() => {
+      modal.remove();
+      callback(0);
+    }, 200);
+  };
+
+  cancelBtn.addEventListener('click', handleCancel);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) handleCancel();
+  });
+
+  // Handle confirm
+  confirmBtn.addEventListener('click', () => {
+    const amt = parseFloat(input.value);
+    if (!amt || amt <= 0) {
+      input.style.borderColor = 'var(--kf-danger)';
+      input.focus();
+      showToast('Please enter a valid amount', 'error');
+      return;
+    }
+    if (amt > emiAmount) {
+      input.style.borderColor = 'var(--kf-danger)';
+      input.focus();
+      showToast(`Amount cannot exceed ₹${emiAmount.toFixed(2)}`, 'error');
+      return;
+    }
+
+    modal.style.animation = 'fadeOut 0.2s ease';
+    setTimeout(() => {
+      modal.remove();
+      callback(amt);
+    }, 200);
+  });
+
+  // Handle Enter key
+  input.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      confirmBtn.click();
+    }
+  });
+
+  // Reset border color on input
+  input.addEventListener('input', () => {
+    input.style.borderColor = 'var(--border-default)';
+  });
 }
 
 
@@ -3956,13 +4014,16 @@ function fireTodayNotifications() {
         tag:     `kf-due-${loan.id}-${todayStr}`,
         requireInteraction: true,  // stays on screen until user acts
         actions: [
-          { action: 'paid',    title: '✅ Paid' },
-          { action: 'pending', title: '⏳ Pending' },
+          { action: 'paid', title: '✅ Paid' },
+          { action: 'unpaid', title: '❌ Unpaid' },
         ],
         data: {
           loanId: loan.id,
-          emi:    stats.emi,
+          loan_id: loan.id,
+          emi: stats.emi,
           amount: stats.emi,
+          client_name: name,
+          client_id: client.id,
         },
         vibrate: [200, 100, 200],  // buzz pattern on Android
       };

@@ -89,8 +89,8 @@ def send_push_notification(subscription, loan, client_name, emi_amount):
         
         # Notification payload
         notification_data = {
-            'title': f'EMI Due — {client_name}',
-            'body': f'₹{emi_amount} due on {loan["next_due_date"]}. How was the collection?',
+            'title': f'🔔 EMI Due — {client_name}',
+            'body': f'₹{emi_amount} is due. Click button or tap notification for Partial:',
             'icon': 'https://samkass.site/logo.png',
             'badge': 'https://samkass.site/logo.png',
             'requireInteraction': True,
@@ -107,7 +107,7 @@ def send_push_notification(subscription, loan, client_name, emi_amount):
                 },
                 {
                     'action': 'partly_paid',
-                    'title': '💰 PARTLY PAID',
+                    'title': '💰 PARTIAL',
                     'icon': 'https://samkass.site/logo.png'
                 }
             ],
@@ -117,7 +117,7 @@ def send_push_notification(subscription, loan, client_name, emi_amount):
                 'client_name': client_name,
                 'amount': emi_amount,
                 'due_date': loan['next_due_date'],
-                'url': '/notify-partial'
+                'url': '/'
             }
         }
         

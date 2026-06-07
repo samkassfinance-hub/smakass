@@ -41,7 +41,6 @@
     }
   }
 
-  // Show notification for overdue loan
   function showLoanDueNotification(loan, client, emiAmount) {
     if (Notification.permission !== 'granted') {
       console.warn('⚠️ Cannot show notification - permission not granted');
@@ -50,9 +49,9 @@
 
     try {
       const title = `🔔 EMI Due — ${client.name}`;
-      const body = `₹${emiAmount} is overdue. How was the collection?`;
+      const body = `₹${emiAmount} is due.`;
       
-      console.log(`🔔 Showing notification with 3 action buttons for ${client.name}`);
+      console.log(`🔔 Showing notification: ✅ Paid | ❌ Unpaid | 💰 Partial for ${client.name}`);
       
       // Use Service Worker for notifications with action buttons
       if ('serviceWorker' in navigator) {
@@ -89,7 +88,7 @@
           };
 
           registration.showNotification(title, notificationOptions);
-          console.log(`✅ Service Worker notification displayed for ${client.name} (₹${emiAmount}) with 3 action buttons`);
+          console.log(`✅ Service Worker notification displayed: Paid, Unpaid & Partial buttons`);
         }).catch(error => {
           console.error('❌ Service Worker notification failed:', error);
           // Fallback to simple notification without action buttons
@@ -340,7 +339,7 @@
 
   // TEST: Force show a notification immediately with action buttons
   async function testNotificationNow() {
-    console.log('🧪 [TEST] Force showing test notification with 3 action buttons...');
+    console.log('🧪 [TEST] Force showing test notification with 2 buttons + body tap...');
     
     if (Notification.permission !== 'granted') {
       const permission = await Notification.requestPermission();
@@ -351,14 +350,14 @@
     }
 
     try {
-      console.log('🧪 [TEST] Showing notification with 3 action buttons');
+      console.log('🧪 [TEST] Showing notification with 2 action buttons');
 
       // Use Service Worker for action buttons
       if ('serviceWorker' in navigator) {
         const registration = await navigator.serviceWorker.ready || await navigator.serviceWorker.register('/sw.js');
         
         const notificationOptions = {
-          body: 'Test notification with 3 action buttons - click the buttons to test!',
+          body: 'Click ✅Paid, ❌Unpaid or 💰Partial button!',
           icon: '/logo.png',
           requireInteraction: true,
           tag: 'test-notification-with-actions',
@@ -387,8 +386,8 @@
           ]
         };
 
-        await registration.showNotification('🔔 SamKass Test (3 Buttons)', notificationOptions);
-        console.log('✅ [TEST] Service Worker notification shown with 3 action buttons');
+        await registration.showNotification('🔔 SamKass Test', notificationOptions);
+        console.log('✅ [TEST] Service Worker notification shown - 3 buttons: Paid, Unpaid, Partial');
         return true;
       } else {
         // Fallback to simple notification
@@ -456,7 +455,7 @@
           },
           {
             action: 'unpaid',
-            title: '❌ Unpaid', 
+            title: '❌ Unpaid',
             icon: '/logo.png'
           },
           {
@@ -467,7 +466,7 @@
         ];
 
         await registration.showNotification('🔔 Manual Test from Console', {
-          body: 'This notification has 3 action buttons! Click them to test.',
+          body: 'Click ✅Paid, ❌Unpaid or 💰Partial button!',
           icon: '/logo.png',
           requireInteraction: true,
           tag: 'manual-console-test',
@@ -480,7 +479,7 @@
           }
         });
 
-        console.log('✅ Manual Service Worker notification sent with 3 action buttons');
+        console.log('✅ Manual Service Worker notification sent - 2 buttons + body for Partial');
       } else {
         // Fallback
         const testNotif = new Notification('🔔 Manual Test from Console', {

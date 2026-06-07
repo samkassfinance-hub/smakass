@@ -17,66 +17,60 @@ self.addEventListener('notificationclick', e => {
 
   notification.close();
 
-  // If no action (user clicked notification body), open app
-  if (!action) {
-    console.log('🔔 SW: No action - opening app');
-    e.waitUntil(
-      clients.openWindow('/').catch(err => {
-        console.error('❌ SW: Error opening window:', err);
-      })
-    );
-    return;
-  }
-
-  if (action === 'paid') {
-    e.waitUntil(handlePaymentAction('paid', data));
-  } else if (action === 'unpaid') {
-    e.waitUntil(handlePaymentAction('unpaid', data));
-  } else if (action === 'partly_paid') {
-    e.waitUntil(handlePaymentAction('partly_paid', data));
-  }
+  // FIRST: Always open/focus the app window
+  e.waitUntil(
+    (async () => {
+      // Handle button actions
+      if (action === 'paid') {
+        await handlePaymentAction('paid', data);
+      } else if (action === 'unpaid') {
+        await handlePaymentAction('unpaid', data);
+      } else if (action === 'partly_paid') {
+        // Open/focus window first for partly_paid
+        const allWindows = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+        
+        if (allWindows.length > 0) {
+          console.log('🔔 SW: Found existing window, focusing it');
+          await allWindows[0].focus();
+        } else {
+          console.log('🔔 SW: No window found, opening new one');
+          await clients.openWindow('/');
+        }
+        
+        // Wait for window to be ready
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        await handlePaymentAction('partly_paid', data);
+      } else {
+        // No action = body clicked
+        console.log('🔔 SW: Body clicked - no action');
+      }
+    })()
+  );
 });
 
 async function handlePaymentAction(actionType, data) {
   try {
     console.log(`🔔 SW: ${actionType} button clicked for loan ${data.loan_id}`);
 
-    // Get all clients first
+    // Get all clients (should exist now since we opened/focused in click handler)
     const allClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
     console.log(`📨 SW: Found ${allClients.length} client windows`);
 
     if (allClients.length === 0) {
-      console.error('❌ SW: No app windows open - opening new window');
-      await self.registration.showNotification('⚠️ Open SamKass App', {
-        body: 'Please open the app to record payment actions',
+      console.error('❌ SW: No app windows found even after opening');
+      await self.registration.showNotification('⚠️ Failed to Open App', {
+        body: 'Please manually open SamKass app to record payment',
         icon: '/logo.png',
-        tag: 'app-required',
-        requireInteraction: false
-      });
-      await clients.openWindow('/');
-      return;
-    }
-
-    // Get token from app
-    const token = await getTokenFromApp();
-
-    if (!token) {
-      console.error('❌ SW: No auth token - user may not be logged in');
-      notifyClients('ERROR', 'Please login to record payment');
-      await self.registration.showNotification('⚠️ Login Required', {
-        body: 'Please login to record payment actions',
-        icon: '/logo.png',
-        tag: 'login-required',
+        tag: 'app-open-failed',
         requireInteraction: false
       });
       return;
     }
-
-    console.log('✅ SW: Token received from app');
 
     let amount = data.amount || 0;
 
-    // For partly paid, ask user for amount
+    // For partly paid, ask user for amount via app
     if (actionType === 'partly_paid') {
       console.log('💰 SW: Prompting user for partial amount...');
       amount = await promptForAmount(data);
@@ -88,63 +82,46 @@ async function handlePaymentAction(actionType, data) {
       console.log(`💰 SW: User entered partial amount: ₹${amount}`);
     }
 
-    console.log(`📤 SW: Sending ${actionType} action with amount ₹${amount} to backend`);
+    console.log(`📤 SW: Sending ${actionType} action directly to app for update`);
 
-    // Get the app's base URL
-    const appUrl = allClients[0].url;
-    const baseUrl = new URL(appUrl).origin;
-    console.log(`📍 SW: Using base URL: ${baseUrl}`);
-
-    // Send to backend
-    const response = await fetch(`${baseUrl}/api/notify-action`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        loan_id: data.loan_id,
+    // DIRECT UPDATE: Send to app immediately for localStorage update
+    allClients.forEach((client, index) => {
+      console.log(`📨 SW: Sending PAYMENT_RECORDED to client ${index + 1}`);
+      client.postMessage({
+        type: 'PAYMENT_RECORDED',
         action: actionType,
-        amount: amount
-      })
+        loan_id: data.loan_id,
+        client_name: data.client_name,
+        amount: amount,
+        result: { success: true, direct_update: true }
+      });
     });
 
-    console.log(`📥 SW: Backend response status: ${response.status}`);
+    console.log('✅ SW: Payment action sent to app for immediate update');
 
-    const result = await response.json();
-    console.log('📥 SW: Backend response data:', result);
-
-    if (response.ok) {
-      console.log('✅ SW: Payment recorded successfully:', result);
-
-      // Notify all open windows to update their data
-      console.log(`📨 SW: Notifying ${allClients.length} client(s) to update data`);
-      
-      allClients.forEach((client, index) => {
-        console.log(`📨 SW: Sending PAYMENT_RECORDED to client ${index + 1}`);
-        client.postMessage({
-          type: 'PAYMENT_RECORDED',
-          action: actionType,
-          loan_id: data.loan_id,
-          client_name: data.client_name,
-          amount: amount,
-          result: result
-        });
-      });
-
-      // Show success notification
-      const actionLabel = getActionLabel(actionType);
-      await self.registration.showNotification('✅ Payment Recorded', {
-        body: `${actionLabel} ₹${amount} - ${data.client_name}`,
-        icon: '/logo.png',
-        tag: 'payment-success',
-        requireInteraction: false
-      });
-
-      console.log('✅ SW: Success notification shown');
-    } else {
-      throw new Error(result.error || 'Failed to record payment');
+    // Show appropriate success notification based on action
+    let notifTitle = '';
+    let notifBody = '';
+    
+    if (actionType === 'paid') {
+      notifTitle = '✅ Marked as PAID';
+      notifBody = `₹${amount} paid by ${data.client_name}. Next due date updated.`;
+    } else if (actionType === 'unpaid') {
+      notifTitle = '❌ Marked as UNPAID';
+      notifBody = `${data.client_name} - ₹${amount} EMI recorded as unpaid for this cycle.`;
+    } else if (actionType === 'partly_paid') {
+      notifTitle = '💰 Partial Payment Recorded';
+      notifBody = `${data.client_name} paid ₹${amount}. Remaining balance updated.`;
     }
+    
+    await self.registration.showNotification(notifTitle, {
+      body: notifBody,
+      icon: '/logo.png',
+      tag: 'payment-success',
+      requireInteraction: false
+    });
+
+    console.log('✅ SW: Success notification shown');
 
   } catch (error) {
     console.error('❌ SW Error in handlePaymentAction:', error);
