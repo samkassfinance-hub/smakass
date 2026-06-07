@@ -4,8 +4,87 @@
    ============================================================ */
 'use strict';
 
+const CACHE_NAME = 'samkass-v1';
+const CHECK_INTERVAL = 5 * 60 * 1000; // Check every 5 minutes
+
 self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', e => e.waitUntil(clients.claim()));
+self.addEventListener('activate', e => {
+  e.waitUntil(clients.claim());
+  console.log('✅ Service Worker activated - Starting notification checks');
+  // Start periodic notification checks
+  startPeriodicCheck();
+});
+
+// Periodic background sync for checking due loans
+function startPeriodicCheck() {
+  setInterval(async () => {
+    console.log('🔔 SW: Periodic check for due loans...');
+    await checkAndNotifyDueLoans();
+  }, CHECK_INTERVAL);
+}
+
+async function checkAndNotifyDueLoans() {
+  try {
+    // Get all window clients to access localStorage
+    const allClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+    
+    if (allClients.length === 0) {
+      console.log('⚠️ SW: No clients found to check data');
+      return;
+    }
+    
+    // Request data from client
+    const channel = new MessageChannel();
+    
+    const dataPromise = new Promise((resolve) => {
+      channel.port1.onmessage = (e) => {
+        resolve(e.data);
+      };
+      
+      setTimeout(() => resolve(null), 5000); // Timeout after 5 seconds
+    });
+    
+    allClients[0].postMessage({ type: 'GET_DUE_LOANS_DATA' }, [channel.port2]);
+    
+    const dueLoans = await dataPromise;
+    
+    if (!dueLoans || dueLoans.length === 0) {
+      console.log('✅ SW: No due loans found');
+      return;
+    }
+    
+    console.log(`🔔 SW: Found ${dueLoans.length} due loans`);
+    
+    // Show notifications
+    for (const item of dueLoans) {
+      await self.registration.showNotification(
+        `🔔 EMI Due — ${item.clientName}`,
+        {
+          body: `₹${item.emiAmount.toFixed(2)} is due. Tap here for Partial Payment.`,
+          icon: '/logo.png',
+          badge: '/logo.png',
+          requireInteraction: true,
+          tag: `loan-due-${item.loanId}`,
+          data: {
+            loan_id: item.loanId,
+            client_id: item.clientId,
+            client_name: item.clientName,
+            amount: item.emiAmount
+          },
+          actions: [
+            { action: 'paid', title: '✅ Paid', icon: '/logo.png' },
+            { action: 'unpaid', title: '❌ Unpaid', icon: '/logo.png' }
+          ]
+        }
+      );
+      
+      console.log(`✅ SW: Notification sent for ${item.clientName}`);
+    }
+    
+  } catch (error) {
+    console.error('❌ SW: Error checking due loans:', error);
+  }
+}
 
 /* Notification Click Handler */
 self.addEventListener('notificationclick', e => {

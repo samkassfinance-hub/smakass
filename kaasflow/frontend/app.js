@@ -3591,6 +3591,48 @@ if ('serviceWorker' in navigator) {
       }
     }
 
+    if (msg.type === 'GET_DUE_LOANS_DATA') {
+      // SW requesting due loans data
+      console.log('📊 App: SW requesting due loans data');
+      
+      try {
+        const loans = Store.loans().filter(l => l.status === 'active');
+        const clients = Store.clients();
+        const today = new Date().toISOString().split('T')[0];
+        
+        const dueLoans = loans
+          .map(loan => {
+            const client = clients.find(c => c.id === loan.clientId);
+            if (!client) return null;
+            
+            const dueDate = loan.nextDueDate || loan.next_due_date;
+            if (!dueDate || dueDate > today) return null;
+            
+            const emiAmount = calcLoanStats(loan).emi;
+            
+            return {
+              loanId: loan.id,
+              clientId: client.id,
+              clientName: client.name,
+              emiAmount: emiAmount,
+              dueDate: dueDate
+            };
+          })
+          .filter(Boolean);
+        
+        console.log(`📤 App: Sending ${dueLoans.length} due loans to SW`);
+        
+        if (event.ports && event.ports[0]) {
+          event.ports[0].postMessage(dueLoans);
+        }
+      } catch (error) {
+        console.error('❌ App: Error getting due loans data:', error);
+        if (event.ports && event.ports[0]) {
+          event.ports[0].postMessage([]);
+        }
+      }
+    }
+
     if (msg.type === 'PROMPT_PARTIAL_AMOUNT') {
       // SW requesting partial amount from user
       console.log('💰 App: Prompting user for partial amount, EMI:', msg.emi_amount);

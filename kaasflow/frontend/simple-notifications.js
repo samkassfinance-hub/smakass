@@ -316,20 +316,20 @@
     console.log('✅ [NOTIF] Initialization successful');
     console.log('🔔 [NOTIF] ================================================\n');
 
-    // Check for overdue loans when app loads (3 second delay for data to load)
-    console.log('⏳ [NOTIF] Scheduling initial check in 3 seconds...');
+    // Check for overdue loans when app loads (1 second delay for data to load)
+    console.log('⏳ [NOTIF] Scheduling initial check in 1 second...');
     setTimeout(() => {
       console.log('🔔 [NOTIF] Running INITIAL overdue check...');
       checkAndNotifyOverdueLoans();
-    }, 3000);
+    }, 1000);
 
-    // Check every 30 minutes while app is open
+    // Check every 5 minutes while app is open
     setInterval(() => {
-      console.log('🔔 [NOTIF] Running PERIODIC overdue check (30min interval)...');
+      console.log('🔔 [NOTIF] Running PERIODIC overdue check (5min interval)...');
       checkAndNotifyOverdueLoans();
-    }, 30 * 60 * 1000);
+    }, 5 * 60 * 1000);
 
-    console.log('📅 [NOTIF] Next periodic check in 30 minutes');
+    console.log('📅 [NOTIF] Next periodic check in 5 minutes');
   }
 
   // TEST: Force show a notification immediately with action buttons
