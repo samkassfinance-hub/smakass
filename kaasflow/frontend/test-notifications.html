@@ -1,254 +1,234 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SamKass - Notification Test</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 600px;
-            margin: 50px auto;
-            padding: 20px;
-            background: #f4f7f4;
-        }
-        .test-card {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            margin: 20px 0;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        button {
-            background: #7ed321;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            margin: 5px;
-        }
-        button:hover { background: #6cb91a; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-        .status { 
-            padding: 10px; 
-            margin: 10px 0; 
-            border-radius: 5px; 
-            font-weight: bold;
-        }
-        .success { background: #d4edda; color: #155724; }
-        .error { background: #f8d7da; color: #721c24; }
-        .warning { background: #fff3cd; color: #856404; }
-        .info { background: #d1ecf1; color: #0c5460; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Notifications - SamKass</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 {
+      color: #333;
+    }
+    .section {
+      background: white;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    button {
+      padding: 12px 24px;
+      margin: 10px 5px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      color: white;
+      font-weight: bold;
+    }
+    .btn-primary { background: #4caf50; }
+    .btn-secondary { background: #2196F3; }
+    .btn-warning { background: #ff9800; }
+    .btn-danger { background: #f44336; }
+    button:hover { opacity: 0.9; }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+    .status.success { background: #d4edda; color: #155724; }
+    .status.error { background: #f8d7da; color: #721c24; }
+    .status.info { background: #d1ecf1; color: #0c5460; }
+    #log {
+      background: #1e1e1e;
+      color: #ddd;
+      padding: 15px;
+      border-radius: 5px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+    .log-line { margin: 2px 0; }
+  </style>
 </head>
 <body>
-    <h1>🔔 SamKass Notification Test</h1>
-    
-    <div class="test-card">
-        <h2>1. Browser Support Check</h2>
-        <div id="support-status" class="status info">Checking browser support...</div>
-    </div>
+  <h1>🔔 Notification Test Page</h1>
+  
+  <div class="section">
+    <h2>Step 1: Request Permission</h2>
+    <button class="btn-primary" onclick="requestPermission()">Request Notification Permission</button>
+    <div id="permission-status" class="status info">Status: Not checked</div>
+  </div>
+  
+  <div class="section">
+    <h2>Step 2: Test Notification with 3 Options</h2>
+    <button class="btn-secondary" onclick="showTestNotification()">Show Test Notification</button>
+    <p><strong>How it works (3 options):</strong></p>
+    <ul>
+      <li>✅ <strong>Button 1: PAID</strong> - Full payment received, next due date updated</li>
+      <li>💰 <strong>Button 2: PARTIAL</strong> - Partial payment, prompts for amount, balance updated</li>
+      <li>❌ <strong>Tap notification body: UNPAID</strong> - Marks as unpaid for this cycle</li>
+    </ul>
+    <p><small>Note: Windows/Chrome only supports 2 action buttons. The 3rd option (UNPAID) is accessed by tapping the notification body.</small></p>
+  </div>
+  
+  <div class="section">
+    <h2>Step 3: Check Data Updates</h2>
+    <button class="btn-warning" onclick="checkData()">Check Current Data</button>
+    <button class="btn-danger" onclick="clearLog()">Clear Log</button>
+    <div id="data-status"></div>
+  </div>
+  
+  <div class="section">
+    <h2>Console Log</h2>
+    <div id="log"></div>
+  </div>
 
-    <div class="test-card">
-        <h2>2. Permission Test</h2>
-        <button onclick="testPermission()" id="permission-btn">Request Notification Permission</button>
-        <div id="permission-status" class="status"></div>
-    </div>
+  <script>
+    function log(message, type = 'info') {
+      const logDiv = document.getElementById('log');
+      const time = new Date().toLocaleTimeString();
+      const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️';
+      logDiv.innerHTML += `<div class="log-line">[${time}] ${icon} ${message}</div>`;
+      logDiv.scrollTop = logDiv.scrollHeight;
+      console.log(message);
+    }
 
-    <div class="test-card">
-        <h2>3. Simple Notification Test</h2>
-        <button onclick="testSimpleNotification()" id="simple-btn" disabled>Test Simple Notification</button>
-        <div id="simple-status" class="status"></div>
-    </div>
+    function clearLog() {
+      document.getElementById('log').innerHTML = '';
+      log('Log cleared');
+    }
 
-    <div class="test-card">
-        <h2>4. VAPID Configuration Test</h2>
-        <button onclick="testVAPID()" id="vapid-btn" disabled>Test VAPID Config</button>
-        <div id="vapid-status" class="status"></div>
-    </div>
+    async function requestPermission() {
+      log('Requesting notification permission...');
+      
+      if (!('Notification' in window)) {
+        log('Notifications not supported in this browser', 'error');
+        document.getElementById('permission-status').textContent = '❌ Not supported';
+        document.getElementById('permission-status').className = 'status error';
+        return;
+      }
 
-    <div class="test-card">
-        <h2>5. Service Worker Test</h2>
-        <button onclick="testServiceWorker()" id="sw-btn" disabled>Test Service Worker</button>
-        <div id="sw-status" class="status"></div>
-    </div>
+      const permission = await Notification.requestPermission();
+      log(`Permission result: ${permission}`, permission === 'granted' ? 'success' : 'error');
+      
+      const statusDiv = document.getElementById('permission-status');
+      if (permission === 'granted') {
+        statusDiv.textContent = '✅ Permission granted';
+        statusDiv.className = 'status success';
+      } else {
+        statusDiv.textContent = '❌ Permission denied';
+        statusDiv.className = 'status error';
+      }
+    }
 
-    <div class="test-card">
-        <h2>6. Push Notification Test</h2>
-        <button onclick="testPushNotification()" id="push-btn" disabled>Test Push Notification</button>
-        <div id="push-status" class="status"></div>
-    </div>
+    async function showTestNotification() {
+      log('Showing test notification...');
+      
+      if (Notification.permission !== 'granted') {
+        log('Permission not granted. Please request permission first.', 'error');
+        return;
+      }
 
-    <!-- Load config and dependencies -->
-    <script src="config.js"></script>
-    <script>
-        let hasPermission = false;
-        let swRegistration = null;
+      if (!('serviceWorker' in navigator)) {
+        log('Service Worker not supported', 'error');
+        return;
+      }
 
-        // Check browser support on load
-        window.onload = function() {
-            checkBrowserSupport();
-        };
-
-        function showStatus(elementId, message, type = 'info') {
-            const element = document.getElementById(elementId);
-            element.textContent = message;
-            element.className = `status ${type}`;
+      try {
+        // Register service worker if not already registered
+        let registration = await navigator.serviceWorker.getRegistration();
+        if (!registration) {
+          log('Registering service worker...');
+          registration = await navigator.serviceWorker.register('/sw.js');
+          await navigator.serviceWorker.ready;
+          log('Service worker registered', 'success');
         }
 
-        function checkBrowserSupport() {
-            const hasNotification = 'Notification' in window;
-            const hasPushManager = 'PushManager' in window;
-            const hasServiceWorker = 'serviceWorker' in navigator;
-            
-            if (hasNotification && hasPushManager && hasServiceWorker) {
-                showStatus('support-status', '✅ Browser fully supports notifications!', 'success');
-                document.getElementById('permission-btn').disabled = false;
-            } else {
-                let missing = [];
-                if (!hasNotification) missing.push('Notifications');
-                if (!hasPushManager) missing.push('Push Manager');
-                if (!hasServiceWorker) missing.push('Service Worker');
-                
-                showStatus('support-status', `❌ Missing: ${missing.join(', ')}`, 'error');
-            }
+        log('Showing notification with 2 buttons + body tap (3 total options)...');
+        
+        await registration.showNotification('🔔 Test Notification - EMI Due', {
+          body: '₹5,000 due today\n\n✅ Paid | 💰 Partial | Tap here for ❌ Unpaid',
+          icon: '/logo.png',
+          requireInteraction: true,
+          tag: 'test-notification',
+          data: {
+            test: true,
+            loan_id: 'test-loan-123',
+            client_name: 'Test Client',
+            amount: 5000
+          },
+          actions: [
+            { action: 'paid', title: '✅ Paid', icon: '/logo.png' },
+            { action: 'partly_paid', title: '💰 Partial', icon: '/logo.png' }
+          ]
+        });
+
+        log('Notification shown successfully!', 'success');
+        log('Now click one of the buttons on the notification', 'warning');
+      } catch (error) {
+        log(`Error: ${error.message}`, 'error');
+      }
+    }
+
+    function checkData() {
+      log('Checking current data...');
+      
+      if (!window.Store) {
+        log('Store not available. Open main app first.', 'error');
+        document.getElementById('data-status').innerHTML = '<div class="status error">Store not available</div>';
+        return;
+      }
+
+      const loans = window.Store.loans ? window.Store.loans() : [];
+      const payments = window.Store.payments ? window.Store.payments() : [];
+      const clients = window.Store.clients ? window.Store.clients() : [];
+
+      log(`Loans: ${loans.length}, Payments: ${payments.length}, Clients: ${clients.length}`, 'success');
+      
+      const html = `
+        <div class="status success">
+          <strong>Current Data:</strong><br>
+          📊 Loans: ${loans.length}<br>
+          💰 Payments: ${payments.length}<br>
+          👥 Clients: ${clients.length}
+        </div>
+      `;
+      document.getElementById('data-status').innerHTML = html;
+
+      if (payments.length > 0) {
+        log('Recent payments:');
+        payments.slice(-3).forEach(p => {
+          log(`  - ₹${p.amount} for loan ${p.loanId} (${p.note})`);
+        });
+      }
+    }
+
+    // Listen for messages from service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        const msg = event.data;
+        log(`Message from SW: ${msg.type}`);
+        
+        if (msg.type === 'PAYMENT_RECORDED') {
+          log(`✅ PAYMENT_RECORDED: ${msg.action} - ₹${msg.amount} for ${msg.client_name}`, 'success');
         }
+      });
+    }
 
-        async function testPermission() {
-            try {
-                if (!('Notification' in window)) {
-                    showStatus('permission-status', '❌ Notifications not supported', 'error');
-                    return;
-                }
-
-                const permission = await Notification.requestPermission();
-                
-                if (permission === 'granted') {
-                    hasPermission = true;
-                    showStatus('permission-status', '✅ Permission granted!', 'success');
-                    document.getElementById('simple-btn').disabled = false;
-                    document.getElementById('vapid-btn').disabled = false;
-                    document.getElementById('sw-btn').disabled = false;
-                } else {
-                    showStatus('permission-status', '❌ Permission denied', 'error');
-                }
-            } catch (error) {
-                showStatus('permission-status', `❌ Error: ${error.message}`, 'error');
-            }
-        }
-
-        function testSimpleNotification() {
-            if (!hasPermission) {
-                showStatus('simple-status', '⚠️ Need permission first', 'warning');
-                return;
-            }
-
-            try {
-                const notification = new Notification('🔔 SamKass Test', {
-                    body: 'Simple notification is working!',
-                    icon: '/logo.png',
-                    requireInteraction: true
-                });
-
-                notification.onclick = () => {
-                    showStatus('simple-status', '✅ Notification clicked!', 'success');
-                    notification.close();
-                };
-
-                showStatus('simple-status', '✅ Simple notification sent!', 'success');
-            } catch (error) {
-                showStatus('simple-status', `❌ Error: ${error.message}`, 'error');
-            }
-        }
-
-        function testVAPID() {
-            try {
-                const vapidKey = window.SamKassConfig?.VAPID_PUBLIC_KEY;
-                
-                if (!vapidKey || vapidKey === 'REPLACE_WITH_YOUR_VAPID_PUBLIC_KEY') {
-                    showStatus('vapid-status', '❌ VAPID key not configured', 'error');
-                    return;
-                }
-
-                if (vapidKey.length < 50) {
-                    showStatus('vapid-status', '❌ VAPID key seems too short', 'error');
-                    return;
-                }
-
-                showStatus('vapid-status', `✅ VAPID key loaded (${vapidKey.length} chars)`, 'success');
-            } catch (error) {
-                showStatus('vapid-status', `❌ Error: ${error.message}`, 'error');
-            }
-        }
-
-        async function testServiceWorker() {
-            try {
-                if (!('serviceWorker' in navigator)) {
-                    showStatus('sw-status', '❌ Service Worker not supported', 'error');
-                    return;
-                }
-
-                // Try to register service worker
-                swRegistration = await navigator.serviceWorker.register('/sw.js');
-                showStatus('sw-status', '✅ Service Worker registered!', 'success');
-                
-                // Enable push test
-                document.getElementById('push-btn').disabled = false;
-
-            } catch (error) {
-                showStatus('sw-status', `❌ SW Error: ${error.message}`, 'error');
-            }
-        }
-
-        async function testPushNotification() {
-            try {
-                if (!swRegistration) {
-                    showStatus('push-status', '⚠️ Need Service Worker first', 'warning');
-                    return;
-                }
-
-                const vapidKey = window.SamKassConfig?.VAPID_PUBLIC_KEY;
-                if (!vapidKey) {
-                    showStatus('push-status', '❌ No VAPID key', 'error');
-                    return;
-                }
-
-                // Convert VAPID key
-                const applicationServerKey = urlBase64ToUint8Array(vapidKey);
-                
-                // Subscribe to push
-                const subscription = await swRegistration.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey: applicationServerKey
-                });
-
-                showStatus('push-status', '✅ Push subscription successful!', 'success');
-                
-                // Show subscription details
-                console.log('Push Subscription:', subscription);
-
-            } catch (error) {
-                showStatus('push-status', `❌ Push Error: ${error.message}`, 'error');
-                console.error('Full error:', error);
-            }
-        }
-
-        // VAPID key conversion utility
-        function urlBase64ToUint8Array(base64String) {
-            const padding = '='.repeat((4 - base64String.length % 4) % 4);
-            const base64 = (base64String + padding)
-                .replace(/-/g, '+')
-                .replace(/_/g, '/');
-
-            const rawData = window.atob(base64);
-            const outputArray = new Uint8Array(rawData.length);
-
-            for (let i = 0; i < rawData.length; ++i) {
-                outputArray[i] = rawData.charCodeAt(i);
-            }
-            return outputArray;
-        }
-    </script>
+    // Initial check
+    window.onload = () => {
+      log('Test page loaded');
+      log('Current permission: ' + (Notification ? Notification.permission : 'Not supported'));
+    };
+  </script>
 </body>
 </html>

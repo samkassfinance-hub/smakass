@@ -2383,7 +2383,7 @@ function renderSettings(container) {
       <div class="kf-card pro-card" data-ocid="settings.data_card">
         <div class="section-title"><i class="fa-solid fa-database"></i>Data Management</div>
         <button class="btn-kf-outline pro-btn-outline w-100 mb-3" id="btn-settings-export-pdf" data-ocid="settings.export_pdf_button"><i class="fa-solid fa-file-pdf me-1"></i>Export Data (PDF)</button>
-        <button class="btn-kf-outline pro-btn-outline w-100 mb-3" id="btn-load-dummy-clients" style="background: rgba(255, 165, 0, 0.1); border-color: orange; color: orange;"><i class="fa-solid fa-flask me-1"></i>Load Dummy Clients (18)</button>
+        <button class="btn-kf-outline pro-btn-outline w-100 mb-3" id="btn-load-dummy-clients" style="background: rgba(255, 165, 0, 0.1); border-color: orange; color: orange;"><i class="fa-solid fa-flask me-1"></i>Load Dummy Clients (2)</button>
 
         <button class="btn-kf-danger pro-btn-danger w-100" id="btn-clear-data" data-ocid="settings.clear_data_button"><i class="fa-solid fa-trash me-1"></i><span data-i18n="clearData">${t('clearData')}</span></button>
       </div>
@@ -2777,9 +2777,9 @@ create table if not exists payments (
 
   if (btnLoadDummy) {
     btnLoadDummy.addEventListener('click', () => {
-      if (confirm('This will create 18 dummy clients with overdue loans. Continue?')) {
+      if (confirm('This will create 2 dummy clients with loans due TODAY and TOMORROW. Continue?')) {
         loadDummyClientsWithOverdueLoans();
-        showToast('✅ 18 dummy clients with overdue loans created!', 'success');
+        showToast('✅ 2 dummy clients with due loans created!', 'success');
         setTimeout(() => {
           navigateTo('clients');
         }, 1000);
@@ -3226,18 +3226,16 @@ function downloadCollectionDetailsPDF(loanId) {
 // ── LOAD DUMMY DATA FOR TESTING ──────────────────────────────
 function loadDummyClientsWithOverdueLoans() {
   const dummyNames = [
-    'Ravi Kumar', 'Priya Sharma', 'Amit Patel', 'Sneha Reddy',
-    'Vikram Singh', 'Anjali Gupta', 'Rahul Verma', 'Pooja Nair',
-    'Suresh Rao', 'Meena Krishnan', 'Arjun Mehta', 'Divya Joshi',
-    'Karthik Iyer', 'Lakshmi Menon', 'Rohan Das', 'Kavita Pillai',
-    'Manoj Agarwal', 'Sita Yadav'
+    'Ravi Kumar', 
+    'Priya Sharma'
   ];
 
   const clients = [];
   const loans = [];
   
-  // Generate dates between 15-45 days ago (all past due)
+  // Set due dates to TODAY and TOMORROW for testing notifications
   const today = new Date();
+  const tomorrow = new Date(today.getTime() + (24 * 60 * 60 * 1000));
   
   dummyNames.forEach((name, index) => {
     // Create client
@@ -3254,14 +3252,11 @@ function loadDummyClientsWithOverdueLoans() {
       createdAt: new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0]
     });
 
-    // Create overdue loan with EXPLICIT nextDueDate
+    // Create loan with due date TODAY (first client) or TOMORROW (second client)
     const loanId = 'dummy-loan-' + Date.now() + '-' + index;
-    const daysAgo = 15 + Math.floor(Math.random() * 30); // 15-45 days ago for due date
-    const daysAgoStart = daysAgo + 45; // Start date even earlier
-    
-    const startDate = new Date(today.getTime() - (daysAgoStart * 24 * 60 * 60 * 1000));
-    const nextDueDate = new Date(today.getTime() - (daysAgo * 24 * 60 * 60 * 1000)); // This is the KEY - set next due date to past
-    const principal = 10000 + (index * 5000); // Vary loan amounts
+    const startDate = new Date(today.getTime() - (60 * 24 * 60 * 60 * 1000)); // Started 60 days ago
+    const nextDueDate = index === 0 ? today : tomorrow; // First client due TODAY, second TOMORROW
+    const principal = index === 0 ? 50000 : 25000; // Different loan amounts
     
     loans.push({
       id: loanId,
@@ -3272,7 +3267,8 @@ function loadDummyClientsWithOverdueLoans() {
       duration: 12,
       type: 'monthly',
       startDate: startDate.toISOString().split('T')[0],
-      nextDueDate: nextDueDate.toISOString().split('T')[0], // IMPORTANT: Set explicit due date
+      nextDueDate: nextDueDate.toISOString().split('T')[0], // IMPORTANT: One TODAY, one TOMORROW
+      next_due_date: nextDueDate.toISOString().split('T')[0], // Support both field names
       status: 'active',
       createdAt: startDate.toISOString().split('T')[0]
     });
@@ -3288,8 +3284,9 @@ function loadDummyClientsWithOverdueLoans() {
   // Trigger sync
   triggerAutoSync();
   
-  console.log('✅ Loaded 18 dummy clients with OVERDUE loans');
-  console.log(`📅 All loans have nextDueDate set to 15-45 days ago`);
+  console.log('✅ Loaded 2 dummy clients with loans due TODAY and TOMORROW');
+  console.log(`📅 Client 1 (Ravi Kumar): ₹50,000 loan due TODAY`);
+  console.log(`📅 Client 2 (Priya Sharma): ₹25,000 loan due TOMORROW`);
   console.log(`📊 Ready for notification testing`);
 }
 

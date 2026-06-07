@@ -27,13 +27,12 @@ def get_push_subscriptions():
         return []
 
 def get_due_loans():
-    """Get all loans that are due today or tomorrow"""
+    """Get all loans that are due today"""
     try:
         supabase = get_supabase_client()
         today = datetime.now(IST).date()
-        tomorrow = today + timedelta(days=1)
         
-        # Get loans where next_due_date is today or tomorrow
+        # Get loans where next_due_date is today or in the past (overdue)
         response = supabase.table('loans').select('''
             *,
             clients (
@@ -41,7 +40,7 @@ def get_due_loans():
                 name,
                 phone
             )
-        ''').eq('status', 'active').in_('next_due_date', [str(today), str(tomorrow)]).execute()
+        ''').eq('status', 'active').lte('next_due_date', str(today)).execute()
         
         return response.data
     except Exception as e:
@@ -181,20 +180,20 @@ def start_scheduler():
     """Start the notification scheduler"""
     print("🚀 Starting SamKass notification scheduler...")
     
-    # Schedule job to run daily at 8:00 AM IST
+    # Schedule job to run EVERY MINUTE for testing
     scheduler.add_job(
         check_and_send_due_notifications,
-        trigger=CronTrigger(hour=8, minute=0, timezone=IST),
+        trigger=CronTrigger(minute='*', timezone=IST),
         id='due_loan_notifications',
         name='Send due loan notifications',
         replace_existing=True
     )
     
-    # Also run immediately on startup for testing
-    # scheduler.add_job(check_and_send_due_notifications, 'date', run_date=datetime.now(IST) + timedelta(seconds=5))
+    # Also run immediately on startup
+    scheduler.add_job(check_and_send_due_notifications, 'date', run_date=datetime.now(IST) + timedelta(seconds=5))
     
     scheduler.start()
-    print("✅ Scheduler started - will run daily at 8:00 AM IST")
+    print("✅ Scheduler started - will run EVERY MINUTE for testing")
     
     # Print next run time
     job = scheduler.get_job('due_loan_notifications')
