@@ -42,8 +42,24 @@ self.addEventListener('notificationclick', e => {
         
         await handlePaymentAction('partly_paid', data);
       } else {
-        // No action = body clicked
-        console.log('🔔 SW: Body clicked - no action');
+        // No action = body clicked = Partial Payment
+        console.log('🔔 SW: Body clicked - Partial Payment');
+        
+        // Open/focus window for partial payment
+        const allWindows = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+        
+        if (allWindows.length > 0) {
+          console.log('🔔 SW: Found existing window, focusing it');
+          await allWindows[0].focus();
+        } else {
+          console.log('🔔 SW: No window found, opening new one');
+          await clients.openWindow('/');
+        }
+        
+        // Wait for window to be ready
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        await handlePaymentAction('partly_paid', data);
       }
     })()
   );
@@ -246,8 +262,7 @@ self.addEventListener('push', e => {
     data: payload.data || {},
     actions: [
       { action: 'paid', title: '✅ Paid', icon: '/logo.png' },
-      { action: 'unpaid', title: '❌ Unpaid', icon: '/logo.png' },
-      { action: 'partly_paid', title: '💰 Partial', icon: '/logo.png' }
+      { action: 'unpaid', title: '❌ Unpaid', icon: '/logo.png' }
     ]
   };
 

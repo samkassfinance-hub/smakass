@@ -104,11 +104,6 @@ def send_push_notification(subscription, loan, client_name, emi_amount):
                     'action': 'unpaid',
                     'title': '❌ UNPAID',
                     'icon': 'https://samkass.site/logo.png'
-                },
-                {
-                    'action': 'partly_paid',
-                    'title': '💰 PARTIAL',
-                    'icon': 'https://samkass.site/logo.png'
                 }
             ],
             'data': {

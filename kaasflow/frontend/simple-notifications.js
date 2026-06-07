@@ -49,9 +49,9 @@
 
     try {
       const title = `🔔 EMI Due — ${client.name}`;
-      const body = `₹${emiAmount} is due.`;
+      const body = `₹${emiAmount} is due. Tap here for Partial Payment.`;
       
-      console.log(`🔔 Showing notification: ✅ Paid | ❌ Unpaid | 💰 Partial for ${client.name}`);
+      console.log(`🔔 Showing notification: ✅ Paid | ❌ Unpaid | (Tap body for Partial) for ${client.name}`);
       
       // Use Service Worker for notifications with action buttons
       if ('serviceWorker' in navigator) {
@@ -77,11 +77,6 @@
               {
                 action: 'unpaid',
                 title: '❌ Unpaid',
-                icon: '/logo.png'
-              },
-              {
-                action: 'partly_paid',
-                title: '💰 Partial',
                 icon: '/logo.png'
               }
             ]
@@ -357,7 +352,7 @@
         const registration = await navigator.serviceWorker.ready || await navigator.serviceWorker.register('/sw.js');
         
         const notificationOptions = {
-          body: 'Click ✅Paid, ❌Unpaid or 💰Partial button!',
+          body: 'Click ✅Paid or ❌Unpaid button, OR tap notification body for 💰Partial!',
           icon: '/logo.png',
           requireInteraction: true,
           tag: 'test-notification-with-actions',
@@ -376,11 +371,6 @@
             {
               action: 'unpaid', 
               title: '❌ Unpaid',
-              icon: '/logo.png'
-            },
-            {
-              action: 'partly_paid',
-              title: '💰 Partial',
               icon: '/logo.png'
             }
           ]
@@ -457,16 +447,11 @@
             action: 'unpaid',
             title: '❌ Unpaid',
             icon: '/logo.png'
-          },
-          {
-            action: 'partly_paid',
-            title: '💰 Partial',
-            icon: '/logo.png'
           }
         ];
 
         await registration.showNotification('🔔 Manual Test from Console', {
-          body: 'Click ✅Paid, ❌Unpaid or 💰Partial button!',
+          body: 'Click ✅Paid or ❌Unpaid button, OR tap notification body for 💰Partial!',
           icon: '/logo.png',
           requireInteraction: true,
           tag: 'manual-console-test',
