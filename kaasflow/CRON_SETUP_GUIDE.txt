@@ -1,0 +1,262 @@
+═══════════════════════════════════════════════════════════════════════════
+   SAMKASS AUTOMATIC NOTIFICATION SETUP GUIDE
+═══════════════════════════════════════════════════════════════════════════
+
+This system will send push notifications AUTOMATICALLY every day at 8 AM IST
+even when NO ONE has the app open!
+
+═══════════════════════════════════════════════════════════════════════════
+   STEP 1: ADD CRON_SECRET TO VERCEL (2 MINUTES)
+═══════════════════════════════════════════════════════════════════════════
+
+1. Open this link in your browser:
+   https://vercel.com/dashboard
+
+2. Click on your "SamKass" project
+
+3. Click "Settings" tab at the top
+
+4. Click "Environment Variables" in the left sidebar
+
+5. Click "Add New" button
+
+6. Enter these values:
+   ┌─────────────────────────────────────────────────┐
+   │ Key:         CRON_SECRET                        │
+   │ Value:       samkass-cron-secret-2025           │
+   │ Environment: ✓ Production                       │
+   │              ✓ Preview                          │
+   │              ✓ Development                      │
+   └─────────────────────────────────────────────────┘
+
+7. Click "Save"
+
+8. REDEPLOY (Important!):
+   - Click "Deployments" tab at top
+   - Find latest deployment (top of list)
+   - Click "..." (3 dots) next to it
+   - Click "Redeploy"
+   - Wait 30 seconds for deployment to finish
+
+✅ STEP 1 COMPLETE!
+
+═══════════════════════════════════════════════════════════════════════════
+   STEP 2: SETUP CRON-JOB.ORG (3 MINUTES)
+═══════════════════════════════════════════════════════════════════════════
+
+PART A: CREATE ACCOUNT (if you don't have one)
+───────────────────────────────────────────────────────────────────────────
+
+1. Open this link:
+   https://cron-job.org/en/signup.php
+
+2. Enter your email address
+
+3. Create a password
+
+4. Click "Sign up"
+
+5. Check your email inbox
+
+6. Click the verification link in the email
+
+7. Login with your credentials
+
+
+PART B: CREATE THE CRONJOB
+───────────────────────────────────────────────────────────────────────────
+
+1. After login, click "Create cronjob" button (top right, green button)
+
+2. Fill in the form EXACTLY as shown below:
+
+   ┌─ BASIC SETTINGS ────────────────────────────────┐
+   │                                                  │
+   │ Title:                                          │
+   │ ┌──────────────────────────────────────────┐   │
+   │ │ SamKass Daily Notifications              │   │
+   │ └──────────────────────────────────────────┘   │
+   │                                                  │
+   │ Address (URL):                                  │
+   │ ┌──────────────────────────────────────────┐   │
+   │ │ https://samkass.site/api/cron/send-      │   │
+   │ │ notifications                             │   │
+   │ └──────────────────────────────────────────┘   │
+   │                                                  │
+   └──────────────────────────────────────────────────┘
+
+   ┌─ SCHEDULE SETTINGS ─────────────────────────────┐
+   │                                                  │
+   │ Minute:     [30]                                │
+   │ Hour:       [2]      ← UTC time (8 AM IST)     │
+   │ Day:        [*]      ← Every day               │
+   │ Month:      [*]      ← Every month             │
+   │ Weekday:    [*]      ← Every day of week       │
+   │                                                  │
+   └──────────────────────────────────────────────────┘
+
+3. Click "Advanced" tab at the top of the form
+
+   ┌─ ADVANCED SETTINGS ─────────────────────────────┐
+   │                                                  │
+   │ Request method:                                 │
+   │ ┌──────────────────────────────────────────┐   │
+   │ │ GET                                      │   │
+   │ └──────────────────────────────────────────┘   │
+   │                                                  │
+   │ Custom request headers:                         │
+   │ Click the "+" button to add a header           │
+   │                                                  │
+   │ Header 1:                                       │
+   │ ┌──────────────────────────────────────────┐   │
+   │ │ Name:  X-Cron-Secret                     │   │
+   │ │ Value: samkass-cron-secret-2025          │   │
+   │ └──────────────────────────────────────────┘   │
+   │                                                  │
+   └──────────────────────────────────────────────────┘
+
+4. Scroll to bottom and click "Create cronjob"
+
+✅ STEP 2 COMPLETE!
+
+═══════════════════════════════════════════════════════════════════════════
+   TEST YOUR SETUP
+═══════════════════════════════════════════════════════════════════════════
+
+TEST 1: Check endpoint is protected (should fail)
+───────────────────────────────────────────────────────────────────────────
+
+Open this URL in your browser:
+https://samkass.site/api/cron/send-notifications
+
+You should see:
+{"error": "Unauthorized"}
+
+This is GOOD! It means the endpoint is protected.
+
+
+TEST 2: Test with secret key (should succeed)
+───────────────────────────────────────────────────────────────────────────
+
+Option A - Using Command Line (Windows PowerShell):
+```
+Invoke-WebRequest -Uri "https://samkass.site/api/cron/send-notifications" -Headers @{"X-Cron-Secret"="samkass-cron-secret-2025"}
+```
+
+Option B - Using curl (if installed):
+```
+curl -X GET https://samkass.site/api/cron/send-notifications -H "X-Cron-Secret: samkass-cron-secret-2025"
+```
+
+Option C - Using online tool:
+1. Go to: https://reqbin.com/
+2. Change method to GET
+3. Enter URL: https://samkass.site/api/cron/send-notifications
+4. Click "Headers" tab
+5. Add header: X-Cron-Secret = samkass-cron-secret-2025
+6. Click "Send"
+
+You should see:
+{
+  "sent": 0,
+  "success": true,
+  "message": "No due loans",
+  "total_due_loans": 0,
+  "users_notified": 0,
+  "timestamp": "2025-01-10T08:00:00+05:30"
+}
+
+This is GOOD! The endpoint is working correctly.
+
+
+TEST 3: Manual trigger from cron-job.org
+───────────────────────────────────────────────────────────────────────────
+
+1. Login to cron-job.org
+2. Find your "SamKass Daily Notifications" job
+3. Click the "Execute now" button (play icon)
+4. Wait 5 seconds
+5. Check "Last execution" status - should show "Success (200)"
+
+✅ ALL TESTS PASSED!
+
+═══════════════════════════════════════════════════════════════════════════
+   HOW IT WORKS NOW
+═══════════════════════════════════════════════════════════════════════════
+
+🕐 EVERY DAY AT 8:00 AM IST:
+   ├─ cron-job.org calls your endpoint
+   ├─ Backend checks Supabase for loans due today
+   ├─ Groups loans by user
+   ├─ Sends push notification to each user
+   └─ Works even if NO ONE has the app open!
+
+📱 WHEN USER GETS NOTIFICATION:
+   ├─ Shows number of due EMIs and total amount
+   ├─ Has 2 buttons: ✅ Paid | ❌ Unpaid
+   └─ Can tap notification body for partial payment
+
+🔘 WHEN USER CLICKS BUTTON:
+   ├─ Works WITHOUT opening the app!
+   ├─ Updates Supabase database directly via API
+   ├─ Shows success notification
+   └─ Next time user opens app, data syncs automatically
+
+💰 PARTIAL PAYMENT:
+   ├─ User taps notification body (not buttons)
+   ├─ Opens dedicated partial payment page
+   ├─ User enters amount
+   ├─ Saves to Supabase directly
+   └─ Page closes automatically
+
+═══════════════════════════════════════════════════════════════════════════
+   TROUBLESHOOTING
+═══════════════════════════════════════════════════════════════════════════
+
+❌ Problem: Endpoint returns "Unauthorized"
+   Solution: Check that X-Cron-Secret header matches Vercel env variable
+
+❌ Problem: No notifications are sent
+   Solution: 
+   - Check that users have push subscriptions in Supabase
+   - Verify VAPID keys are set in Vercel
+   - Check that loans have next_due_date set
+
+❌ Problem: Buttons don't work
+   Solution:
+   - Verify service worker is registered
+   - Check browser console for errors
+   - Make sure user has granted notification permission
+
+❌ Problem: cron-job.org shows failure
+   Solution:
+   - Check cron-job.org execution log for error details
+   - Verify URL is correct
+   - Confirm Vercel deployment is live
+
+═══════════════════════════════════════════════════════════════════════════
+   MONITORING
+═══════════════════════════════════════════════════════════════════════════
+
+Check if notifications are being sent:
+1. Login to cron-job.org
+2. Click on "SamKass Daily Notifications"
+3. View "Execution history"
+4. Each successful run shows: Status 200, Response time, Response body
+
+Check backend logs:
+1. Go to Vercel dashboard
+2. Click on your project
+3. Click "Logs" tab
+4. Filter for "/api/cron/send-notifications"
+5. View detailed execution logs
+
+═══════════════════════════════════════════════════════════════════════════
+
+🎉 CONGRATULATIONS! Your automatic notification system is now live!
+
+Notifications will be sent AUTOMATICALLY every day at 8 AM IST without
+anyone needing to open the app. Users can mark payments directly from
+the notification without opening the app.
+
+═══════════════════════════════════════════════════════════════════════════
