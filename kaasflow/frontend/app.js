@@ -2777,9 +2777,9 @@ create table if not exists payments (
 
   if (btnLoadDummy) {
     btnLoadDummy.addEventListener('click', () => {
-      if (confirm('This will create 2 dummy clients with loans due TODAY and TOMORROW. Continue?')) {
+      if (confirm('This will create 2 dummy clients with loans due on JUNE 9, 2026. Old dummy data will be removed. Continue?')) {
         loadDummyClientsWithOverdueLoans();
-        showToast('✅ 2 dummy clients with due loans created!', 'success');
+        showToast('✅ 2 dummy clients with loans due JUNE 9, 2026 created!', 'success');
         setTimeout(() => {
           navigateTo('clients');
         }, 1000);
@@ -3234,14 +3234,13 @@ function loadDummyClientsWithOverdueLoans() {
   const loans = [];
   
   // EXACT DATE: June 9, 2026
-  const dueDate = new Date('2026-06-09T00:00:00');
-  const startDate = new Date('2026-04-10T00:00:00'); // Started 60 days ago
+  const dueDateString = '2026-06-09'; // HARDCODED - NO CALCULATIONS
   
-  console.log('📅 Setting due date to:', dueDate.toISOString().split('T')[0]);
+  console.log('📅 HARDCODED due date:', dueDateString);
   
   dummyNames.forEach((name, index) => {
     // Create client
-    const clientId = 'dummy-client-' + Date.now() + '-' + index;
+    const clientId = 'dummy-client-jun9-' + Date.now() + '-' + index;
     const phone = '98' + String(Math.floor(10000000 + Math.random() * 90000000)).substring(0, 8);
     
     clients.push({
@@ -3251,15 +3250,14 @@ function loadDummyClientsWithOverdueLoans() {
       address: 'Test Address ' + (index + 1),
       idNum: '',
       occupation: 'Business',
-      createdAt: startDate.toISOString().split('T')[0]
+      createdAt: '2026-04-10'
     });
 
     // Create loan with EXACT due date: June 9, 2026
-    const loanId = 'dummy-loan-' + Date.now() + '-' + index;
+    const loanId = 'dummy-loan-jun9-' + Date.now() + '-' + index;
     const principal = index === 0 ? 50000 : 25000;
-    const dueDateString = '2026-06-09'; // EXACT DATE
     
-    console.log(`📅 Creating loan for ${name} with due date: ${dueDateString}`);
+    console.log(`📅 Creating loan for ${name} with HARDCODED due date: ${dueDateString}`);
     
     loans.push({
       id: loanId,
@@ -3270,32 +3268,46 @@ function loadDummyClientsWithOverdueLoans() {
       duration: 12,
       type: 'monthly',
       startDate: '2026-04-10',
-      nextDueDate: dueDateString, // EXACT: 2026-06-09
-      next_due_date: dueDateString, // EXACT: 2026-06-09
+      nextDueDate: dueDateString,
+      next_due_date: dueDateString,
       status: 'active',
       createdAt: '2026-04-10'
     });
   });
 
-  // FIRST: Remove any existing dummy clients
+  // AGGRESSIVE CLEANUP: Remove ALL old dummy data
   let existingClients = Store.clients();
   let existingLoans = Store.loans();
   
-  // Remove old dummy data
-  existingClients = existingClients.filter(c => !c.id.startsWith('dummy-client-'));
-  existingLoans = existingLoans.filter(l => !l.id.startsWith('dummy-loan-'));
+  console.log('🗑️ Before cleanup - Clients:', existingClients.length, 'Loans:', existingLoans.length);
   
-  // Add new dummy clients
+  // Remove ALL variations of dummy data
+  existingClients = existingClients.filter(c => 
+    !c.id.startsWith('dummy-client-') && 
+    !c.id.startsWith('dummy-client-jun9-') &&
+    c.name !== 'Ravi Kumar' && 
+    c.name !== 'Priya Sharma'
+  );
+  
+  existingLoans = existingLoans.filter(l => 
+    !l.id.startsWith('dummy-loan-') &&
+    !l.id.startsWith('dummy-loan-jun9-')
+  );
+  
+  console.log('🗑️ After cleanup - Clients:', existingClients.length, 'Loans:', existingLoans.length);
+  
+  // Add new dummy clients with June 9, 2026 date
   localStorage.setItem(LS.clients, JSON.stringify([...existingClients, ...clients]));
   localStorage.setItem(LS.loans, JSON.stringify([...existingLoans, ...loans]));
   
-  // Trigger sync
+  // Trigger sync to Supabase
   triggerAutoSync();
   
   console.log('✅ Loaded 2 dummy clients with loans due EXACTLY on June 9, 2026');
-  console.log(`📅 Client 1 (Ravi Kumar): ₹50,000 due on 2026-06-09`);
-  console.log(`📅 Client 2 (Priya Sharma): ₹25,000 due on 2026-06-09`);
-  console.log(`📊 Next due date verification:`, loans[0].nextDueDate, loans[1].nextDueDate);
+  console.log(`📅 Client 1 (Ravi Kumar): ₹50,000 due on ${dueDateString}`);
+  console.log(`📅 Client 2 (Priya Sharma): ₹25,000 due on ${dueDateString}`);
+  console.log(`📊 Verification - Loan 1 nextDueDate:`, loans[0].nextDueDate);
+  console.log(`📊 Verification - Loan 2 nextDueDate:`, loans[1].nextDueDate);
 }
 
 // ── EXPORT / IMPORT ───────────────────────────────────────────
