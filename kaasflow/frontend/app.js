@@ -3233,8 +3233,8 @@ function loadDummyClientsWithOverdueLoans() {
   const clients = [];
   const loans = [];
   
-  // Set due date to TOMORROW (January 9, 2026)
-  const tomorrow = new Date('2026-01-09');
+  // Set due date to TOMORROW (June 9, 2026)
+  const tomorrow = new Date('2026-06-09');
   const startDate = new Date(tomorrow.getTime() - (60 * 24 * 60 * 60 * 1000)); // Started 60 days ago
   
   dummyNames.forEach((name, index) => {
@@ -3252,7 +3252,7 @@ function loadDummyClientsWithOverdueLoans() {
       createdAt: startDate.toISOString().split('T')[0]
     });
 
-    // Create loan with due date TOMORROW (January 9, 2026)
+    // Create loan with due date TOMORROW (June 9, 2026)
     const loanId = 'dummy-loan-' + Date.now() + '-' + index;
     const principal = index === 0 ? 50000 : 25000; // Different loan amounts
     
@@ -3265,7 +3265,7 @@ function loadDummyClientsWithOverdueLoans() {
       duration: 12,
       type: 'monthly',
       startDate: startDate.toISOString().split('T')[0],
-      nextDueDate: tomorrow.toISOString().split('T')[0], // TOMORROW: 2026-01-09
+      nextDueDate: tomorrow.toISOString().split('T')[0], // TOMORROW: June 9, 2026
       next_due_date: tomorrow.toISOString().split('T')[0], // Support both field names
       status: 'active',
       createdAt: startDate.toISOString().split('T')[0]
@@ -3282,10 +3282,10 @@ function loadDummyClientsWithOverdueLoans() {
   // Trigger sync
   triggerAutoSync();
   
-  console.log('✅ Loaded 2 dummy clients with loans due TOMORROW (2026-01-09)');
-  console.log(`📅 Client 1 (Ravi Kumar): ₹50,000 loan due 2026-01-09`);
-  console.log(`📅 Client 2 (Priya Sharma): ₹25,000 loan due 2026-01-09`);
-  console.log(`📊 Ready for notification testing - will trigger at 8 AM tomorrow`);
+  console.log('✅ Loaded 2 dummy clients with loans due TOMORROW (June 9, 2026)');
+  console.log(`📅 Client 1 (Ravi Kumar): ₹50,000 loan due June 9, 2026`);
+  console.log(`📅 Client 2 (Priya Sharma): ₹25,000 loan due June 9, 2026`);
+  console.log(`📊 Ready for notification testing - will trigger at 8 AM tomorrow (June 9, 2026)`);
 }
 
 // ── EXPORT / IMPORT ───────────────────────────────────────────
