@@ -1,351 +1,185 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SamKass - Partial Payment</title>
-    <style>
-        body {
-            font-family: 'Outfit', sans-serif;
-            background: #f4f7f4;
-            margin: 0;
-            padding: 20px;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .container {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-            padding: 30px;
-            max-width: 500px;
-            width: 100%;
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .logo {
-            width: 60px;
-            height: 60px;
-            background: #7ed321;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 15px;
-            font-size: 24px;
-            color: white;
-        }
-        h1 {
-            color: #333;
-            margin: 0;
-            font-size: 24px;
-            font-weight: 600;
-        }
-        .client-info {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 25px;
-        }
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-        }
-        .info-label {
-            font-weight: 500;
-            color: #666;
-        }
-        .info-value {
-            font-weight: 600;
-            color: #333;
-        }
-        .amount-input {
-            margin-bottom: 25px;
-        }
-        label {
-            display: block;
-            font-weight: 500;
-            color: #333;
-            margin-bottom: 8px;
-        }
-        input[type="number"] {
-            width: 100%;
-            padding: 15px;
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
-            font-size: 18px;
-            font-weight: 600;
-            transition: border-color 0.3s;
-            box-sizing: border-box;
-        }
-        input[type="number"]:focus {
-            outline: none;
-            border-color: #7ed321;
-        }
-        .quick-amounts {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-            flex-wrap: wrap;
-        }
-        .quick-amount {
-            background: #e9ecef;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s;
-        }
-        .quick-amount:hover {
-            background: #7ed321;
-            color: white;
-        }
-        .buttons {
-            display: flex;
-            gap: 15px;
-            margin-top: 30px;
-        }
-        .btn {
-            flex: 1;
-            padding: 15px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        .btn-primary {
-            background: #7ed321;
-            color: white;
-        }
-        .btn-primary:hover {
-            background: #6cb91a;
-        }
-        .btn-secondary {
-            background: #e9ecef;
-            color: #666;
-        }
-        .btn-secondary:hover {
-            background: #d1d3d4;
-        }
-        .status {
-            margin-top: 20px;
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-            font-weight: 500;
-        }
-        .status.success {
-            background: #d4edda;
-            color: #155724;
-        }
-        .status.error {
-            background: #f8d7da;
-            color: #721c24;
-        }
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 20px;
-        }
-        .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #7ed321;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Partial Payment - SamKass</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 20px;
+      padding: 40px 30px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    h1 { font-size: 24px; margin-bottom: 10px; color: #333; }
+    .client-name { font-size: 18px; color: #666; margin-bottom: 20px; }
+    .emi-info {
+      background: #f5f5f5;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+    .emi-label { font-size: 14px; color: #666; }
+    .emi-amount { font-size: 28px; font-weight: bold; color: #7ed321; }
+    label {
+      display: block;
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 8px;
+    }
+    input {
+      width: 100%;
+      padding: 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 18px;
+      margin-bottom: 20px;
+      transition: border 0.3s;
+    }
+    input:focus {
+      outline: none;
+      border-color: #7ed321;
+    }
+    button {
+      width: 100%;
+      padding: 15px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .btn-primary {
+      background: #7ed321;
+      color: white;
+      margin-bottom: 10px;
+    }
+    .btn-primary:hover {
+      background: #6bc215;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(126, 211, 33, 0.4);
+    }
+    .btn-secondary {
+      background: #f5f5f5;
+      color: #666;
+    }
+    .btn-secondary:hover {
+      background: #e0e0e0;
+    }
+    .status {
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .success { background: #d4edda; color: #155724; display: block; }
+    .error { background: #f8d7da; color: #721c24; display: block; }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="logo">₹</div>
-            <h1>Partial Payment</h1>
-        </div>
-
-        <div class="client-info">
-            <div class="info-row">
-                <span class="info-label">Client:</span>
-                <span class="info-value" id="client-name">Loading...</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">EMI Amount:</span>
-                <span class="info-value" id="emi-amount">₹0</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Loan ID:</span>
-                <span class="info-value" id="loan-id">-</span>
-            </div>
-        </div>
-
-        <div class="amount-input">
-            <label for="partial-amount">Enter Partial Payment Amount:</label>
-            <input type="number" id="partial-amount" placeholder="0" min="1" step="0.01">
-            <div class="quick-amounts">
-                <button class="quick-amount" onclick="setQuickAmount(1000)">₹1,000</button>
-                <button class="quick-amount" onclick="setQuickAmount(2000)">₹2,000</button>
-                <button class="quick-amount" onclick="setQuickAmount(5000)">₹5,000</button>
-                <button class="quick-amount" onclick="setQuickAmount(0.5)">50%</button>
-            </div>
-        </div>
-
-        <div class="buttons">
-            <button class="btn btn-secondary" onclick="cancel()">Cancel</button>
-            <button class="btn btn-primary" onclick="submitPayment()">Record Payment</button>
-        </div>
-
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <div>Processing payment...</div>
-        </div>
-
-        <div id="status"></div>
+  <div class="card">
+    <h1>💰 Partial Payment</h1>
+    <div class="client-name" id="clientName">Loading...</div>
+    
+    <div class="emi-info">
+      <div class="emi-label">EMI Amount</div>
+      <div class="emi-amount" id="emiAmount">₹0</div>
     </div>
+    
+    <div id="status" class="status"></div>
+    
+    <label for="amount">Enter Partial Amount Received</label>
+    <input type="number" id="amount" placeholder="Enter amount" min="1" step="0.01" autofocus>
+    
+    <button class="btn-primary" onclick="savePartial()">✅ Confirm Payment</button>
+    <button class="btn-secondary" onclick="window.close()">Cancel</button>
+  </div>
 
-    <script>
-        let loanData = {};
-
-        // Parse URL parameters
-        function getUrlParams() {
-            const params = new URLSearchParams(window.location.search);
-            return {
-                loan_id: params.get('loan_id'),
-                client_name: params.get('client_name'),
-                amount: parseFloat(params.get('amount')) || 0
-            };
-        }
-
-        // Initialize page
-        function initPage() {
-            loanData = getUrlParams();
-            
-            document.getElementById('client-name').textContent = loanData.client_name || 'Unknown Client';
-            document.getElementById('emi-amount').textContent = `₹${loanData.amount?.toLocaleString() || '0'}`;
-            document.getElementById('loan-id').textContent = loanData.loan_id || 'Unknown';
-        }
-
-        // Set quick amount
-        function setQuickAmount(value) {
-            const input = document.getElementById('partial-amount');
-            if (value === 0.5) {
-                // 50% of EMI
-                input.value = (loanData.amount * 0.5).toFixed(2);
-            } else {
-                input.value = value;
-            }
-            input.focus();
-        }
-
-        // Submit partial payment
-        async function submitPayment() {
-            const amount = parseFloat(document.getElementById('partial-amount').value);
-            
-            if (!amount || amount <= 0) {
-                showStatus('Please enter a valid amount', 'error');
-                return;
-            }
-
-            if (amount > loanData.amount) {
-                showStatus('Partial amount cannot exceed EMI amount', 'error');
-                return;
-            }
-
-            showLoading(true);
-
-            try {
-                // Get auth token from localStorage
-                const session = JSON.parse(localStorage.getItem('kf_session') || '{}');
-                const token = session.token;
-
-                if (!token) {
-                    throw new Error('Authentication required. Please login first.');
-                }
-
-                const response = await fetch('/api/notify-action', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        loan_id: loanData.loan_id,
-                        action: 'partly_paid',
-                        amount: amount
-                    })
-                });
-
-                const result = await response.json();
-
-                if (response.ok) {
-                    showStatus(`✅ Partial payment of ₹${amount.toLocaleString()} recorded successfully!`, 'success');
-                    
-                    // Auto-close after 2 seconds
-                    setTimeout(() => {
-                        if (window.opener) {
-                            window.opener.postMessage({
-                                type: 'PARTIAL_PAYMENT_SUCCESS',
-                                data: { loan_id: loanData.loan_id, amount: amount }
-                            }, '*');
-                        }
-                        window.close();
-                    }, 2000);
-                } else {
-                    throw new Error(result.error || 'Failed to record payment');
-                }
-
-            } catch (error) {
-                console.error('Payment error:', error);
-                showStatus(`❌ Error: ${error.message}`, 'error');
-            } finally {
-                showLoading(false);
-            }
-        }
-
-        // Cancel and close
-        function cancel() {
-            if (window.opener) {
-                window.opener.postMessage({
-                    type: 'PARTIAL_PAYMENT_CANCELLED'
-                }, '*');
-            }
-            window.close();
-        }
-
-        // Show loading state
-        function showLoading(show) {
-            document.getElementById('loading').style.display = show ? 'block' : 'none';
-            document.querySelector('.buttons').style.display = show ? 'none' : 'flex';
-        }
-
-        // Show status message
-        function showStatus(message, type) {
-            const statusDiv = document.getElementById('status');
-            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
-        }
-
-        // Initialize when page loads
-        window.onload = initPage;
-
-        // Handle Enter key
-        document.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                submitPayment();
-            }
+  <script>
+    // Get params from URL
+    const params = new URLSearchParams(window.location.search);
+    const loanId = params.get('loan_id');
+    const emiAmount = parseFloat(params.get('amount')) || 0;
+    const clientName = decodeURIComponent(params.get('name') || 'Client');
+    
+    // Display info
+    document.getElementById('clientName').textContent = clientName;
+    document.getElementById('emiAmount').textContent = `₹${emiAmount.toFixed(2)}`;
+    document.getElementById('amount').max = emiAmount;
+    
+    async function savePartial() {
+      const amount = parseFloat(document.getElementById('amount').value);
+      
+      if (!amount || amount <= 0) {
+        showStatus('Please enter a valid amount', 'error');
+        return;
+      }
+      
+      if (amount > emiAmount) {
+        showStatus(`Amount cannot exceed ₹${emiAmount.toFixed(2)}`, 'error');
+        return;
+      }
+      
+      try {
+        // Call backend API
+        const response = await fetch('https://samkass.site/api/cron/notify-action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            loans: [{
+              loan_id: loanId,
+              client_name: clientName,
+              amount: emiAmount
+            }],
+            action: 'partly_paid',
+            amount: amount
+          })
         });
-    </script>
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          showStatus(`✅ Partial payment of ₹${amount.toFixed(2)} recorded!`, 'success');
+          
+          // Close after 2 seconds
+          setTimeout(() => {
+            window.close();
+            // If close fails, redirect to app
+            setTimeout(() => window.location.href = '/', 100);
+          }, 2000);
+        } else {
+          showStatus('Failed to save payment. Please try again.', 'error');
+        }
+        
+      } catch (error) {
+        console.error('Error:', error);
+        showStatus('Network error. Please check your connection.', 'error');
+      }
+    }
+    
+    function showStatus(msg, type) {
+      const status = document.getElementById('status');
+      status.textContent = msg;
+      status.className = 'status ' + type;
+    }
+    
+    // Handle Enter key
+    document.getElementById('amount').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') savePartial();
+    });
+  </script>
 </body>
 </html>

@@ -91,151 +91,69 @@ self.addEventListener('notificationclick', e => {
   const notification = e.notification;
   const action = e.action;
   const data = notification.data || {};
+  const loans = data.loans || [];
 
-  console.log('🔔 SW: Notification clicked - action:', action, 'data:', data);
+  console.log('🔔 SW: Notification clicked - action:', action);
 
   notification.close();
 
-  // FIRST: Always open/focus the app window
-  e.waitUntil(
-    (async () => {
-      // Handle button actions
-      if (action === 'paid') {
-        await handlePaymentAction('paid', data);
-      } else if (action === 'unpaid') {
-        await handlePaymentAction('unpaid', data);
-      } else if (action === 'partly_paid') {
-        // Open/focus window first for partly_paid
-        const allWindows = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+  // Handle button actions
+  if (action === 'paid' || action === 'unpaid') {
+    // Call backend API directly - no localStorage
+    e.waitUntil(
+      fetch('https://samkass.site/api/cron/notify-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          loans: loans,
+          action: action
+        }),
+        keepalive: true
+      })
+      .then(res => res.json())
+      .then(result => {
+        console.log(`✅ SW: ${action} action saved:`, result);
         
-        if (allWindows.length > 0) {
-          console.log('🔔 SW: Found existing window, focusing it');
-          await allWindows[0].focus();
-        } else {
-          console.log('🔔 SW: No window found, opening new one');
-          await clients.openWindow('/');
-        }
-        
-        // Wait for window to be ready
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        await handlePaymentAction('partly_paid', data);
-      } else {
-        // No action = body clicked = Partial Payment
-        console.log('🔔 SW: Body clicked - Partial Payment');
-        
-        // Open/focus window for partial payment
-        const allWindows = await clients.matchAll({ type: 'window', includeUncontrolled: true });
-        
-        if (allWindows.length > 0) {
-          console.log('🔔 SW: Found existing window, focusing it');
-          await allWindows[0].focus();
-        } else {
-          console.log('🔔 SW: No window found, opening new one');
-          await clients.openWindow('/');
-        }
-        
-        // Wait for window to be ready
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        await handlePaymentAction('partly_paid', data);
-      }
-    })()
-  );
-});
-
-async function handlePaymentAction(actionType, data) {
-  try {
-    console.log(`🔔 SW: ${actionType} button clicked for loan ${data.loan_id}`);
-
-    // Get all clients (should exist now since we opened/focused in click handler)
-    const allClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
-    console.log(`📨 SW: Found ${allClients.length} client windows`);
-
-    if (allClients.length === 0) {
-      console.error('❌ SW: No app windows found even after opening');
-      await self.registration.showNotification('⚠️ Failed to Open App', {
-        body: 'Please manually open SamKass app to record payment',
-        icon: '/logo.png',
-        tag: 'app-open-failed',
-        requireInteraction: false
-      });
-      return;
-    }
-
-    let amount = data.amount || 0;
-
-    // For partly paid, ask user for amount via app
-    if (actionType === 'partly_paid') {
-      console.log('💰 SW: Prompting user for partial amount...');
-      amount = await promptForAmount(data);
-      if (!amount || amount <= 0) {
-        console.log('⚠️ SW: Partial payment cancelled by user');
-        notifyClients('INFO', 'Partial payment cancelled');
-        return;
-      }
-      console.log(`💰 SW: User entered partial amount: ₹${amount}`);
-    }
-
-    console.log(`📤 SW: Sending ${actionType} action directly to app for update`);
-
-    // DIRECT UPDATE: Send to app immediately for localStorage update
-    allClients.forEach((client, index) => {
-      console.log(`📨 SW: Sending PAYMENT_RECORDED to client ${index + 1}`);
-      client.postMessage({
-        type: 'PAYMENT_RECORDED',
-        action: actionType,
-        loan_id: data.loan_id,
-        client_name: data.client_name,
-        amount: amount,
-        result: { success: true, direct_update: true }
-      });
-    });
-
-    console.log('✅ SW: Payment action sent to app for immediate update');
-
-    // Show appropriate success notification based on action
-    let notifTitle = '';
-    let notifBody = '';
-    
-    if (actionType === 'paid') {
-      notifTitle = '✅ Marked as PAID';
-      notifBody = `₹${amount} paid by ${data.client_name}. Next due date updated.`;
-    } else if (actionType === 'unpaid') {
-      notifTitle = '❌ Marked as UNPAID';
-      notifBody = `${data.client_name} - ₹${amount} EMI recorded as unpaid for this cycle.`;
-    } else if (actionType === 'partly_paid') {
-      notifTitle = '💰 Partial Payment Recorded';
-      notifBody = `${data.client_name} paid ₹${amount}. Remaining balance updated.`;
-    }
-    
-    await self.registration.showNotification(notifTitle, {
-      body: notifBody,
-      icon: '/logo.png',
-      tag: 'payment-success',
-      requireInteraction: false
-    });
-
-    console.log('✅ SW: Success notification shown');
-
-  } catch (error) {
-    console.error('❌ SW Error in handlePaymentAction:', error);
-    console.error('❌ SW Error stack:', error.stack);
-    notifyClients('ERROR', `Failed: ${error.message}`);
-    
-    // Show error notification
-    try {
-      await self.registration.showNotification('❌ Payment Failed', {
-        body: `Failed to record ${actionType} for ${data.client_name}. Error: ${error.message}`,
-        icon: '/logo.png',
-        tag: 'payment-error',
-        requireInteraction: false
-      });
-    } catch (notifError) {
-      console.error('❌ SW: Failed to show error notification:', notifError);
+        // Show success notification
+        return self.registration.showNotification(
+          action === 'paid' ? '✅ Marked as PAID' : '❌ Marked as UNPAID',
+          {
+            body: `${loans.length} EMI(s) updated successfully`,
+            icon: '/logo.png',
+            tag: 'payment-success',
+            requireInteraction: false
+          }
+        );
+      })
+      .catch(err => {
+        console.error('❌ SW: Action failed:', err);
+        return self.registration.showNotification(
+          '❌ Action Failed',
+          {
+            body: 'Could not update payment. Please open the app.',
+            icon: '/logo.png',
+            tag: 'payment-error'
+          }
+        );
+      })
+    );
+  } else if (!action) {
+    // Notification body clicked - open app for partial payment
+    const firstLoan = loans[0];
+    if (firstLoan) {
+      e.waitUntil(
+        clients.openWindow(
+          'https://samkass.site/notify-partial.html?loan_id=' +
+          firstLoan.loan_id + '&amount=' + firstLoan.amount +
+          '&name=' + encodeURIComponent(firstLoan.client_name)
+        )
+      );
+    } else {
+      e.waitUntil(clients.openWindow('https://samkass.site'));
     }
   }
-}
+});
+
 
 async function getTokenFromApp() {
   try {
