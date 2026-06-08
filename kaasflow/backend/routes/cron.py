@@ -45,8 +45,12 @@ def send_notifications():
     cron_secret = request.headers.get('X-Cron-Secret')
     expected_secret = os.getenv('CRON_SECRET', 'change-this-secret')
     
+    print(f"🔐 Cron: Received secret: {cron_secret}")
+    print(f"🔐 Cron: Expected secret: {expected_secret}")
+    
     if cron_secret != expected_secret:
-        return jsonify({'error': 'Unauthorized'}), 401
+        print(f"❌ Cron: Secret mismatch!")
+        return jsonify({'error': 'Unauthorized', 'debug': f'received={cron_secret is not None}'}), 401
     
     try:
         supabase = get_supabase_client()
