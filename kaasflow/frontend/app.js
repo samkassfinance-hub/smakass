@@ -3233,9 +3233,11 @@ function loadDummyClientsWithOverdueLoans() {
   const clients = [];
   const loans = [];
   
-  // Set due date to TOMORROW (June 9, 2026)
-  const tomorrow = new Date('2026-06-09');
-  const startDate = new Date(tomorrow.getTime() - (60 * 24 * 60 * 60 * 1000)); // Started 60 days ago
+  // EXACT DATE: June 9, 2026
+  const dueDate = new Date('2026-06-09T00:00:00');
+  const startDate = new Date('2026-04-10T00:00:00'); // Started 60 days ago
+  
+  console.log('📅 Setting due date to:', dueDate.toISOString().split('T')[0]);
   
   dummyNames.forEach((name, index) => {
     // Create client
@@ -3252,9 +3254,12 @@ function loadDummyClientsWithOverdueLoans() {
       createdAt: startDate.toISOString().split('T')[0]
     });
 
-    // Create loan with due date TOMORROW (June 9, 2026)
+    // Create loan with EXACT due date: June 9, 2026
     const loanId = 'dummy-loan-' + Date.now() + '-' + index;
-    const principal = index === 0 ? 50000 : 25000; // Different loan amounts
+    const principal = index === 0 ? 50000 : 25000;
+    const dueDateString = '2026-06-09'; // EXACT DATE
+    
+    console.log(`📅 Creating loan for ${name} with due date: ${dueDateString}`);
     
     loans.push({
       id: loanId,
@@ -3264,28 +3269,33 @@ function loadDummyClientsWithOverdueLoans() {
       interestType: 'percentage',
       duration: 12,
       type: 'monthly',
-      startDate: startDate.toISOString().split('T')[0],
-      nextDueDate: tomorrow.toISOString().split('T')[0], // TOMORROW: June 9, 2026
-      next_due_date: tomorrow.toISOString().split('T')[0], // Support both field names
+      startDate: '2026-04-10',
+      nextDueDate: dueDateString, // EXACT: 2026-06-09
+      next_due_date: dueDateString, // EXACT: 2026-06-09
       status: 'active',
-      createdAt: startDate.toISOString().split('T')[0]
+      createdAt: '2026-04-10'
     });
   });
 
-  // Save to localStorage
-  const existingClients = Store.clients();
-  const existingLoans = Store.loans();
+  // FIRST: Remove any existing dummy clients
+  let existingClients = Store.clients();
+  let existingLoans = Store.loans();
   
+  // Remove old dummy data
+  existingClients = existingClients.filter(c => !c.id.startsWith('dummy-client-'));
+  existingLoans = existingLoans.filter(l => !l.id.startsWith('dummy-loan-'));
+  
+  // Add new dummy clients
   localStorage.setItem(LS.clients, JSON.stringify([...existingClients, ...clients]));
   localStorage.setItem(LS.loans, JSON.stringify([...existingLoans, ...loans]));
   
   // Trigger sync
   triggerAutoSync();
   
-  console.log('✅ Loaded 2 dummy clients with loans due TOMORROW (June 9, 2026)');
-  console.log(`📅 Client 1 (Ravi Kumar): ₹50,000 loan due June 9, 2026`);
-  console.log(`📅 Client 2 (Priya Sharma): ₹25,000 loan due June 9, 2026`);
-  console.log(`📊 Ready for notification testing - will trigger at 8 AM tomorrow (June 9, 2026)`);
+  console.log('✅ Loaded 2 dummy clients with loans due EXACTLY on June 9, 2026');
+  console.log(`📅 Client 1 (Ravi Kumar): ₹50,000 due on 2026-06-09`);
+  console.log(`📅 Client 2 (Priya Sharma): ₹25,000 due on 2026-06-09`);
+  console.log(`📊 Next due date verification:`, loans[0].nextDueDate, loans[1].nextDueDate);
 }
 
 // ── EXPORT / IMPORT ───────────────────────────────────────────
