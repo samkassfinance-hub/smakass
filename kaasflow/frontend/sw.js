@@ -97,61 +97,46 @@ self.addEventListener('notificationclick', e => {
 
   notification.close();
 
-  // Handle button actions
-  if (action === 'paid' || action === 'unpaid') {
-    // Call backend API directly - no localStorage
-    e.waitUntil(
-      fetch('https://samkass.site/api/cron/notify-action', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          loans: loans,
-          action: action
-        }),
-        keepalive: true
-      })
-      .then(res => res.json())
-      .then(result => {
-        console.log(`✅ SW: ${action} action saved:`, result);
-        
-        // Show success notification
-        return self.registration.showNotification(
-          action === 'paid' ? '✅ Marked as PAID' : '❌ Marked as UNPAID',
-          {
-            body: `${loans.length} EMI(s) updated successfully`,
-            icon: '/logo.png',
-            tag: 'payment-success',
-            requireInteraction: false
-          }
-        );
-      })
-      .catch(err => {
-        console.error('❌ SW: Action failed:', err);
-        return self.registration.showNotification(
-          '❌ Action Failed',
-          {
-            body: 'Could not update payment. Please open the app.',
-            icon: '/logo.png',
-            tag: 'payment-error'
-          }
-        );
-      })
-    );
-  } else if (!action) {
-    // Notification body clicked - open app for partial payment
+  // Build URL with action parameters
+  let url = 'https://samkass.site/';
+  
+  if (action === 'paid') {
+    // Open app with paid action
+    const loanIds = loans.map(l => l.loan_id).join(',');
+    url = `https://samkass.site/?action=paid&loans=${loanIds}`;
+    console.log('✅ SW: Opening app to mark as PAID');
+  } else if (action === 'unpaid') {
+    // Open app with unpaid action
+    const loanIds = loans.map(l => l.loan_id).join(',');
+    url = `https://samkass.site/?action=unpaid&loans=${loanIds}`;
+    console.log('❌ SW: Opening app to mark as UNPAID');
+  } else if (loans.length > 0) {
+    // Notification body clicked - open partial payment page
     const firstLoan = loans[0];
-    if (firstLoan) {
-      e.waitUntil(
-        clients.openWindow(
-          'https://samkass.site/notify-partial.html?loan_id=' +
-          firstLoan.loan_id + '&amount=' + firstLoan.amount +
-          '&name=' + encodeURIComponent(firstLoan.client_name)
-        )
-      );
-    } else {
-      e.waitUntil(clients.openWindow('https://samkass.site'));
-    }
+    url = `https://samkass.site/notify-partial.html?loan_id=${firstLoan.loan_id}&amount=${firstLoan.amount}&name=${encodeURIComponent(firstLoan.client_name)}`;
+    console.log('💰 SW: Opening partial payment page');
   }
+
+  // Open the app window
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then(windowClients => {
+        // Check if app is already open
+        for (let i = 0; i < windowClients.length; i++) {
+          const client = windowClients[i];
+          if (client.url.includes('samkass.site') && 'focus' in client) {
+            // Focus existing window and navigate
+            client.focus();
+            client.navigate(url);
+            return client;
+          }
+        }
+        // Open new window if app not open
+        if (clients.openWindow) {
+          return clients.openWindow(url);
+        }
+      })
+  );
 });
 
 

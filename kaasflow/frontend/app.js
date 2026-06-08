@@ -5049,6 +5049,39 @@ setTimeout(() => {
 document.addEventListener('DOMContentLoaded', () => {
   console.log('🎬 BOOT: DOMContentLoaded event fired');
   
+  // Handle notification action from URL parameters
+  const urlParams = new URLSearchParams(window.location.search);
+  const action = urlParams.get('action');
+  const loanIds = urlParams.get('loans');
+  
+  if (action && loanIds) {
+    console.log(`🔔 Handling notification action: ${action} for loans: ${loanIds}`);
+    
+    // Wait for app to initialize, then process action
+    setTimeout(() => {
+      const loanIdArray = loanIds.split(',');
+      
+      if (action === 'paid') {
+        // Mark all loans as paid
+        loanIdArray.forEach(loanId => {
+          handlePaidNotification(loanId);
+        });
+        showToast(`✅ Marked ${loanIdArray.length} loan(s) as PAID`, 'success');
+        navigateTo('collection');
+      } else if (action === 'unpaid') {
+        // Mark all loans as unpaid
+        loanIdArray.forEach(loanId => {
+          // Just show toast - unpaid doesn't change anything
+        });
+        showToast(`❌ Marked ${loanIdArray.length} loan(s) as UNPAID`, 'info');
+        navigateTo('collection');
+      }
+      
+      // Clear URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }, 2000);
+  }
+  
   // Check if required dependencies are loaded
   console.log('🔍 BOOT: Checking dependencies...');
   console.log('Bootstrap:', typeof bootstrap !== 'undefined');
