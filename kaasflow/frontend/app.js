@@ -3233,9 +3233,9 @@ function loadDummyClientsWithOverdueLoans() {
   const clients = [];
   const loans = [];
   
-  // Set due dates to TODAY and TOMORROW for testing notifications
-  const today = new Date();
-  const tomorrow = new Date(today.getTime() + (24 * 60 * 60 * 1000));
+  // Set due date to TOMORROW (January 9, 2026)
+  const tomorrow = new Date('2026-01-09');
+  const startDate = new Date(tomorrow.getTime() - (60 * 24 * 60 * 60 * 1000)); // Started 60 days ago
   
   dummyNames.forEach((name, index) => {
     // Create client
@@ -3249,13 +3249,11 @@ function loadDummyClientsWithOverdueLoans() {
       address: 'Test Address ' + (index + 1),
       idNum: '',
       occupation: 'Business',
-      createdAt: new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0]
+      createdAt: startDate.toISOString().split('T')[0]
     });
 
-    // Create loan with due date TODAY (first client) or TOMORROW (second client)
+    // Create loan with due date TOMORROW (January 9, 2026)
     const loanId = 'dummy-loan-' + Date.now() + '-' + index;
-    const startDate = new Date(today.getTime() - (60 * 24 * 60 * 60 * 1000)); // Started 60 days ago
-    const nextDueDate = index === 0 ? today : tomorrow; // First client due TODAY, second TOMORROW
     const principal = index === 0 ? 50000 : 25000; // Different loan amounts
     
     loans.push({
@@ -3267,8 +3265,8 @@ function loadDummyClientsWithOverdueLoans() {
       duration: 12,
       type: 'monthly',
       startDate: startDate.toISOString().split('T')[0],
-      nextDueDate: nextDueDate.toISOString().split('T')[0], // IMPORTANT: One TODAY, one TOMORROW
-      next_due_date: nextDueDate.toISOString().split('T')[0], // Support both field names
+      nextDueDate: tomorrow.toISOString().split('T')[0], // TOMORROW: 2026-01-09
+      next_due_date: tomorrow.toISOString().split('T')[0], // Support both field names
       status: 'active',
       createdAt: startDate.toISOString().split('T')[0]
     });
@@ -3284,10 +3282,10 @@ function loadDummyClientsWithOverdueLoans() {
   // Trigger sync
   triggerAutoSync();
   
-  console.log('✅ Loaded 2 dummy clients with loans due TODAY and TOMORROW');
-  console.log(`📅 Client 1 (Ravi Kumar): ₹50,000 loan due TODAY`);
-  console.log(`📅 Client 2 (Priya Sharma): ₹25,000 loan due TOMORROW`);
-  console.log(`📊 Ready for notification testing`);
+  console.log('✅ Loaded 2 dummy clients with loans due TOMORROW (2026-01-09)');
+  console.log(`📅 Client 1 (Ravi Kumar): ₹50,000 loan due 2026-01-09`);
+  console.log(`📅 Client 2 (Priya Sharma): ₹25,000 loan due 2026-01-09`);
+  console.log(`📊 Ready for notification testing - will trigger at 8 AM tomorrow`);
 }
 
 // ── EXPORT / IMPORT ───────────────────────────────────────────
@@ -3667,12 +3665,14 @@ if ('serviceWorker' in navigator) {
         
         showToast(`✅ ${actionLabel} - ₹${msg.amount} for ${msg.client_name}`, 'success');
         
-        // FORCE PAGE RELOAD to show updated data
-        console.log('🔄 Forcing page reload in 1 second...');
-        setTimeout(() => {
-          console.log('🔄 Reloading page now...');
-          window.location.reload();
-        }, 1000);
+        // Refresh the current view without full page reload
+        console.log('🔄 Refreshing current view...');
+        const currentPage = State.page;
+        if (currentPage === 'collection') {
+          renderCollectionPage();
+        } else if (currentPage === 'loans') {
+          renderLoansPage();
+        }
       } catch (error) {
         console.error('❌ Failed to update app data:', error);
         console.error('❌ Error stack:', error.stack);
@@ -5067,17 +5067,17 @@ document.addEventListener('DOMContentLoaded', () => {
           handlePaidNotification(loanId);
         });
         showToast(`✅ Marked ${loanIdArray.length} loan(s) as PAID`, 'success');
+        
+        // Navigate and refresh view
         navigateTo('collection');
+        setTimeout(() => renderCollectionPage(), 500);
       } else if (action === 'unpaid') {
-        // Mark all loans as unpaid
-        loanIdArray.forEach(loanId => {
-          // Just show toast - unpaid doesn't change anything
-        });
+        // Mark all loans as unpaid - just show message
         showToast(`❌ Marked ${loanIdArray.length} loan(s) as UNPAID`, 'info');
         navigateTo('collection');
       }
       
-      // Clear URL parameters
+      // Clear URL parameters without reload
       window.history.replaceState({}, document.title, window.location.pathname);
     }, 2000);
   }
