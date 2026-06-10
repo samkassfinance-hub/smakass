@@ -2394,6 +2394,61 @@ function renderSettings(container) {
         <button class="btn-kf-outline pro-btn-outline w-100" id="btn-connect-supabase-storage"><i class="fa-solid fa-link me-1"></i>Connect Storage</button>
       </div>
 
+      <!-- WhatsApp Automation Card -->
+      <div class="kf-card pro-card" data-ocid="settings.whatsapp_card">
+        <div class="section-title">
+          <i class="fa-brands fa-whatsapp"></i> WhatsApp Automation
+        </div>
+        <p class="text-muted-kf fs-sm mb-3">
+          Connect your WhatsApp to send automatic payment reminders to customers.
+        </p>
+        
+        <!-- Error Message Display -->
+        <div id="wa-error-msg" class="alert alert-danger d-none" role="alert" style="font-size: 0.875rem; margin-bottom: 1rem;">
+        </div>
+        
+        <!-- WhatsApp Number Input -->
+        <div class="settings-row pro-row">
+          <div>
+            <div class="settings-row-label">WhatsApp Number</div>
+            <input type="tel" id="wa-phone-input" class="form-control kf-input" 
+                   placeholder="+91 XXXXXXXXXX" />
+          </div>
+        </div>
+        
+        <!-- Connection Status Badge -->
+        <div id="wa-status-badge" class="mb-3">
+          <span class="badge bg-secondary">Not Connected</span>
+        </div>
+        
+        <!-- Action Buttons -->
+        <button class="btn-kf-primary w-100 mb-2" id="btn-wa-connect">
+          <i class="fa-brands fa-whatsapp me-2"></i>Connect WhatsApp
+        </button>
+        <button class="btn-kf-outline w-100 mb-2 d-none" id="btn-wa-disconnect">
+          <i class="fa-solid fa-link-slash me-2"></i>Disconnect
+        </button>
+        <button class="btn-kf-outline w-100 mb-2 d-none" id="btn-wa-test">
+          <i class="fa-solid fa-paper-plane me-2"></i>Send Test Message
+        </button>
+        
+        <!-- Reminder Settings (shown when connected) -->
+        <div id="wa-reminder-settings" class="d-none mt-3">
+          <div class="settings-row pro-row">
+            <div><div class="settings-row-label">Due Today Reminders</div></div>
+            <label class="kf-toggle"><input type="checkbox" id="wa-due-today" checked /><span class="kf-toggle-slider"></span></label>
+          </div>
+          <div class="settings-row pro-row">
+            <div><div class="settings-row-label">Due Tomorrow Reminders</div></div>
+            <label class="kf-toggle"><input type="checkbox" id="wa-due-tomorrow" checked /><span class="kf-toggle-slider"></span></label>
+          </div>
+          <div class="settings-row pro-row">
+            <div><div class="settings-row-label">Overdue Reminders</div></div>
+            <label class="kf-toggle"><input type="checkbox" id="wa-overdue" checked /><span class="kf-toggle-slider"></span></label>
+          </div>
+        </div>
+      </div>
+
       <!-- Legal & Contact Options -->
       <div class="kf-card pro-card" data-ocid="settings.legal_card">
         <div class="section-title"><i class="fa-solid fa-circle-info"></i>About & Legal</div>
@@ -2437,6 +2492,11 @@ function renderSettings(container) {
     </div>`;
 
   translateDOM();
+
+  // Initialize WhatsApp Automation if available
+  if (window.WhatsAppAutomation) {
+    WhatsAppAutomation.loadConfig();
+  }
 
   // Toggle Recycle Bin visibility
   $('#btn-open-recycle-bin').addEventListener('click', (e) => {

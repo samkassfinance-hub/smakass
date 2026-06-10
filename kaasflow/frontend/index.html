@@ -2619,6 +2619,25 @@
     </div>
   </div>
 
+  <!-- WhatsApp QR Modal -->
+  <div class="modal fade" id="waQRModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content kf-modal">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="fa-brands fa-whatsapp me-2" style="color: #25D366;"></i>Connect WhatsApp</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body text-center" style="padding: 2rem;">
+          <p class="text-muted-kf mb-4">Scan this QR code with your WhatsApp app (Linked Devices) to connect.</p>
+          <div id="wa-qr-image" class="mb-4" style="min-height: 250px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+            <!-- QR code will be injected here -->
+          </div>
+          <p class="text-muted-kf fs-sm">This window will automatically close once connected.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- [NEW] Import / Export Data: Hidden file input for import -->
   <input type="file" id="import-file-input" accept=".json" style="display:none" />
 
@@ -2728,6 +2747,7 @@
   <script src="push-notifications.js" defer></script>
   <script src="test-notification-auto-update.js" defer></script>
   <script src="test-notification-fix.js" defer></script>
+  <script src="whatsapp-automation.js" defer></script>
   
   <!-- Final Fallback Script -->
   <script>
