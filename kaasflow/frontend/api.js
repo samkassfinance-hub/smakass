@@ -1,6 +1,6 @@
 const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
     ? 'http://127.0.0.1:5000/api'
-    : '/api'; // Same deployment, relative path
+    : 'https://backend-inky-xi-82.vercel.app/api'; // Backend deployment
 
 async function apiCall(endpoint, method = 'GET', body = null) {
     const headers = {

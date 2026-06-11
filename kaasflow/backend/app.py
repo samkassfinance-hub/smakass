@@ -18,8 +18,10 @@ print(f"\n🔧 Environment loaded:")
 print(f"   WHATSAPP_API_URL: {whatsapp_url}")
 print(f"   WHATSAPP_API_KEY: {'SET' if whatsapp_key else 'NOT SET'}")
 
-from flask import Flask
+from flask import Flask, request, jsonify
 from flask_cors import CORS
+from supabase import create_client, Client
+from auth.jwt_handler import decode_token
 
 # Create Flask app instance (Vercel needs this at top level)
 app = Flask(__name__)
@@ -39,22 +41,9 @@ allowed_origins = [
     "https://samkass.site"
 ]
 
-CORS(app, supports_credentials=True, resources={r"/api/*": {"origins": allowed_origins}})
+CORS(app, supports_credentials=True, resources={r"/*": {"origins": allowed_origins}})
 
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
-
-# Import and register auth routes
-from auth.routes import auth_bp
-from razorpay_integration import payment_routes
-from routes.push import push_bp
-from routes.test_push import test_push_bp
-from routes.cron import cron_bp
-from routes.whatsapp import whatsapp_bp
-
-import os
-from supabase import create_client, Client
-from auth.jwt_handler import decode_token
-from flask import request, jsonify
 
 # Initialize Supabase Client
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
@@ -64,11 +53,19 @@ supabase: Client = None
 if SUPABASE_URL and SUPABASE_KEY:
     try:
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-        print("Supabase client initialized successfully.")
+        print("✅ Supabase client initialized successfully.")
     except Exception as e:
-        print(f"Warning: Failed to initialize Supabase client: {e}")
+        print(f"⚠️ Warning: Failed to initialize Supabase client: {e}")
         supabase = None
-        
+
+# Import and register all blueprints
+from auth.routes import auth_bp
+from razorpay_integration import payment_routes
+from routes.push import push_bp
+from routes.test_push import test_push_bp
+from routes.cron import cron_bp
+from routes.whatsapp import whatsapp_bp
+
 app.register_blueprint(auth_bp, url_prefix='/api')
 app.register_blueprint(auth_bp, url_prefix='/auth', name='auth_prefix')
 app.register_blueprint(push_bp, url_prefix='/api')
@@ -97,7 +94,6 @@ def health_check():
 
 @app.route('/api/debug-env', methods=['GET'])
 def debug_env():
-    import os
     resend_key = os.environ.get("RESEND_API_KEY")
     resend_key_masked = f"{resend_key[:6]}...{resend_key[-4:]}" if resend_key and len(resend_key) > 10 else ("Set" if resend_key else "Not Set")
     
@@ -112,9 +108,10 @@ def debug_env():
         "SUPABASE_URL": os.environ.get("SUPABASE_URL"),
         "SUPABASE_SERVICE_ROLE_KEY": supabase_key_masked,
         "GOOGLE_CLIENT_ID": os.environ.get("GOOGLE_CLIENT_ID"),
+        "WHATSAPP_API_URL": os.environ.get("WHATSAPP_API_URL"),
+        "WHATSAPP_API_KEY": "SET" if os.environ.get("WHATSAPP_API_KEY") else "NOT SET",
         "supabase_client_initialized": supabase is not None
     })
-
 
 
 # ── Cloud Sync Routes ────────────────────────────────────────
@@ -220,6 +217,10 @@ def sync_restore():
     except Exception as e:
         print(f"Sync Restore Error: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
+
+# IMPORTANT: Export app for Vercel
+handler = app
+
 if __name__ == '__main__':
     port = int(os.environ.get('BACKEND_PORT', 5000))
     app.run(debug=True, port=port, host='0.0.0.0')

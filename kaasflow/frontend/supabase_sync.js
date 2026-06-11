@@ -26,7 +26,9 @@
     return supabaseInstance;
   }
 
-  const API_BASE = '/api/sync';
+  const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? 'http://127.0.0.1:5000/api/sync'
+    : 'https://backend-inky-xi-82.vercel.app/api/sync';
   const LAST_SYNC_KEY = 'kf_last_sync';
 
   // ─── Helper: Get Current User ────────────────────────────────
