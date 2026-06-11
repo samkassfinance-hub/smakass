@@ -21,6 +21,9 @@ print(f"   WHATSAPP_API_KEY: {'SET' if whatsapp_key else 'NOT SET'}")
 from flask import Flask
 from flask_cors import CORS
 
+# Create Flask app instance (Vercel needs this at top level)
+app = Flask(__name__)
+
 # Allow requests from frontend
 allowed_origins = [
     os.environ.get("FRONTEND_URL", "http://localhost:5500"),
