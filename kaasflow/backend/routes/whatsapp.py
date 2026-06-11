@@ -20,40 +20,66 @@ def get_instance_name(user_id):
     return f"samkass_{user_id.replace('-', '').replace('_', '')[:16]}"
 
 def get_user_from_token():
-    """Extract user from auth header without decorator"""
+    """Extract user from auth header with multiple fallbacks"""
     auth_header = request.headers.get('Authorization')
-    if not auth_header or not auth_header.startswith('Bearer '):
-        return None
+    x_user_email = request.headers.get('X-User-Email')
     
-    token = auth_header.split(' ')[1]
-    try:
-        payload = decode_token(token)
-        return payload
-    except:
-        return None
+    # Try Authorization header
+    if auth_header and auth_header.startswith('Bearer '):
+        token = auth_header.split(' ')[1]
+        try:
+            payload = decode_token(token)
+            if payload:
+                user_id = payload.get('sub') or payload.get('user_id') or payload.get('id')
+                if user_id:
+                    return {'id': user_id, 'email': payload.get('email', ''), 'payload': payload}
+        except Exception as e:
+            print(f"Token decode error: {e}")
+    
+    # Try X-User-Email header
+    if x_user_email:
+        return {'id': x_user_email, 'email': x_user_email}
+    
+    # Try custom session format
+    if auth_header and ':' in auth_header:
+        parts = auth_header.split(':')
+        if len(parts) > 1 and '@' in parts[1]:
+            return {'id': parts[1], 'email': parts[1]}
+    
+    return None
 
 @whatsapp_bp.route('/whatsapp/setup', methods=['POST'])
 def setup_whatsapp():
     try:
         current_user = get_user_from_token()
         if not current_user:
+            print("ERROR: No user extracted from token")
+            print(f"Headers: {dict(request.headers)}")
             return jsonify({'success': False, 'error': 'Authentication failed'}), 401
             
-        user_id = current_user.get('sub') or current_user.get('id')
+        user_id = current_user.get('id')
         if not user_id:
+            print("ERROR: No user_id found in current_user")
             return jsonify({'success': False, 'error': 'User ID not found'}), 401
+        
+        print(f"✅ WhatsApp setup for user: {user_id}")
             
         instance_name = get_instance_name(user_id)
         
         try:
             service = get_whatsapp_service()
         except ValueError as ve:
+            print(f"ERROR: WhatsApp service error: {ve}")
             return jsonify({'success': False, 'error': str(ve)}), 400
         
         # Create instance
+        print(f"Creating WhatsApp instance: {instance_name}")
         result = service.create_instance(instance_name)
         if not result:
+            print(f"ERROR: Failed to create instance")
             return jsonify({'success': False, 'error': 'Failed to create WhatsApp instance'}), 500
+        
+        print(f"✅ Instance created: {result}")
             
         supabase = get_supabase_client()
         
@@ -66,21 +92,26 @@ def setup_whatsapp():
                     'instance_name': instance_name,
                     'updated_at': datetime.utcnow().isoformat()
                 }).eq('user_id', user_id).execute()
+                print(f"✅ Updated existing config")
             else:
                 supabase.table('kf_whatsapp_config').insert({
                     'user_id': user_id,
                     'instance_name': instance_name,
                     'updated_at': datetime.utcnow().isoformat()
                 }).execute()
+                print(f"✅ Created new config")
         except Exception as db_err:
             print(f"Database error in setup: {db_err}")
             pass
             
         return jsonify({'success': True, 'instance_name': instance_name}), 200
     except ValueError as ve:
+        print(f"ValueError: {ve}")
         return jsonify({'success': False, 'error': str(ve)}), 400
     except Exception as e:
         print(f"WhatsApp setup error: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'error': f'Server error: {str(e)}'}), 500
 
 @whatsapp_bp.route('/whatsapp/qr', methods=['GET'])
@@ -90,7 +121,7 @@ def get_qr():
         if not current_user:
             return jsonify({'success': False, 'error': 'Authentication failed'}), 401
             
-        user_id = current_user.get('sub') or current_user.get('id')
+        user_id = current_user.get('id')
         if not user_id:
             return jsonify({'success': False, 'error': 'User ID not found'}), 401
             
@@ -117,7 +148,7 @@ def get_status():
         if not current_user:
             return jsonify({'success': False, 'error': 'Authentication failed'}), 401
             
-        user_id = current_user.get('sub') or current_user.get('id')
+        user_id = current_user.get('id')
         if not user_id:
             return jsonify({'success': False, 'error': 'User ID not found'}), 401
             
@@ -156,7 +187,7 @@ def disconnect():
         if not current_user:
             return jsonify({'success': False, 'error': 'Authentication failed'}), 401
             
-        user_id = current_user.get('sub') or current_user.get('id')
+        user_id = current_user.get('id')
         if not user_id:
             return jsonify({'success': False, 'error': 'User ID not found'}), 401
             
@@ -185,7 +216,7 @@ def send_test():
         if not current_user:
             return jsonify({'success': False, 'error': 'Authentication failed'}), 401
             
-        user_id = current_user.get('sub') or current_user.get('id')
+        user_id = current_user.get('id')
         if not user_id:
             return jsonify({'success': False, 'error': 'User ID not found'}), 401
             
@@ -214,7 +245,7 @@ def reminder_config():
         if not current_user:
             return jsonify({'success': False, 'error': 'Authentication failed'}), 401
             
-        user_id = current_user.get('sub') or current_user.get('id')
+        user_id = current_user.get('id')
         if not user_id:
             return jsonify({'success': False, 'error': 'User ID not found'}), 401
             
