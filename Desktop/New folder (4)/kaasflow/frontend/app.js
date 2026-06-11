@@ -4627,27 +4627,25 @@ function openChatbot() {
   }
   
   console.log('✅ Opening chatbot interface...');
+  
+  // Remove closing class if present
+  chatbotInterface.classList.remove('closing');
+  
+  // Show with smooth animation
   chatbotInterface.style.display = 'flex';
   chatbotIcon.style.display = 'none';
-  
-  // Trigger opening animation - center the chatbot
-  setTimeout(() => {
-    chatbotInterface.style.opacity = '1';
-    chatbotInterface.style.transform = 'translate(-50%, -50%) scale(1)';
-    chatbotInterface.classList.add('active');
-  }, 10);
   
   // Update language
   updateChatbotLanguage();
   
-  // Focus input
+  // Focus input after animation
   setTimeout(() => {
     const input = document.getElementById('chatbot-input');
     if (input) {
       input.focus();
       console.log('✅ Chatbot input focused');
     }
-  }, 300);
+  }, 400);
 }
 
 // Make openChatbot globally available
@@ -4660,13 +4658,13 @@ function closeChatbot() {
   const chatbotIcon = document.getElementById('chatbot-icon');
   
   if (chatbotInterface && chatbotIcon) {
-    // Trigger closing animation
-    chatbotInterface.style.opacity = '0';
-    chatbotInterface.style.transform = 'translate(-50%, -50%) scale(0.8)';
-    chatbotInterface.classList.remove('active');
+    // Add closing animation class
+    chatbotInterface.classList.add('closing');
     
+    // Wait for animation to complete before hiding
     setTimeout(() => {
       chatbotInterface.style.display = 'none';
+      chatbotInterface.classList.remove('closing');
       chatbotIcon.style.display = 'flex';
       console.log('✅ Chatbot interface closed');
     }, 300);
@@ -4752,87 +4750,19 @@ function addMessage(message, type) {
       <div class="message-content">${message}</div>
     `;
   } else {
-    const messageId = 'msg-' + Date.now();
     messageDiv.innerHTML = `
-      <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #7ed321, #4caf1a); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 8px rgba(126, 211, 33, 0.3);">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3z"/>
+      <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #7ed321, #4caf1a); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+          <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2Z"/>
         </svg>
       </div>
-      <div class="message-content">
-        <span id="${messageId}">${message}</span>
-        <button class="speak-button" onclick="speakText(document.getElementById('${messageId}').textContent)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
-          </svg>
-        </button>
-      </div>
+      <div class="message-content">${message}</div>
     `;
   }
   
   messagesContainer.appendChild(messageDiv);
   messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
-
-// Text-to-Speech functionality
-let currentSpeech = null;
-
-function speakText(text) {
-  // Stop any ongoing speech
-  if (currentSpeech) {
-    window.speechSynthesis.cancel();
-  }
-  
-  // Check if browser supports speech synthesis
-  if (!('speechSynthesis' in window)) {
-    console.warn('Text-to-speech not supported in this browser');
-    return;
-  }
-  
-  // Create new speech utterance
-  const utterance = new SpeechSynthesisUtterance(text);
-  
-  // Get current language
-  const settings = Store.settings();
-  const lang = settings.lang || 'en';
-  
-  // Set language and voice parameters
-  utterance.lang = lang === 'ta' ? 'ta-IN' : 'en-US';
-  utterance.rate = 0.9; // Slightly slower for better comprehension
-  utterance.pitch = 1;
-  utterance.volume = 1;
-  
-  // Visual feedback
-  const speakButtons = document.querySelectorAll('.speak-button');
-  speakButtons.forEach(btn => btn.classList.remove('speaking'));
-  
-  utterance.onstart = () => {
-    currentSpeech = utterance;
-    // Add visual feedback to all speak buttons
-    speakButtons.forEach(btn => {
-      if (btn.onclick && btn.onclick.toString().includes(text.substring(0, 20))) {
-        btn.classList.add('speaking');
-      }
-    });
-  };
-  
-  utterance.onend = () => {
-    currentSpeech = null;
-    speakButtons.forEach(btn => btn.classList.remove('speaking'));
-  };
-  
-  utterance.onerror = (event) => {
-    console.error('Speech synthesis error:', event);
-    currentSpeech = null;
-    speakButtons.forEach(btn => btn.classList.remove('speaking'));
-  };
-  
-  // Speak the text
-  window.speechSynthesis.speak(utterance);
-}
-
-// Make speakText globally available
-window.speakText = speakText;
 
 function showTypingIndicator() {
   const messagesContainer = document.getElementById('chatbot-messages');
@@ -4841,12 +4771,12 @@ function showTypingIndicator() {
   typingDiv.id = 'typing-indicator';
   
   typingDiv.innerHTML = `
-    <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #7ed321, #4caf1a); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 8px rgba(126, 211, 33, 0.3);">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3z"/>
+    <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #7ed321, #4caf1a); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+        <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2Z"/>
       </svg>
     </div>
-    <div style="background: var(--bg-input); padding: 14px 18px; border-radius: 18px 18px 18px 4px; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+    <div style="background: var(--bg-input); padding: 12px 16px; border-radius: 16px 16px 16px 4px; display: flex; align-items: center; gap: 4px;">
       <div class="typing-dot"></div>
       <div class="typing-dot"></div>
       <div class="typing-dot"></div>
