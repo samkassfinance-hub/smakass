@@ -9,3 +9,4 @@ razorpay>=1.4.1
 pywebpush>=1.14.0
 apscheduler>=3.10.4
 pytz>=2024.1
+resend>=0.3.0

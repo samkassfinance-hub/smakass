@@ -20,6 +20,11 @@ app = Flask(__name__)
 allowed_origins = [
     os.environ.get("FRONTEND_URL", "http://localhost:5500"),
     "http://127.0.0.1:5500",
+    "http://localhost:5500",
+    "http://127.0.0.1:5501",
+    "http://localhost:5501",
+    "http://127.0.0.1:5502",
+    "http://localhost:5502",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "https://www.samkass.site",
@@ -36,6 +41,7 @@ from razorpay_integration import payment_routes
 from routes.push import push_bp
 from routes.test_push import test_push_bp
 from routes.cron import cron_bp
+from routes.whatsapp import whatsapp_bp
 
 import os
 from supabase import create_client, Client
@@ -60,6 +66,7 @@ app.register_blueprint(auth_bp, url_prefix='/auth', name='auth_prefix')
 app.register_blueprint(push_bp, url_prefix='/api')
 app.register_blueprint(test_push_bp, url_prefix='/api')
 app.register_blueprint(cron_bp, url_prefix='/api/cron')
+app.register_blueprint(whatsapp_bp, url_prefix='/api')
 
 # Register payment routes
 payment_routes(app)
@@ -68,8 +75,11 @@ payment_routes(app)
 if not os.environ.get('VERCEL'):
     try:
         from notification_scheduler import start_scheduler
+        from whatsapp_reminder_scheduler import start_whatsapp_scheduler
         start_scheduler()
         print("✅ Notification scheduler started")
+        start_whatsapp_scheduler()
+        print("✅ WhatsApp reminder scheduler started")
     except Exception as e:
         print(f"⚠️ Could not start scheduler: {e}")
 

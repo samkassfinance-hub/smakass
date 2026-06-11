@@ -39,18 +39,34 @@ def calculate_emi(loan):
 
 @cron_bp.route('/send-notifications', methods=['GET', 'POST'])
 def send_notifications():
-    """Send push notifications for due loans - called by external cron job"""
+    """Send push notifications for due loans - called by external cron job or Vercel Cron"""
     
-    # Verify cron secret
-    cron_secret = request.headers.get('X-Cron-Secret')
-    expected_secret = os.getenv('CRON_SECRET', 'change-this-secret')
+    # Verify cron secret (skip check if coming from Vercel Cron)
+    is_vercel_cron = request.headers.get('User-Agent', '').startswith('vercel-cron/')
     
-    print(f"🔐 Cron: Received secret: {cron_secret}")
-    print(f"🔐 Cron: Expected secret: {expected_secret}")
-    
-    if cron_secret != expected_secret:
-        print(f"❌ Cron: Secret mismatch!")
-        return jsonify({'error': 'Unauthorized', 'debug': f'received={cron_secret is not None}'}), 401
+    if not is_vercel_cron:
+        cron_secret = request.headers.get('X-Cron-Secret')
+        expected_secret = os.getenv('CRON_SECRET', 'change-this-secret')
+        
+        # Debug logging
+        print(f"🔐 Cron: Received secret: {cron_secret[:10] if cron_secret else 'None'}...")
+        print(f"🔐 Cron: Expected secret: {expected_secret[:10] if expected_secret else 'None'}...")
+        print(f"🔐 Cron: Secrets match: {cron_secret == expected_secret}")
+        print(f"🔐 Cron: Received length: {len(cron_secret) if cron_secret else 0}")
+        print(f"🔐 Cron: Expected length: {len(expected_secret) if expected_secret else 0}")
+        
+        if cron_secret != expected_secret:
+            print(f"❌ Cron: Secret mismatch!")
+            return jsonify({
+                'error': 'Unauthorized',
+                'debug': {
+                    'received': cron_secret is not None,
+                    'received_length': len(cron_secret) if cron_secret else 0,
+                    'expected_length': len(expected_secret) if expected_secret else 0
+                }
+            }), 401
+    else:
+        print(f"✅ Cron: Request from Vercel Cron verified")
     
     try:
         supabase = get_supabase_client()

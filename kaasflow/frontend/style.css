@@ -2841,3 +2841,24 @@ body.tamil-text .nav-tab i {
 .pulse-syncing {
   animation: pulse-syncing 1.2s infinite;
 }
+
+/* ── 45. WHATSAPP AUTOMATION ───────────────────────────── */
+@keyframes pulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7); }
+  70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(37, 211, 102, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); }
+}
+
+[data-ocid="settings.whatsapp_card"] .section-title i {
+  color: #25D366;
+}
+
+#btn-wa-connect {
+  background: linear-gradient(135deg, #25D366, #128C7E) !important;
+  color: white !important;
+}
+
+#btn-wa-connect:hover {
+  background: linear-gradient(135deg, #128C7E, #075E54) !important;
+  box-shadow: 0 8px 25px rgba(37, 211, 102, 0.4) !important;
+}

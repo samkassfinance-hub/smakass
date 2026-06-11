@@ -3093,8 +3093,16 @@ function sendReminder(loanId) {
     ? t('reminderMsgOverdue', client.name, fmtCur(stats.emi), stats.daysOverdue)
     : t('reminderMsg', client.name, fmtCur(stats.emi));
   const phone = client.phone.replace(/\D/g, '');
-  const url = `https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`;
-  window.open(url, '_blank');
+  
+  // Check if WhatsApp Automation is available and connected
+  if (window.WhatsAppAutomation && window.WhatsAppAutomation.connected) {
+    // Use backend WhatsApp automation
+    window.WhatsAppAutomation.sendReminder(loanId);
+  } else {
+    // Fallback to direct WhatsApp web link
+    const url = `https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank');
+  }
 }
 
 // [NEW] PDF Download Requirements: Improved Client Details PDF

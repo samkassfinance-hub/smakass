@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  evolution-api:
+    image: atendai/evolution-api:latest
+    container_name: evolution-api
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      AUTHENTICATION_API_KEY: 387ec87f3544ad933ee9905809a4e93985238082ec697f99651d0255b9b72371
+      AUTHENTICATION_EXPOSE_IN_FETCH_DATA: "true"
+      LOG_LEVEL: "debug"
+      PROVIDER: "docker"
+      STORE_MESSAGE_UP: "true"
+      STORE_MESSAGE_DOWN: "true"
+    volumes:
+      - evolution-data:/home/user/evolution
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  evolution-data:
+    driver: local

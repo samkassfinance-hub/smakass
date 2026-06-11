@@ -1,0 +1,276 @@
+╔════════════════════════════════════════════════════════════════════╗
+║             WhatsApp Automation - Complete Setup Guide             ║
+╚════════════════════════════════════════════════════════════════════╝
+
+QUICK START
+═══════════════════════════════════════════════════════════════════
+
+Your WhatsApp API credentials are already configured:
+  • API URL: https://www.samkass.site
+  • API Key: 387ec87f3544ad933ee9905809a4e93985238082ec697f99651d0255b9b72371
+
+
+STEP 1: DATABASE SETUP
+═══════════════════════════════════════════════════════════════════
+
+1. Go to: https://app.supabase.com
+2. Select your KaasFlow project
+3. Open SQL Editor → New Query
+4. Copy all content from: kaasflow/backend/add_whatsapp_table.sql
+5. Paste into the editor and click "Run"
+
+Expected result:
+  "kf_whatsapp_config table created successfully!"
+
+
+STEP 2: VERIFY BACKEND CONFIGURATION
+═══════════════════════════════════════════════════════════════════
+
+File: kaasflow/backend/.env
+
+Should contain:
+  WHATSAPP_API_URL=https://www.samkass.site
+  WHATSAPP_API_KEY=387ec87f3544ad933ee9905809a4e93985238082ec697f99651d0255b9b72371
+
+✓ Already configured!
+
+
+STEP 3: START THE BACKEND
+═══════════════════════════════════════════════════════════════════
+
+Windows PowerShell:
+  cd kaasflow/backend
+  python app.py
+
+Or if you have Python 3:
+  python3 app.py
+
+Expected output:
+  ✅ Supabase client initialized successfully.
+  ✅ Notification scheduler started
+  ✅ WhatsApp reminder scheduler started
+  Running on http://127.0.0.1:5000
+
+
+STEP 4: CONNECT WHATSAPP IN APP
+═══════════════════════════════════════════════════════════════════
+
+1. Open SamKass in browser
+2. Go to Settings → WhatsApp Automation
+3. Enter your WhatsApp phone number (+91XXXXXXXXXX)
+4. Click "Connect WhatsApp"
+5. A QR code will appear
+6. Scan it with your phone's camera or WhatsApp app
+7. Confirm connection in WhatsApp on your phone
+
+
+STEP 5: TEST THE CONNECTION
+═══════════════════════════════════════════════════════════════════
+
+1. After scanning QR code, click "Send Test Message"
+2. Check your phone for the test message
+3. If received, WhatsApp automation is working!
+
+
+FEATURES NOW AVAILABLE
+═══════════════════════════════════════════════════════════════════
+
+✓ Automatic Daily Reminders:
+  - Due today notifications (9:00 AM)
+  - Due tomorrow reminders
+  - Overdue payment alerts
+
+✓ Manual Reminders:
+  - Send reminder button on each loan
+  - Test message functionality
+  - Customizable message content
+
+✓ Reminder Settings:
+  - Toggle reminders on/off
+  - Configure which types (due today/tomorrow/overdue)
+  - Set your phone number
+
+
+HOW IT WORKS
+═══════════════════════════════════════════════════════════════════
+
+1. User enters phone + clicks Connect
+   → Backend creates Evolution API instance
+   → QR code displayed for scanning
+   
+2. User scans QR with WhatsApp
+   → Backend confirms connection
+   → Ready to send messages
+
+3. Daily at 9 AM:
+   → Scheduler checks all active loans
+   → Sends automatic reminders
+   → Logs all messages
+
+4. Manual reminders:
+   → User clicks WhatsApp button on loan
+   → Message sent immediately to client
+   → Confirmation shown to user
+
+
+API ENDPOINTS
+═══════════════════════════════════════════════════════════════════
+
+POST   /api/whatsapp/setup
+  - Initialize WhatsApp instance
+  - Body: { "phone": "+91XXXXXXXXXX" }
+
+GET    /api/whatsapp/qr
+  - Get QR code for connection (base64)
+
+GET    /api/whatsapp/status
+  - Check if WhatsApp is connected
+
+POST   /api/whatsapp/disconnect
+  - Logout and remove instance
+
+POST   /api/whatsapp/test
+  - Send test message
+  - Body: { "phone": "+91XXXXXXXXXX" }
+
+GET    /api/whatsapp/reminders/config
+  - Get reminder configuration
+
+POST   /api/whatsapp/reminders/config
+  - Update reminder settings
+  - Body: {
+      "due_today": true,
+      "due_tomorrow": true,
+      "overdue": true,
+      "phone": "+91XXXXXXXXXX"
+    }
+
+
+FILE STRUCTURE
+═══════════════════════════════════════════════════════════════════
+
+Backend:
+  ✓ kaasflow/backend/whatsapp_service.py
+    - WhatsAppService class for API calls
+    
+  ✓ kaasflow/backend/routes/whatsapp.py
+    - API endpoints and request handling
+    
+  ✓ kaasflow/backend/whatsapp_reminder_scheduler.py
+    - Daily reminder scheduling
+    
+  ✓ kaasflow/backend/.env
+    - Configuration (already set)
+
+Frontend:
+  ✓ kaasflow/frontend/whatsapp-automation.js
+    - WhatsAppAutomation JavaScript class
+    - UI management
+    - API communication
+    
+  ✓ kaasflow/frontend/app.js (updated)
+    - sendReminder() function integration
+
+
+TROUBLESHOOTING
+═══════════════════════════════════════════════════════════════════
+
+Issue: "WhatsApp API credentials not configured"
+Solution: 
+  1. Check .env file has WHATSAPP_API_URL and WHATSAPP_API_KEY
+  2. Restart backend server
+  3. Check environment variables are loaded
+
+Issue: QR code not displaying
+Solution:
+  1. Verify API connection is working
+  2. Check browser console for errors
+  3. Ensure backend is running and accessible
+
+Issue: Message not sending
+Solution:
+  1. Verify WhatsApp is connected (check status)
+  2. Ensure phone number format is correct (+91XXXXXXXXXX)
+  3. Check backend logs for API errors
+  4. Verify client has phone number in system
+
+Issue: Scheduler not running
+Solution:
+  1. Check backend logs show "WhatsApp reminder scheduler started"
+  2. Verify APScheduler dependency is installed
+  3. Ensure backend is running (not just Flask dev server)
+
+Issue: Can't scan QR code
+Solution:
+  1. Try refreshing the page
+  2. Make sure Evolution API is accessible
+  3. Check your phone's camera/WhatsApp permissions
+
+
+DAILY SCHEDULER TIMES
+═══════════════════════════════════════════════════════════════════
+
+Current: 9:00 AM IST (Asia/Kolkata)
+
+To change, edit: kaasflow/backend/whatsapp_reminder_scheduler.py
+Line: scheduler.add_job(run_daily_reminders, 'cron', hour=9, minute=0)
+
+Change hour and minute values as needed:
+  Example: hour=14, minute=30 → 2:30 PM
+  Example: hour=8, minute=0 → 8:00 AM
+
+
+ENVIRONMENT VARIABLES
+═══════════════════════════════════════════════════════════════════
+
+kaasflow/backend/.env:
+
+WHATSAPP_API_URL=https://www.samkass.site
+  ✓ Already set
+
+WHATSAPP_API_KEY=387ec87f3544ad933ee9905809a4e93985238082ec697f99651d0255b9b72371
+  ✓ Already set
+
+Other required variables (already configured):
+  • SUPABASE_URL
+  • SUPABASE_SERVICE_ROLE_KEY
+  • JWT_SECRET
+  • CRON_SECRET
+
+
+TESTING CHECKLIST
+═══════════════════════════════════════════════════════════════════
+
+□ Backend .env has WhatsApp credentials
+□ Database table created (kf_whatsapp_config)
+□ Backend server running
+□ Frontend loads whatsapp-automation.js
+□ Can access Settings → WhatsApp Automation
+□ Can enter phone number
+□ Can scan QR code and connect
+□ Test message sends successfully
+□ Manual reminders work (buttons on loans)
+□ Daily scheduler is running (check logs)
+
+
+NEXT STEPS
+═══════════════════════════════════════════════════════════════════
+
+1. Complete setup above
+2. Test manual reminders on a loan
+3. Monitor logs for daily scheduler runs
+4. Configure reminder preferences
+5. Train team on WhatsApp features
+
+
+SUPPORT
+═══════════════════════════════════════════════════════════════════
+
+For issues or questions:
+  Email: samkassfinance@gmail.com
+  WhatsApp: 7904987242
+
+
+═══════════════════════════════════════════════════════════════════
+Setup Guide v1.0 - Updated June 2026
+═══════════════════════════════════════════════════════════════════

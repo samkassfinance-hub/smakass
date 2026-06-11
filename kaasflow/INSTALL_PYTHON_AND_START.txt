@@ -1,0 +1,272 @@
+╔════════════════════════════════════════════════════════════════════╗
+║        Python Installation & Backend Startup Guide                ║
+╚════════════════════════════════════════════════════════════════════╝
+
+
+⚠️  PYTHON NOT DETECTED
+═══════════════════════════════════════════════════════════════════
+
+Your system doesn't have Python installed.
+You need Python 3.8 or higher to run the backend.
+
+
+STEP 1: INSTALL PYTHON
+═══════════════════════════════════════════════════════════════════
+
+WINDOWS:
+  1. Go to: https://www.python.org/downloads/
+  2. Click: "Download Python 3.12" (or latest)
+  3. Run the installer
+  4. ⚠️  IMPORTANT: Check "Add Python to PATH"
+  5. Click: "Install Now"
+  6. Wait for completion
+  7. Restart your computer
+
+Verify installation:
+  • Open PowerShell
+  • Run: python --version
+  • Should show: Python 3.12.x
+
+
+MAC:
+  Option 1 - Using Homebrew:
+    brew install python3
+    
+  Option 2 - Direct download:
+    1. Go to: https://www.python.org/downloads/
+    2. Download macOS installer
+    3. Run and follow instructions
+    4. Restart terminal
+
+Verify:
+  python3 --version
+
+
+LINUX:
+  Ubuntu/Debian:
+    sudo apt update
+    sudo apt install python3 python3-pip
+    
+  Fedora:
+    sudo dnf install python3 python3-pip
+    
+  Arch:
+    sudo pacman -S python
+
+Verify:
+  python3 --version
+
+
+STEP 2: INSTALL DEPENDENCIES
+═══════════════════════════════════════════════════════════════════
+
+Open PowerShell/Terminal and run:
+
+  cd kaasflow/backend
+  pip install -r requirements.txt
+
+This will install:
+  ✓ Flask - Web framework
+  ✓ Flask-CORS - Cross-origin requests
+  ✓ Supabase - Database client
+  ✓ APScheduler - Task scheduler
+  ✓ PyWebPush - Push notifications
+  ✓ Requests - HTTP library
+  ✓ And more...
+
+Wait for completion (may take 2-5 minutes).
+
+
+STEP 3: VERIFY INSTALLATION
+═══════════════════════════════════════════════════════════════════
+
+Run:
+  python --version
+  (or python3 on Mac/Linux)
+
+Should show: Python 3.x.x
+
+Then verify Flask:
+  python -c "import flask; print('Flask OK')"
+
+
+STEP 4: START BACKEND
+═══════════════════════════════════════════════════════════════════
+
+WINDOWS (PowerShell):
+  cd kaasflow/backend
+  python app.py
+
+WINDOWS (Command Prompt):
+  cd kaasflow/backend
+  python app.py
+
+MAC/LINUX:
+  cd kaasflow/backend
+  python3 app.py
+
+
+EXPECTED OUTPUT
+═══════════════════════════════════════════════════════════════════
+
+✅ Supabase client initialized successfully.
+✅ Notification scheduler started
+✅ WhatsApp reminder scheduler started
+Running on http://127.0.0.1:5000
+ * Debug mode: on
+ * Running on http://127.0.0.1:5000
+
+
+SUCCESS = Backend is running!
+
+
+STEP 5: TEST IT WORKS
+═══════════════════════════════════════════════════════════════════
+
+Open browser:
+  http://localhost:5000/health
+
+Expected response:
+  {"status": "ok"}
+
+If you see this:
+  ✅ Backend is working!
+
+
+STEP 6: CONNECT FRONTEND
+═══════════════════════════════════════════════════════════════════
+
+1. Keep backend running (terminal open)
+
+2. Open new terminal/window
+
+3. Go to frontend:
+   cd kaasflow/frontend
+
+4. Start frontend server:
+   python -m http.server 5500
+   (or use Live Server in VS Code)
+
+5. Open browser:
+   http://localhost:5500
+
+6. Log in to your account
+
+7. Go to: Settings → WhatsApp Automation
+
+8. Connect WhatsApp
+
+
+TROUBLESHOOTING
+═══════════════════════════════════════════════════════════════════
+
+Problem: "python: command not found"
+Solution:
+  • Python not in PATH
+  • Restart computer after install
+  • Reinstall Python (check "Add to PATH")
+
+Problem: "No module named flask"
+Solution:
+  • Run: pip install -r requirements.txt
+  • Wait for all packages to install
+
+Problem: "Port 5000 already in use"
+Solution:
+  • Close other apps using port 5000
+  • Check: netstat -ano | findstr :5000
+  • Kill the process or change port in app.py
+
+Problem: "Cannot connect to Supabase"
+Solution:
+  • Check .env has SUPABASE_URL
+  • Verify SUPABASE_SERVICE_ROLE_KEY
+  • Check internet connection
+
+Problem: Backend crashes on startup
+Solution:
+  • Check .env file exists
+  • Check all required env variables set
+  • Run: python -c "import app"
+  • Look at error message for details
+
+
+PYTHON VERSIONS
+═══════════════════════════════════════════════════════════════════
+
+Recommended: Python 3.9 or higher
+Minimum: Python 3.8
+Latest: Python 3.12
+
+Download from: https://www.python.org/downloads/
+
+
+ENVIRONMENT VARIABLES
+═══════════════════════════════════════════════════════════════════
+
+File: kaasflow/backend/.env
+
+Should have:
+  WHATSAPP_API_URL=https://www.samkass.site
+  WHATSAPP_API_KEY=387ec87f3544ad933ee9905809a4e93985238082ec697f99651d0255b9b72371
+  SUPABASE_URL=https://eahyuwpejwbqzzolajzr.supabase.co
+  SUPABASE_SERVICE_ROLE_KEY=(your key)
+  JWT_SECRET=changeme
+  CRON_SECRET=(your secret)
+  VAPID_PRIVATE_KEY=(your key)
+  VAPID_PUBLIC_KEY=(your key)
+
+
+REQUIREMENTS.TXT
+═══════════════════════════════════════════════════════════════════
+
+All dependencies listed in:
+  kaasflow/backend/requirements.txt
+
+Pip will install all automatically with:
+  pip install -r requirements.txt
+
+
+HELPFUL COMMANDS
+═══════════════════════════════════════════════════════════════════
+
+Check Python version:
+  python --version
+
+List installed packages:
+  pip list
+
+Install specific package:
+  pip install package-name
+
+Check if module exists:
+  python -c "import module_name"
+
+Stop server:
+  Ctrl+C in terminal
+
+
+AFTER EVERYTHING IS RUNNING
+═══════════════════════════════════════════════════════════════════
+
+Backend: http://localhost:5000
+Frontend: http://localhost:5500
+WhatsApp: ENABLED
+Daily Reminders: 9:00 AM IST
+Database: Supabase (cloud)
+
+
+═══════════════════════════════════════════════════════════════════
+
+✅ FOLLOW THESE STEPS IN ORDER
+
+1. Install Python
+2. Verify installation
+3. Install dependencies
+4. Start backend
+5. Test health endpoint
+6. Connect frontend
+7. Test WhatsApp connection
+8. Done!
+
+═══════════════════════════════════════════════════════════════════

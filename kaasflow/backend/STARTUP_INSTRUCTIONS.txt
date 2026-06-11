@@ -1,0 +1,206 @@
+╔════════════════════════════════════════════════════════════════════╗
+║        Backend Startup - WhatsApp Automation Ready                ║
+╚════════════════════════════════════════════════════════════════════╝
+
+
+QUICK START
+═══════════════════════════════════════════════════════════════════
+
+Windows (PowerShell):
+  • Open PowerShell in kaasflow/backend folder
+  • Run: .\START_BACKEND.ps1
+  • If error about execution policy, run:
+    Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+Windows (Command Prompt):
+  cd kaasflow/backend
+  python app.py
+
+Linux/Mac:
+  cd kaasflow/backend
+  bash start_backend.sh
+
+  Or directly:
+  python3 app.py
+
+
+WHAT IT DOES
+═══════════════════════════════════════════════════════════════════
+
+✓ Checks Python installation
+✓ Installs missing dependencies
+✓ Loads .env configuration
+✓ Initializes Supabase client
+✓ Starts Flask server on port 5000
+✓ Initializes notification scheduler
+✓ Starts WhatsApp reminder scheduler
+✓ Ready for frontend connections
+
+
+EXPECTED OUTPUT
+═══════════════════════════════════════════════════════════════════
+
+✅ Supabase client initialized successfully.
+✅ Notification scheduler started
+✅ WhatsApp reminder scheduler started
+Running on http://127.0.0.1:5000
+ * Debug mode: on
+ * Running on http://127.0.0.1:5000
+
+
+SUCCESS INDICATORS
+═══════════════════════════════════════════════════════════════════
+
+✓ Server shows "Running on http://127.0.0.1:5000"
+✓ No error messages
+✓ "WhatsApp reminder scheduler started" appears
+✓ Backend ready for connections
+
+
+VERIFY IT'S WORKING
+═══════════════════════════════════════════════════════════════════
+
+Test in browser:
+  • Go to: http://localhost:5000/health
+  • Should show: {"status": "ok"}
+
+If error:
+  • Check if port 5000 is in use
+  • Try: netstat -ano | findstr :5000 (Windows)
+  • Or: lsof -i :5000 (Mac/Linux)
+
+
+CONFIGURATION
+═══════════════════════════════════════════════════════════════════
+
+File: kaasflow/backend/.env
+
+Should contain:
+  WHATSAPP_API_URL=https://www.samkass.site
+  WHATSAPP_API_KEY=387ec87f3544ad933ee9905809a4e93985238082ec697f99651d0255b9b72371
+  SUPABASE_URL=https://eahyuwpejwbqzzolajzr.supabase.co
+  SUPABASE_SERVICE_ROLE_KEY=(your key)
+  JWT_SECRET=changeme
+  CRON_SECRET=(your secret)
+  VAPID_PRIVATE_KEY=(your key)
+  VAPID_PUBLIC_KEY=(your key)
+
+
+REQUIREMENTS
+═══════════════════════════════════════════════════════════════════
+
+Automatically installed:
+  ✓ Flask - Web framework
+  ✓ flask-cors - CORS support
+  ✓ python-dotenv - .env file loading
+  ✓ requests - HTTP requests
+  ✓ supabase - Database client
+  ✓ apscheduler - Task scheduling
+  ✓ pywebpush - Push notifications
+  ✓ resend - Email service
+
+
+TROUBLESHOOTING
+═══════════════════════════════════════════════════════════════════
+
+Problem: "Python not found"
+Solution:
+  • Install Python 3.8+ from python.org
+  • Add to PATH
+  • Restart terminal
+
+Problem: "Module not found"
+Solution:
+  • Run: pip install -r requirements.txt
+  • Or let startup script install automatically
+
+Problem: "Port 5000 already in use"
+Solution:
+  • Close other app using port 5000
+  • Or change port in app.py
+
+Problem: "Supabase connection error"
+Solution:
+  • Check .env has correct SUPABASE_URL
+  • Verify SUPABASE_SERVICE_ROLE_KEY
+  • Check internet connection
+
+Problem: "WhatsApp scheduler not starting"
+Solution:
+  • Verify APScheduler is installed
+  • Check .env has WhatsApp credentials
+  • Check backend logs for errors
+
+
+WHAT HAPPENS AT STARTUP
+═══════════════════════════════════════════════════════════════════
+
+1. Load .env configuration
+   ├─ WhatsApp API credentials
+   ├─ Supabase connection
+   └─ JWT secrets
+
+2. Initialize Supabase
+   ├─ Connect to database
+   ├─ Verify credentials
+   └─ Ready for queries
+
+3. Register routes
+   ├─ Authentication endpoints
+   ├─ WhatsApp endpoints
+   ├─ Payment endpoints
+   └─ Notification endpoints
+
+4. Start schedulers
+   ├─ Notification scheduler (emails)
+   ├─ WhatsApp reminder scheduler (daily 9 AM)
+   └─ Background jobs
+
+5. Start Flask server
+   ├─ Listen on http://localhost:5000
+   ├─ Accept frontend connections
+   └─ Handle API requests
+
+
+NEXT STEPS
+═══════════════════════════════════════════════════════════════════
+
+1. Start backend: Follow steps above
+2. Verify health: http://localhost:5000/health
+3. Open frontend: http://localhost:5500
+4. Go to: Settings → WhatsApp Automation
+5. Connect WhatsApp and test
+
+
+COMMON PORTS
+═══════════════════════════════════════════════════════════════════
+
+Backend: 5000
+Frontend: 5500
+Database: Supabase (cloud)
+
+
+LOGS
+═══════════════════════════════════════════════════════════════════
+
+All messages printed to terminal:
+  • API calls logged
+  • Errors shown with details
+  • Scheduler events logged
+  • WhatsApp events logged
+
+
+STOP SERVER
+═══════════════════════════════════════════════════════════════════
+
+Press: Ctrl+C in terminal
+
+Wait for graceful shutdown:
+  KeyboardInterrupt
+  (Server stops)
+
+
+═══════════════════════════════════════════════════════════════════
+Backend Startup Guide v1.0
+Ready for WhatsApp Automation
+═══════════════════════════════════════════════════════════════════
