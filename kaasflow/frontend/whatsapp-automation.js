@@ -57,29 +57,58 @@ const WhatsAppAutomation = {
   },
 
   setupEventListeners() {
-    // Connect button
-    const connectBtn = document.getElementById('btn-wa-connect');
-    if (connectBtn) {
-      connectBtn.addEventListener('click', () => this.setupWhatsApp());
-    }
+    // Wait for buttons to be available
+    const checkAndSetup = () => {
+      const connectBtn = document.getElementById('btn-wa-connect');
+      const disconnectBtn = document.getElementById('btn-wa-disconnect');
+      const testBtn = document.getElementById('btn-wa-test');
 
-    // Disconnect button
-    const disconnectBtn = document.getElementById('btn-wa-disconnect');
-    if (disconnectBtn) {
-      disconnectBtn.addEventListener('click', () => this.disconnect());
-    }
+      if (connectBtn) {
+        connectBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          this.setupWhatsApp();
+        });
+        console.log('✅ Connect button listener attached');
+      }
 
-    // Test message button
-    const testBtn = document.getElementById('btn-wa-test');
-    if (testBtn) {
-      testBtn.addEventListener('click', () => this.sendTest());
-    }
+      if (disconnectBtn) {
+        disconnectBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          this.disconnect();
+        });
+        console.log('✅ Disconnect button listener attached');
+      }
 
-    // Reminder checkboxes
-    const checkboxes = document.querySelectorAll('[data-reminder-type]');
-    checkboxes.forEach(cb => {
-      cb.addEventListener('change', () => this.updateReminders());
-    });
+      if (testBtn) {
+        testBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          this.sendTest();
+        });
+        console.log('✅ Test button listener attached');
+      }
+
+      // Reminder checkboxes
+      const dueToday = document.getElementById('wa-due-today');
+      const dueTomorrow = document.getElementById('wa-due-tomorrow');
+      const overdue = document.getElementById('wa-overdue');
+
+      if (dueToday) {
+        dueToday.addEventListener('change', () => this.updateReminders());
+      }
+      if (dueTomorrow) {
+        dueTomorrow.addEventListener('change', () => this.updateReminders());
+      }
+      if (overdue) {
+        overdue.addEventListener('change', () => this.updateReminders());
+      }
+
+      if (!connectBtn) {
+        // Try again in 500ms if buttons not found
+        setTimeout(checkAndSetup, 500);
+      }
+    };
+
+    checkAndSetup();
   },
 
   async setupWhatsApp() {
@@ -133,13 +162,24 @@ const WhatsAppAutomation = {
       if (data.success && data.qr) {
         // Create modal with QR code
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal fade show';
+        modal.style.display = 'block';
+        modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
         modal.innerHTML = `
-          <div class="modal-content" style="max-width: 400px;">
-            <h3>Scan QR Code to Connect WhatsApp</h3>
-            <img src="data:image/png;base64,${data.qr}" style="width: 100%; margin: 20px 0;" />
-            <p style="text-align: center; color: #666;">Use your phone camera or WhatsApp app to scan this code</p>
-            <button class="btn-kf-primary w-100" onclick="this.parentElement.parentElement.remove()">Close</button>
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="background: var(--bg-card); border: 1px solid var(--border-default);">
+              <div class="modal-header" style="border-bottom: 1px solid var(--border-default);">
+                <h5 class="modal-title">Scan QR Code to Connect WhatsApp</h5>
+                <button type="button" class="btn-close" onclick="this.closest('.modal').remove()"></button>
+              </div>
+              <div class="modal-body text-center">
+                <img src="data:image/png;base64,${data.qr}" style="width: 100%; max-width: 300px; margin: 20px 0;" />
+                <p style="color: var(--text-secondary);">Use your phone camera or WhatsApp app to scan this code</p>
+              </div>
+              <div class="modal-footer" style="border-top: 1px solid var(--border-default);">
+                <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">Close</button>
+              </div>
+            </div>
           </div>
         `;
         document.body.appendChild(modal);
@@ -174,7 +214,6 @@ const WhatsAppAutomation = {
             await this.updateReminders();
           }
         } else if (attempts < 12) {
-          // Check again after 5 seconds (max 1 minute)
           setTimeout(() => this.checkConnectionStatus(attempts + 1), 5000);
           console.log(`⏳ Checking connection... (${attempts + 1})`);
         }
@@ -251,9 +290,9 @@ const WhatsAppAutomation = {
 
   async updateReminders() {
     try {
-      const dueToday = document.getElementById('reminder-due-today')?.checked ?? true;
-      const dueTomorrow = document.getElementById('reminder-due-tomorrow')?.checked ?? true;
-      const overdue = document.getElementById('reminder-overdue')?.checked ?? true;
+      const dueToday = document.getElementById('wa-due-today')?.checked ?? true;
+      const dueTomorrow = document.getElementById('wa-due-tomorrow')?.checked ?? true;
+      const overdue = document.getElementById('wa-overdue')?.checked ?? true;
       const phoneInput = document.getElementById('wa-phone-input');
       const phone = phoneInput?.value?.trim();
 
@@ -287,15 +326,20 @@ const WhatsAppAutomation = {
     const connectBtn = document.getElementById('btn-wa-connect');
     const disconnectBtn = document.getElementById('btn-wa-disconnect');
     const testBtn = document.getElementById('btn-wa-test');
-    const statusDiv = document.getElementById('wa-status');
+    const statusBadge = document.getElementById('wa-status-badge');
+    const reminderSettings = document.getElementById('wa-reminder-settings');
     
     if (this.connected) {
       connectBtn?.classList.add('d-none');
       disconnectBtn?.classList.remove('d-none');
       testBtn?.classList.remove('d-none');
       
-      if (statusDiv) {
-        statusDiv.innerHTML = '<i class="fa-solid fa-circle-check" style="color: #25D366;"></i> Connected';
+      if (reminderSettings) {
+        reminderSettings.classList.remove('d-none');
+      }
+      
+      if (statusBadge) {
+        statusBadge.innerHTML = '<span class="badge bg-success"><i class="fa-solid fa-circle-check me-2"></i>Connected</span>';
       }
       console.log('✅ UI updated: WhatsApp connected');
     } else {
@@ -303,8 +347,12 @@ const WhatsAppAutomation = {
       disconnectBtn?.classList.add('d-none');
       testBtn?.classList.add('d-none');
       
-      if (statusDiv) {
-        statusDiv.innerHTML = '<i class="fa-solid fa-circle" style="color: #999;"></i> Not Connected';
+      if (reminderSettings) {
+        reminderSettings.classList.add('d-none');
+      }
+      
+      if (statusBadge) {
+        statusBadge.innerHTML = '<span class="badge bg-secondary"><i class="fa-solid fa-circle me-2"></i>Not Connected</span>';
       }
       console.log('⭕ UI updated: WhatsApp disconnected');
     }
@@ -350,9 +398,20 @@ const WhatsAppAutomation = {
   }
 };
 
-// Auto-initialize when DOM is ready
+// Initialize after DOM is ready
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => WhatsAppAutomation.init());
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => WhatsAppAutomation.init(), 100);
+  });
 } else {
-  WhatsAppAutomation.init();
+  setTimeout(() => WhatsAppAutomation.init(), 100);
 }
+
+// Also listen for page changes
+document.addEventListener('pageChanged', () => {
+  setTimeout(() => {
+    if (WhatsAppAutomation) {
+      WhatsAppAutomation.setupEventListeners();
+    }
+  }, 50);
+});
