@@ -6,15 +6,20 @@ backend_dir = os.path.dirname(os.path.abspath(__file__))
 if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
 
-from flask import Flask
-from flask_cors import CORS
+# CRITICAL: Load .env FIRST before any other imports
 from dotenv import load_dotenv
 env_path = os.path.join(backend_dir, '.env')
 load_dotenv(dotenv_path=env_path)
 
-# OTP Email Fix - Updated 2025
+# Verify WhatsApp credentials loaded
+whatsapp_url = os.environ.get('WHATSAPP_API_URL', '')
+whatsapp_key = os.environ.get('WHATSAPP_API_KEY', '')
+print(f"\n🔧 Environment loaded:")
+print(f"   WHATSAPP_API_URL: {whatsapp_url}")
+print(f"   WHATSAPP_API_KEY: {'SET' if whatsapp_key else 'NOT SET'}")
 
-app = Flask(__name__)
+from flask import Flask
+from flask_cors import CORS
 
 # Allow requests from frontend
 allowed_origins = [

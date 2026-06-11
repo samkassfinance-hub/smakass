@@ -7,12 +7,19 @@ from datetime import datetime
 whatsapp_bp = Blueprint('whatsapp', __name__)
 
 def get_whatsapp_service():
-    api_url = os.environ.get('WHATSAPP_API_URL', '')
-    api_key = os.environ.get('WHATSAPP_API_KEY', '')
+    api_url = os.environ.get('WHATSAPP_API_URL', '').strip()
+    api_key = os.environ.get('WHATSAPP_API_KEY', '').strip()
+    
+    print(f"\n📱 WhatsApp Service Check:")
+    print(f"   API URL: {api_url if api_url else 'NOT SET'}")
+    print(f"   API Key: {'SET' if api_key else 'NOT SET'}")
     
     if not api_url or not api_key:
-        raise ValueError('WhatsApp API credentials not configured.')
+        error_msg = 'WhatsApp API credentials not configured. Check .env file.'
+        print(f"   ❌ {error_msg}")
+        raise ValueError(error_msg)
     
+    print(f"   ✅ Credentials found")
     return WhatsAppService(api_url, api_key)
 
 def get_instance_name(user_id):
