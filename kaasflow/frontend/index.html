@@ -2747,8 +2747,174 @@
   <script src="push-notifications.js" defer></script>
   <script src="test-notification-auto-update.js" defer></script>
   <script src="test-notification-fix.js" defer></script>
-  <script src="whatsapp-automation.js" defer></script>
+  <script src="whatsapp-automation.js?v=99" defer></script>
   
+  <!-- WhatsApp Inline Override: ensures no backend calls happen regardless of cache -->
+  <script>
+    // This runs AFTER whatsapp-automation.js and overrides it to use direct wa.me links
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        // Override the entire WhatsAppAutomation object with backend-free version
+        window.WhatsAppAutomation = {
+          config: {},
+          connected: false,
+          phoneNumber: null,
+
+          _loadState: function() {
+            try {
+              var saved = localStorage.getItem('wa_automation_config');
+              if (saved) {
+                var c = JSON.parse(saved);
+                this.connected = c.connected || false;
+                this.phoneNumber = c.phoneNumber || null;
+                this.config = c;
+              }
+            } catch(e) {}
+          },
+
+          _saveState: function() {
+            try {
+              localStorage.setItem('wa_automation_config', JSON.stringify({
+                connected: this.connected,
+                phoneNumber: this.phoneNumber,
+                connectedAt: this.config.connectedAt || new Date().toISOString(),
+                dueTodayEnabled: this.config.dueTodayEnabled !== false,
+                dueTomorrowEnabled: this.config.dueTomorrowEnabled !== false,
+                overdueEnabled: this.config.overdueEnabled !== false
+              }));
+            } catch(e) {}
+          },
+
+          _formatPhone: function(phone) {
+            if (!phone) return '';
+            var cleaned = phone.replace(/[\s\-\(\)\+]/g, '');
+            if (cleaned.startsWith('0')) cleaned = '91' + cleaned.substring(1);
+            if (cleaned.length === 10 && /^\d+$/.test(cleaned)) cleaned = '91' + cleaned;
+            return cleaned;
+          },
+
+          _toast: function(msg, type) {
+            if (typeof showToast === 'function') showToast(msg, type);
+            else console.log(msg);
+          },
+
+          _updateUI: function() {
+            var connectBtn = document.getElementById('btn-wa-connect');
+            var disconnectBtn = document.getElementById('btn-wa-disconnect');
+            var testBtn = document.getElementById('btn-wa-test');
+            var statusBadge = document.getElementById('wa-status-badge');
+            var reminderSettings = document.getElementById('wa-reminder-settings');
+            var phoneInput = document.getElementById('wa-phone-input');
+            if (this.connected) {
+              if (connectBtn) connectBtn.classList.add('d-none');
+              if (disconnectBtn) disconnectBtn.classList.remove('d-none');
+              if (testBtn) testBtn.classList.remove('d-none');
+              if (reminderSettings) reminderSettings.classList.remove('d-none');
+              if (statusBadge) statusBadge.innerHTML = '<span style="background:rgba(37,211,102,0.15);color:#25D366;border:1px solid rgba(37,211,102,0.3);padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;"><i class="fa-solid fa-circle-check" style="margin-right:6px;"></i>Connected</span>';
+              if (phoneInput && !phoneInput.value && this.phoneNumber) phoneInput.value = this.phoneNumber;
+            } else {
+              if (connectBtn) connectBtn.classList.remove('d-none');
+              if (disconnectBtn) disconnectBtn.classList.add('d-none');
+              if (testBtn) testBtn.classList.add('d-none');
+              if (reminderSettings) reminderSettings.classList.add('d-none');
+              if (statusBadge) statusBadge.innerHTML = '<span style="background:rgba(153,153,153,0.15);color:#999;border:1px solid rgba(153,153,153,0.3);padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;"><i class="fa-solid fa-circle" style="margin-right:6px;"></i>Not Connected</span>';
+            }
+          },
+
+          connectWhatsApp: function() {
+            var phoneInput = document.getElementById('wa-phone-input');
+            var phone = phoneInput ? phoneInput.value.trim() : '';
+            if (!phone) { this._toast('Please enter your WhatsApp number', 'error'); return; }
+            var digits = phone.replace(/\D/g, '');
+            if (digits.length < 10) { this._toast('Please enter a valid phone number (at least 10 digits)', 'error'); return; }
+            this.phoneNumber = this._formatPhone(phone);
+            this.connected = true;
+            this.config.connectedAt = new Date().toISOString();
+            this._saveState();
+            this._updateUI();
+            this._toast('\u2705 WhatsApp connected! You can now send reminders to customers.', 'success');
+          },
+
+          disconnect: function() {
+            if (!confirm('Disconnect WhatsApp? You will need to reconnect later.')) return;
+            this.connected = false;
+            this.phoneNumber = null;
+            this.config = {};
+            localStorage.removeItem('wa_automation_config');
+            this._updateUI();
+            this._toast('WhatsApp disconnected', 'info');
+          },
+
+          sendTest: function() {
+            if (!this.connected || !this.phoneNumber) { this._toast('WhatsApp is not connected. Please connect first.', 'error'); return; }
+            var msg = '\u2705 Hello from SamKass! Your WhatsApp automation is working. Payment reminders will be sent through WhatsApp.';
+            window.open('https://wa.me/' + this.phoneNumber + '?text=' + encodeURIComponent(msg), '_blank');
+            this._toast('\ud83d\udcf1 WhatsApp opened with test message!', 'success');
+          },
+
+          sendReminder: function(loanId) {
+            if (!this.connected) { this._toast('WhatsApp not connected. Connect in Settings first.', 'error'); return; }
+            var loan = typeof Store !== 'undefined' ? Store.loans().find(function(l){ return l.id === loanId; }) : null;
+            if (!loan) { this._toast('Loan not found', 'error'); return; }
+            var client = typeof Store !== 'undefined' ? Store.clients().find(function(c){ return c.id === loan.clientId; }) : null;
+            if (!client || !client.phone) { this._toast('Client phone number not available', 'error'); return; }
+            var stats = typeof calcLoanStats === 'function' ? calcLoanStats(loan) : null;
+            var fmtFn = typeof fmtCur === 'function' ? fmtCur : function(n){ return '\u20b9' + Number(n).toLocaleString('en-IN'); };
+            var msg;
+            if (stats && stats.isOverdue) {
+              msg = 'Dear ' + client.name + ',\n\nYour EMI payment of ' + fmtFn(stats.emi) + ' is overdue by ' + stats.daysOverdue + ' day(s). Please pay at the earliest.\n\nThank you,\nSamKass Finance';
+            } else if (stats) {
+              msg = 'Dear ' + client.name + ',\n\nYour EMI payment of ' + fmtFn(stats.emi) + ' is due. Please ensure timely payment.\n\nThank you,\nSamKass Finance';
+            } else {
+              msg = 'Dear ' + client.name + ',\n\nThis is a reminder about your loan payment. Please contact us.\n\nThank you,\nSamKass Finance';
+            }
+            var clientPhone = this._formatPhone(client.phone);
+            window.open('https://wa.me/' + clientPhone + '?text=' + encodeURIComponent(msg), '_blank');
+            this._toast('\ud83d\udcf1 WhatsApp reminder opened for ' + client.name, 'success');
+          },
+
+          setupEventListeners: function() {
+            var self = this;
+            var connectBtn = document.getElementById('btn-wa-connect');
+            var disconnectBtn = document.getElementById('btn-wa-disconnect');
+            var testBtn = document.getElementById('btn-wa-test');
+            if (connectBtn) {
+              var nb = connectBtn.cloneNode(true);
+              connectBtn.parentNode.replaceChild(nb, connectBtn);
+              nb.addEventListener('click', function(){ self.connectWhatsApp(); });
+            }
+            if (disconnectBtn) {
+              var nb2 = disconnectBtn.cloneNode(true);
+              disconnectBtn.parentNode.replaceChild(nb2, disconnectBtn);
+              nb2.addEventListener('click', function(){ self.disconnect(); });
+            }
+            if (testBtn) {
+              var nb3 = testBtn.cloneNode(true);
+              testBtn.parentNode.replaceChild(nb3, testBtn);
+              nb3.addEventListener('click', function(){ self.sendTest(); });
+            }
+          },
+
+          loadConfig: function() {
+            this._loadState();
+            this.setupEventListeners();
+            this._updateUI();
+          },
+
+          init: function() {
+            this._loadState();
+            this.setupEventListeners();
+            this._updateUI();
+          }
+        };
+
+        // Re-init with loaded state
+        window.WhatsAppAutomation.init();
+        console.log('\u2705 WhatsApp override loaded. Connected:', window.WhatsAppAutomation.connected);
+      }, 300);
+    });
+  </script>
+
   <!-- Final Fallback Script -->
   <script>
     // Ultra-safe fallback - if nothing else works, at least show something
