@@ -1,0 +1,2715 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#f4f7f4" />
+  <title>SamKass – Finance Manager</title>
+  <meta name="description"
+    content="SamKass – Manage loans, track EMIs, and automate payment reminders for small-scale financiers." />
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="../../../samkaslogo.jpeg" type="image/jpeg" />
+  <link rel="apple-touch-icon" href="../../../samkaslogo.jpeg" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="SamKass" />
+
+
+  <!-- Google Fonts preload -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+Tamil:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* Loading indicator - show before JS loads */
+    #app-loading {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #f4f7f4;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    #app-loading .loader {
+      text-align: center;
+    }
+    #app-loading h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2rem;
+      font-weight: 800;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, #7ed321, #4caf1a);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    #app-loading .dots {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+    #app-loading .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #7ed321;
+      animation: bounce 0.6s ease-in-out infinite;
+    }
+    #app-loading .dot:nth-child(2) { animation-delay: 0.1s; }
+    #app-loading .dot:nth-child(3) { animation-delay: 0.2s; }
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0.7); opacity: 0.5; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+
+    /* UI/UX VARIABLES */
+    :root, :root[data-theme="dark"] {
+      /* Backgrounds */
+      --bg-primary: #000000;
+      --bg-secondary: #0a0f0a;
+      --bg-card: #0d1a0d;
+      --bg-input: #0a1410;
+
+      /* Primary Green (Logo lime-green gradient) */
+      --green-light: #7ed321;
+      --green-mid: #4caf1a;
+      --green-dark: #1e6b00;
+      --green-glow: rgba(110, 207, 16, 0.53);
+
+      /* Accent Blue (Logo blue sweep) */
+      --blue-light: #00cfff;
+      --blue-mid: #0080c8;
+      --blue-dark: #003c6e;
+      --blue-glow: rgba(0, 170, 255, 0.33);
+
+      /* Text Colors */
+      --text-primary: #ffffff;
+      --text-secondary: #b0c4b0;
+      --text-muted: #556655;
+
+      /* Borders */
+      --border-default: #1a3a1a;
+      
+      /* Gradients */
+      --gradient-green: linear-gradient(135deg, #7ed321 0%, #4caf1a 50%, #1e6b00 100%);
+      --gradient-blue: linear-gradient(135deg, #00cfff 0%, #0080c8 100%);
+      --gradient-card: linear-gradient(145deg, #0d1a0d 0%, #0a0f0a 100%);
+      --gradient-btn-primary: linear-gradient(135deg, #7ed321, #2e8b00);
+      --gradient-btn-hover: linear-gradient(135deg, #9aff2a, #4caf1a);
+
+      /* Shadows & Gloss */
+      --kf-shadow-hover: rgba(0, 0, 0, 0.7);
+      --card-gloss-opacity: 0.6;
+
+      /* Mapping to legacy vars */
+      --color-primary: var(--green-light);
+      --color-primary-dark: var(--green-mid);
+      --kf-bg: var(--bg-primary);
+      --kf-surface: var(--bg-secondary);
+      --kf-surface-glass: rgba(10, 15, 10, 0.85);
+      --kf-card: var(--bg-card);
+      --kf-card-border: var(--border-default);
+      --kf-text: var(--text-primary);
+      --kf-text-muted: var(--text-secondary);
+      --kf-amber: var(--green-light);
+      --kf-amber-dark: var(--green-mid);
+      --kf-success: #4caf1a;
+      --kf-danger: #ff4444;
+      --kf-input-bg: var(--bg-input);
+      --kf-input-border: var(--border-default);
+      --kf-divider: rgba(126, 211, 33, 0.1);
+      --kf-shadow: rgba(0, 0, 0, 0.5);
+      
+      /* Fallbacks for JS injected variables */
+      --color-border: var(--kf-card-border);
+      --color-border-muted: var(--kf-divider);
+      --color-success: var(--kf-success);
+      --color-danger: var(--kf-danger);
+      --color-text: var(--kf-text);
+      --color-text-muted: var(--kf-text-muted);
+      --color-surface-elevated: var(--kf-surface);
+    }
+
+    :root[data-theme="light"] {
+      /* Backgrounds */
+      --bg-primary: #f4f7f4;
+      --bg-secondary: #ffffff;
+      --bg-card: #ffffff;
+      --bg-input: #f9fcf9;
+
+      /* Primary Green */
+      --green-light: #5ca112; /* Darker for legibility */
+      --green-mid: #4caf1a;
+      --green-dark: #1e6b00;
+      --green-glow: rgba(76, 175, 26, 0.2);
+
+      /* Accent Blue */
+      --blue-light: #0080c8;
+      --blue-mid: #0080c8;
+      --blue-dark: #003c6e;
+      --blue-glow: rgba(0, 128, 200, 0.2);
+
+      /* Text Colors */
+      --text-primary: #0a1410;
+      --text-secondary: #4a5c4a;
+      --text-muted: #8a9c8a;
+
+      /* Borders */
+      --border-default: #dce6dc;
+      
+      /* Gradients */
+      --gradient-green: linear-gradient(135deg, #5ca112 0%, #4caf1a 50%, #1e6b00 100%);
+      --gradient-blue: linear-gradient(135deg, #0080c8 0%, #003c6e 100%);
+      --gradient-card: linear-gradient(145deg, #ffffff 0%, #f9fbf9 100%);
+      --gradient-btn-primary: linear-gradient(135deg, #5ca112, #2e8b00);
+      --gradient-btn-hover: linear-gradient(135deg, #7ed321, #4caf1a);
+
+      /* Shadows & Gloss */
+      --kf-shadow: rgba(0, 0, 0, 0.08);
+      --kf-shadow-hover: rgba(0, 0, 0, 0.15);
+      --card-gloss-opacity: 0.2;
+
+      /* Mapping to legacy vars */
+      --color-primary: var(--green-mid);
+      --color-primary-dark: var(--green-dark);
+      --kf-bg: var(--bg-primary);
+      --kf-surface: var(--bg-secondary);
+      --kf-surface-glass: rgba(255, 255, 255, 0.85);
+      --kf-card: var(--bg-card);
+      --kf-card-border: var(--border-default);
+      --kf-text: var(--text-primary);
+      --kf-text-muted: var(--text-secondary);
+      --kf-amber: var(--green-mid);
+      --kf-amber-dark: var(--green-dark);
+      --kf-success: #3b8e12;
+      --kf-danger: #e11d48;
+      --kf-input-bg: var(--bg-input);
+      --kf-input-border: var(--border-default);
+      --kf-divider: rgba(76, 175, 26, 0.15);
+    }
+
+    body {
+      background-color: var(--kf-bg) !important;
+      color: var(--kf-text) !important;
+      font-family: 'Outfit', sans-serif !important;
+      -webkit-font-smoothing: antialiased;
+      background-attachment: fixed;
+    }
+
+    html:not([data-theme="light"]) body, html[data-theme="dark"] body {
+      background-image: 
+        radial-gradient(ellipse at 20% 50%, #0a2a0a 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, #001a33 0%, transparent 40%);
+    }
+
+    html[data-theme="light"] body {
+      background-image: 
+        radial-gradient(ellipse at 20% 50%, rgba(76, 175, 26, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(0, 128, 200, 0.08) 0%, transparent 40%);
+    }
+
+    h1, h2, h3, h4, h5, h6, .auth-logo-title, .app-name, .page-title {
+      font-family: 'Outfit', sans-serif !important;
+    }
+
+    .kpi-value, .stat-value, .pin-digit-input, #qr-price-text, .emi-preview-row strong, #slot-count-display {
+      font-family: 'JetBrains Mono', monospace !important;
+    }
+
+    /* Glassmorphism Cards */
+    .kf-card, .card, .stat-card, .kpi-card, .client-card, .loan-card, .payment-row, .due-today-item, .collection-item {
+      background: var(--gradient-card) !important;
+      border: 1px solid var(--kf-card-border) !important;
+      border-radius: 18px !important;
+      box-shadow: 0 8px 32px var(--kf-shadow), inset 0 1px 0 var(--kf-divider) !important;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease, border-color 0.3s ease !important;
+    }
+
+    .kf-card::before, .card::before, .auth-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 10%; right: 10%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--green-light), var(--blue-light), transparent);
+      opacity: var(--card-gloss-opacity);
+      pointer-events: none;
+    }
+
+    .kf-card:hover, .card:hover, .stat-card:hover, .kpi-card:hover, .client-card:hover, .loan-card:hover, .collection-item:hover {
+      transform: translateY(-4px) !important;
+      box-shadow: 0 12px 40px var(--kf-shadow-hover), 0 0 20px var(--green-glow) !important;
+      border-color: var(--green-mid) !important;
+    }
+
+    /* Buttons */
+    .btn-kf-primary, .btn-primary {
+      background: var(--gradient-btn-primary) !important;
+      color: #ffffff !important;
+      border: none !important;
+      border-radius: 12px !important;
+      font-weight: 700 !important;
+      padding: 14px 24px !important;
+      transition: all 0.3s ease !important;
+      box-shadow: 0 4px 15px rgba(76, 175, 26, 0.3) !important;
+      font-family: 'Outfit', sans-serif !important;
+      letter-spacing: 0.5px;
+    }
+
+    .btn-kf-primary:hover, .btn-primary:hover {
+      background: var(--gradient-btn-hover) !important;
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 8px 25px rgba(126, 211, 33, 0.5) !important;
+    }
+
+    .btn-kf-outline, .btn-secondary {
+      background: var(--kf-input-bg) !important;
+      color: var(--kf-text) !important;
+      border: 1px solid var(--kf-input-border) !important;
+      border-radius: 12px !important;
+      font-weight: 600 !important;
+      padding: 14px 24px !important;
+      transition: all 0.3s ease !important;
+      backdrop-filter: blur(8px);
+    }
+
+    .btn-kf-outline:hover, .btn-secondary:hover {
+      background: var(--kf-card-border) !important;
+      border-color: var(--blue-mid) !important;
+      color: var(--blue-light) !important;
+    }
+
+    .btn-icon {
+      background: var(--kf-input-bg) !important;
+      border: 1px solid var(--kf-input-border) !important;
+      color: var(--kf-text) !important;
+      border-radius: 12px !important;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    }
+
+    .btn-icon:hover {
+      background: var(--kf-accent) !important;
+      color: #000000 !important;
+      border-color: var(--kf-accent) !important;
+      transform: translateY(-3px) rotate(5deg);
+      box-shadow: 0 8px 15px var(--green-glow);
+    }
+    
+    .btn-icon.danger:hover {
+      background: var(--kf-danger) !important;
+      color: #fff !important;
+      border-color: var(--kf-danger) !important;
+      box-shadow: 0 8px 15px rgba(255, 68, 68, 0.3);
+    }
+
+    /* Inputs */
+    .kf-input, .form-input, .form-control, .search-input {
+      background: var(--kf-input-bg) !important;
+      border: 1px solid var(--kf-input-border) !important;
+      border-radius: 12px !important;
+      color: var(--kf-text) !important;
+      padding: 14px 16px !important;
+      transition: all 0.2s ease !important;
+      font-size: 1rem !important;
+      font-family: 'Outfit', sans-serif !important;
+    }
+
+    .kf-input::placeholder, .form-control::placeholder {
+      color: var(--text-muted) !important;
+    }
+
+    .kf-input:focus, .form-input:focus, .form-control:focus, .search-input:focus {
+      background: var(--kf-surface) !important;
+      border-color: var(--green-mid) !important;
+      box-shadow: 0 0 0 3px rgba(76, 175, 26, 0.15) !important;
+      outline: none !important;
+    }
+    
+    .input-group-text {
+      background: var(--kf-input-bg) !important;
+      border: 1px solid var(--kf-input-border) !important;
+      border-right: none !important;
+      color: var(--kf-text-muted) !important;
+      border-radius: 12px 0 0 12px !important;
+    }
+    
+    .input-group .form-control {
+      border-left: none !important;
+    }
+    
+    .btn-toggle-pw {
+      border-left: none !important;
+      border-right: 1px solid var(--kf-input-border) !important;
+      border-radius: 0 12px 12px 0 !important;
+      background: var(--kf-input-bg) !important;
+      cursor: pointer;
+      color: var(--text-muted) !important;
+      transition: color 0.2s;
+    }
+
+    .btn-toggle-pw:hover {
+      color: var(--green-light) !important;
+    }
+
+    /* Animations */
+    @keyframes fadeInScale {
+      0% { opacity: 0; transform: scale(0.97) translateY(10px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    @keyframes slideUpFade {
+      0% { opacity: 0; transform: translateY(30px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    .page-section {
+      animation: fadeInScale 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .stagger-children > * {
+      opacity: 0;
+      animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .stagger-children > *:nth-child(1) { animation-delay: 0.05s; }
+    .stagger-children > *:nth-child(2) { animation-delay: 0.1s; }
+    .stagger-children > *:nth-child(3) { animation-delay: 0.15s; }
+    .stagger-children > *:nth-child(4) { animation-delay: 0.2s; }
+    .stagger-children > *:nth-child(5) { animation-delay: 0.25s; }
+    .stagger-children > *:nth-child(6) { animation-delay: 0.3s; }
+    .stagger-children > *:nth-child(7) { animation-delay: 0.35s; }
+    .stagger-children > *:nth-child(8) { animation-delay: 0.4s; }
+
+    /* Bottom Nav */
+    #bottom-nav {
+      background: var(--kf-surface-glass) !important;
+      backdrop-filter: blur(24px) saturate(180%) !important;
+      -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+      border-top: 1px solid var(--kf-card-border) !important;
+      box-shadow: 0 -10px 40px var(--kf-shadow) !important;
+      padding-bottom: env(safe-area-inset-bottom, 12px) !important;
+    }
+
+    .nav-tab {
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+      position: relative;
+    }
+
+    .nav-tab i {
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+      font-size: 1.3rem !important;
+    }
+
+    .nav-tab.active {
+      color: var(--green-light) !important;
+    }
+
+    .nav-tab.active i {
+      transform: translateY(-6px) scale(1.15) !important;
+      text-shadow: 0 0 15px var(--green-glow) !important;
+    }
+    
+    .nav-tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: -6px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 6px;
+      height: 6px;
+      background: var(--blue-light);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--blue-glow);
+    }
+
+    /* Modals */
+    .modal-content {
+      background: var(--kf-surface-glass) !important;
+      backdrop-filter: blur(20px) !important;
+      -webkit-backdrop-filter: blur(20px) !important;
+      border: 1px solid var(--kf-card-border) !important;
+      border-radius: 28px !important;
+      box-shadow: 0 30px 80px var(--kf-shadow) !important;
+    }
+    
+    .modal-header {
+      border-bottom: 1px solid var(--kf-divider) !important;
+    }
+    
+    .modal-footer {
+      border-top: 1px solid var(--kf-divider) !important;
+    }
+
+    /* Headers */
+    #top-header {
+      background: var(--kf-surface-glass) !important;
+      backdrop-filter: blur(20px) saturate(180%) !important;
+      -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+      border-bottom: 1px solid var(--kf-card-border) !important;
+      box-shadow: 0 4px 30px var(--kf-shadow) !important;
+    }
+
+    .header-logo-icon, .auth-logo-icon {
+      background: var(--gradient-green);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 0 12px var(--green-glow));
+    }
+
+    .header-title {
+      font-family: 'Outfit', sans-serif !important;
+      font-weight: 800 !important;
+      letter-spacing: -0.5px;
+    }
+
+    /* Avatars & Badges */
+    .badge-kf {
+      padding: 6px 12px !important;
+      border-radius: 20px !important;
+      font-weight: 700 !important;
+      letter-spacing: 0.5px !important;
+      text-transform: uppercase;
+      font-size: 0.7rem !important;
+    }
+
+    .badge-active { background: rgba(16, 185, 129, 0.15) !important; color: var(--kf-success) !important; border: 1px solid rgba(16, 185, 129, 0.3) !important; }
+    .badge-overdue { background: rgba(239, 68, 68, 0.15) !important; color: var(--kf-danger) !important; border: 1px solid rgba(239, 68, 68, 0.3) !important; }
+    .badge-completed { background: rgba(59, 130, 246, 0.15) !important; color: #3b82f6 !important; border: 1px solid rgba(59, 130, 246, 0.3) !important; }
+
+    .client-avatar {
+      background: var(--gradient-green) !important;
+      color: #ffffff !important;
+      box-shadow: 0 6px 15px var(--green-glow) !important;
+      font-family: 'Outfit', sans-serif !important;
+      font-weight: 800 !important;
+      border: 2px solid rgba(255, 255, 255, 0.1) !important;
+    }
+    
+    /* Progress Bars */
+    .kf-progress {
+      background: var(--kf-input-bg) !important;
+      border-radius: 10px !important;
+      height: 8px !important;
+      overflow: hidden;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    .kf-progress-fill {
+      background: var(--gradient-green) !important;
+      border-radius: 10px !important;
+      box-shadow: 0 0 10px var(--green-glow) !important;
+    }
+    .kf-progress-fill.success {
+      background: var(--gradient-green) !important;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.5) !important;
+    }
+    .kf-progress-fill.danger {
+      background: linear-gradient(90deg, #b91c1c, #ef4444) !important;
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.5) !important;
+    }
+
+    /* Auth Screen Pro Overrides */
+    .auth-container {
+      background: transparent !important;
+    }
+    .auth-logo-icon {
+      font-size: 3.5rem !important;
+    }
+    .auth-card {
+      background: var(--gradient-card) !important;
+      border-radius: var(--radius-xl) !important;
+      padding: 40px 30px !important;
+    }
+
+    /* Stepper/PIN Inputs */
+    .pin-digit-input {
+      width: 55px !important;
+      height: 65px !important;
+      font-size: 2rem !important;
+      font-weight: 800 !important;
+      border-radius: 16px !important;
+      background: var(--bg-input) !important;
+      border: 2px solid var(--kf-input-border) !important;
+      color: var(--text-primary) !important;
+      box-shadow: inset 0 2px 5px rgba(0,0,0,0.2) !important;
+      transition: all 0.2s !important;
+    }
+    .pin-digit-input:focus {
+      border-color: var(--green-mid) !important;
+      background: rgba(76, 175, 26, 0.05) !important;
+      box-shadow: 0 0 0 4px rgba(76, 175, 26, 0.15), inset 0 2px 5px rgba(0,0,0,0.2) !important;
+      transform: translateY(-2px);
+    }
+    .pin-digit-input.success {
+      border-color: var(--kf-success) !important;
+      color: var(--kf-success) !important;
+      background: rgba(16, 185, 129, 0.05) !important;
+      box-shadow: 0 0 15px rgba(16, 185, 129, 0.3) !important;
+    }
+
+    /* Filter Tabs */
+    .filter-tabs {
+      background: var(--kf-input-bg) !important;
+      border: 1px solid var(--kf-card-border) !important;
+      border-radius: 16px !important;
+      padding: 6px !important;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .filter-tab {
+      flex: 1;
+      min-width: 80px;
+      border-radius: 12px !important;
+      font-weight: 600 !important;
+      color: var(--kf-text-muted) !important;
+      transition: all 0.3s ease !important;
+    }
+    .filter-tab.active {
+      background: var(--kf-card) !important;
+      color: var(--kf-text) !important;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+      border: 1px solid rgba(255,255,255,0.08) !important;
+    }
+
+    /* INFO MODALS & SETTINGS OPTIONS */
+    .settings-option-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 18px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-default);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+      text-decoration: none;
+      margin-bottom: 10px;
+    }
+    .settings-option-row:hover {
+      background: rgba(126, 211, 33, 0.05);
+      border-color: var(--green-mid);
+    }
+    .settings-option-icon {
+      font-size: 20px;
+      width: 36px;
+      height: 36px;
+      background: rgba(126, 211, 33, 0.08);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .settings-option-label {
+      flex: 1;
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+    .settings-option-chevron {
+      color: var(--text-muted);
+      font-size: 16px;
+    }
+    .info-modal {
+      position: fixed; inset: 0; background: var(--bg-primary); z-index: 1050; 
+      display: flex; flex-direction: column; animation: slideUp 0.3s ease;
+    }
+    .info-modal-header {
+      display: flex; align-items: center; justify-content: space-between; 
+      padding: 20px 20px 16px; border-bottom: 1px solid var(--border-default);
+      background: var(--kf-surface-glass); backdrop-filter: blur(20px);
+    }
+    .info-modal-title { font-size: 1.25rem; font-weight: 700; color: var(--text-primary); }
+    .info-modal-close { background: none; border: none; color: var(--text-muted); font-size: 22px; cursor: pointer; padding: 4px; transition: color 0.2s; }
+    .info-modal-close:hover { color: var(--text-primary); }
+    .info-modal-body { flex: 1; overflow-y: auto; padding: 20px; font-size: 0.875rem; color: var(--text-muted); line-height: 1.8; }
+    .info-modal-body h4 { color: var(--text-primary); margin-top: 1.5rem; margin-bottom: 0.5rem; font-size: 1rem; }
+    
+    .contact-modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); 
+      display: flex; align-items: flex-end; justify-content: center; z-index: 1050; animation: fadeIn 0.2s ease;
+    }
+    .contact-modal-card {
+      background: var(--bg-card); border: 1px solid var(--border-default); 
+      border-radius: 24px 24px 0 0; padding: 28px 24px 36px; width: 100%; max-width: 500px; animation: slideUp 0.25s ease;
+    }
+    .contact-item-row {
+      display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 12px; 
+      text-decoration: none; transition: background 0.2s; margin-bottom: 8px; border: 1px solid var(--border-default);
+    }
+    .contact-item-row:hover { background: rgba(126, 211, 33, 0.06); border-color: var(--green-mid); }
+    .contact-item-icon {
+      font-size: 22px; width: 44px; height: 44px; background: rgba(126, 211, 33, 0.08); 
+      border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--green-light);
+    }
+    .contact-item-label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 2px; }
+    .contact-item-value { font-size: 1rem; font-weight: 600; color: var(--green-light); }
+
+    /* Custom scrollbar for webkit */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--kf-card-border);
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--kf-input-border);
+    }
+
+    /* PWA Install Bubble Animation */
+    @keyframes pulse-bubble {
+      0% {
+        box-shadow: 0 8px 24px rgba(126, 211, 33, 0.4), 0 0 0 0 rgba(126, 211, 33, 0.7);
+      }
+      50% {
+        box-shadow: 0 8px 24px rgba(126, 211, 33, 0.4), 0 0 0 15px rgba(126, 211, 33, 0);
+      }
+      100% {
+        box-shadow: 0 8px 24px rgba(126, 211, 33, 0.4), 0 0 0 0 rgba(126, 211, 33, 0);
+      }
+    }
+
+    /* ── CHATBOT STYLES ─────────────────────────────────────────── */
+    @keyframes float {
+      0%, 100% {
+        transform: translateY(0px);
+      }
+      50% {
+        transform: translateY(-10px);
+      }
+    }
+
+    @keyframes slideInUp {
+      from {
+        transform: translate(-50%, 100%);
+        opacity: 0;
+      }
+      to {
+        transform: translate(-50%, -50%);
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideOutDown {
+      from {
+        transform: translate(-50%, -50%);
+        opacity: 1;
+      }
+      to {
+        transform: translate(-50%, 100%);
+        opacity: 0;
+      }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .chatbot-icon:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 25px rgba(126, 211, 33, 0.6);
+    }
+
+    .chatbot-icon:active {
+      transform: scale(0.95);
+    }
+
+    .chatbot-icon.dragging {
+      cursor: grabbing;
+      animation: none;
+      box-shadow: 0 8px 30px rgba(126, 211, 33, 0.6);
+    }
+
+    .chatbot-interface {
+      animation: slideInUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .chatbot-interface.closing {
+      animation: slideOutDown 0.3s ease-out forwards;
+    }
+
+    .chatbot-messages {
+      scrollbar-width: thin;
+      scrollbar-color: var(--border-default) transparent;
+    }
+
+    .chatbot-messages::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .chatbot-messages::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .chatbot-messages::-webkit-scrollbar-thumb {
+      background: var(--border-default);
+      border-radius: 3px;
+    }
+
+    .bot-message, .user-message {
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .user-message {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .user-message .message-content {
+      background: linear-gradient(135deg, #7ed321, #4caf1a);
+      color: white;
+      padding: 12px 16px;
+      border-radius: 16px 16px 4px 16px;
+      font-size: 14px;
+      line-height: 1.4;
+      max-width: 240px;
+      word-wrap: break-word;
+    }
+
+    .bot-message .message-content {
+      background: var(--bg-input);
+      padding: 12px 16px;
+      border-radius: 16px 16px 16px 4px;
+      color: var(--text-primary);
+      font-size: 14px;
+      line-height: 1.4;
+      max-width: 240px;
+      word-wrap: break-word;
+    }
+
+    .typing-indicator {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 16px;
+    }
+
+    .typing-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green-mid);
+      animation: typing 1.4s infinite ease-in-out;
+    }
+
+    .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+    .typing-dot:nth-child(3) { animation-delay: 0; }
+
+    @keyframes typing {
+      0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+
+    #chatbot-input:focus {
+      border-color: var(--green-mid);
+      box-shadow: 0 0 0 3px rgba(126, 211, 33, 0.15);
+    }
+
+    #chatbot-send:hover {
+      transform: scale(1.05);
+    }
+
+    #chatbot-send:active {
+      transform: scale(0.95);
+    }
+
+    #chatbot-voice:hover {
+      background: var(--green-glow);
+      border-color: var(--green-mid);
+      color: var(--green-mid);
+    }
+
+    #chatbot-voice.recording {
+      background: #ef4444;
+      border-color: #ef4444;
+      color: white;
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
+    /* Toast Pro */
+    .kf-toast {
+      background: var(--kf-surface-glass) !important;
+      backdrop-filter: blur(12px) !important;
+      border: 1px solid var(--kf-card-border) !important;
+      border-radius: 16px !important;
+      box-shadow: 0 15px 40px var(--kf-shadow) !important;
+      font-weight: 600 !important;
+      padding: 14px 20px !important;
+      font-family: 'Plus Jakarta Sans', sans-serif !important;
+    }
+
+    /* FIX for Current Plan text visibility */
+    .pro-plan-card .section-title,
+    .pro-plan-card .settings-row-label,
+    .pro-plan-card span,
+    .pro-plan-card div {
+      color: var(--kf-text) !important;
+    }
+
+    /* TAMIL LANGUAGE FIXES */
+    body.tamil-text,
+    body.tamil-text * {
+      font-family: 'Noto Sans Tamil', 'Plus Jakarta Sans', sans-serif !important;
+    }
+
+    body.tamil-text h1, body.tamil-text h2, body.tamil-text h3, 
+    body.tamil-text h4, body.tamil-text h5, body.tamil-text h6,
+    body.tamil-text .btn-kf-primary, body.tamil-text .nav-tab span,
+    body.tamil-text .stat-label, body.tamil-text .section-title,
+    body.tamil-text strong, body.tamil-text label,
+    body.tamil-text button {
+      font-weight: 800 !important; /* Bold texts for Tamil */
+      letter-spacing: 0.2px !important;
+    }
+
+    body.tamil-text span, body.tamil-text p, body.tamil-text div {
+      font-weight: 600; /* Bolder readable font for Tamil */
+    }
+
+    /* PREVENT ICONS FROM DISAPPEARING/CHANGING */
+    body i.fa-solid, body i.fas {
+      font-family: "Font Awesome 6 Free" !important;
+      font-weight: 900 !important;
+    }
+    body i.fa-regular, body i.far {
+      font-family: "Font Awesome 6 Free" !important;
+      font-weight: 400 !important;
+    }
+    body i.fa-brands, body i.fab {
+      font-family: "Font Awesome 6 Brands" !important;
+      font-weight: 400 !important;
+    }
+
+    /* ── Google Sign-In Button ── */
+    .btn-google-signin {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 13px 20px;
+      background: #ffffff;
+      color: #3c4043;
+      font-family: 'Plus Jakarta Sans', 'Inter', 'Roboto', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      border: 1.5px solid #dadce0;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-google-signin::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(66,133,244,0.04), rgba(234,67,53,0.04), rgba(251,188,5,0.04), rgba(52,168,83,0.04));
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .btn-google-signin:hover {
+      border-color: #4285F4;
+      box-shadow: 0 4px 16px rgba(66, 133, 244, 0.15), 0 2px 6px rgba(0,0,0,0.06);
+      transform: translateY(-1px);
+    }
+    .btn-google-signin:hover::before {
+      opacity: 1;
+    }
+    .btn-google-signin:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px rgba(66, 133, 244, 0.1);
+    }
+    .btn-google-signin svg {
+      position: relative;
+      z-index: 1;
+    }
+    .btn-google-signin span {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Dark theme overrides for Google button */
+    [data-theme="dark"] .btn-google-signin {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.12);
+      color: #e8eaed;
+    }
+    [data-theme="dark"] .btn-google-signin:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(66, 133, 244, 0.5);
+      box-shadow: 0 4px 16px rgba(66, 133, 244, 0.15), 0 0 0 1px rgba(66, 133, 244, 0.2);
+    }
+
+    /* Google button loading state */
+    .btn-google-signin.loading {
+      pointer-events: none;
+      opacity: 0.75;
+    }
+    .btn-google-signin.loading span::after {
+      content: '...';
+      animation: googleBtnDots 1.2s infinite;
+    }
+    @keyframes googleBtnDots {
+      0%, 20% { content: '.'; }
+      40% { content: '..'; }
+      60%, 100% { content: '...'; }
+    }
+  </style>
+
+  <!-- Bootstrap 5.3 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
+
+  <!-- Font Awesome 6.5 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- Custom styles -->
+  <link rel="stylesheet" href="style.css?v=3" />
+  <link rel="stylesheet" href="subscription.css?v=3" />
+
+  <!-- Chart.js 4 -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- jsPDF 2.5 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- jsPDF-AutoTable for structured PDF generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+  <!-- SheetJS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <!-- Razorpay Payment Gateway - MUST LOAD BEFORE razorpay.js -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js" onload="console.log('✅ Razorpay SDK loaded')" onerror="console.error('❌ Failed to load Razorpay SDK')"></script>
+</head>
+
+<body id="app-body">
+
+  <!-- FLOATING BUBBLES - Only visible on auth screens -->
+  <!-- Logo Bubble with "Install App" Label (Bottom Left) -->
+  <div id="logo-bubble-container" class="draggable-bubble auth-only-bubble" style="position: fixed; bottom: 100px; left: 8%; display: none; flex-direction: column; align-items: center; z-index: 9999; cursor: pointer; touch-action: none;">
+    <div id="logo-bubble" class="custom-floating-bubble logo-bubble" style="width: 95px; height: 95px; border-radius: 50%; background: linear-gradient(135deg, #7ed321 0%, #4caf1a 50%, #3d9b15 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 20px 60px rgba(126, 211, 33, 0.7), 0 0 40px rgba(126, 211, 33, 0.4); animation: crazy-bubble-float-1 5s ease-in-out infinite; border: 4px solid rgba(255, 255, 255, 0.4); cursor: pointer; transition: all 0.3s ease; position: relative;">
+      <div style="position: absolute; inset: -8px; border-radius: 50%; background: linear-gradient(45deg, transparent, rgba(126, 211, 33, 0.3), transparent); animation: bubble-rotate 3s linear infinite;"></div>
+      <img src="logo.png" alt="SamKass" style="width: 78px; height: 78px; border-radius: 50%; object-fit: cover; border: 3px solid white; pointer-events: none; position: relative; z-index: 2;">
+    </div>
+    <div class="install-label" style="font-size: 0.75rem; color: #7ed321; margin-top: 12px; font-weight: 700; text-align: center; background: rgba(13, 26, 13, 0.92); padding: 8px 16px; border-radius: 14px; backdrop-filter: blur(16px); border: 2px solid rgba(126, 211, 33, 0.3); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5), inset 0 1px 2px rgba(126, 211, 33, 0.3); animation: crazy-bubble-float-1 5s ease-in-out infinite; pointer-events: none; letter-spacing: 0.5px; text-transform: uppercase;">
+      Install App
+    </div>
+  </div>
+
+  <!-- Video Tutorial Bubble with Label (Bottom Right) -->
+  <div id="video-bubble-container" class="draggable-bubble auth-only-bubble" style="position: fixed; bottom: 100px; right: 8%; display: none; flex-direction: column; align-items: center; z-index: 9999; cursor: pointer; touch-action: none;">
+    <div id="video-bubble" class="custom-floating-bubble video-bubble" style="width: 95px; height: 95px; border-radius: 50%; background: linear-gradient(135deg, #00cfff 0%, #0080c8 50%, #005f96 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 20px 60px rgba(0, 207, 255, 0.7), 0 0 40px rgba(0, 207, 255, 0.4); animation: crazy-bubble-float-2 5.5s ease-in-out infinite; border: 4px solid rgba(255, 255, 255, 0.4); transition: all 0.3s ease; position: relative;">
+      <div style="position: absolute; inset: -8px; border-radius: 50%; background: linear-gradient(-45deg, transparent, rgba(0, 207, 255, 0.3), transparent); animation: bubble-rotate-reverse 3s linear infinite;"></div>
+      <svg width="45" height="45" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="pointer-events: none; position: relative; z-index: 2; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
+        <path d="M8 5v14l11-7L8 5z" fill="white" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="tutorial-label" style="font-size: 0.75rem; color: #00cfff; margin-top: 12px; font-weight: 700; text-align: center; background: rgba(13, 26, 13, 0.92); padding: 8px 16px; border-radius: 14px; backdrop-filter: blur(16px); border: 2px solid rgba(0, 207, 255, 0.3); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5), inset 0 1px 2px rgba(0, 207, 255, 0.3); animation: crazy-bubble-float-2 5.5s ease-in-out infinite; pointer-events: none; letter-spacing: 0.5px; text-transform: uppercase;">
+      Tutorial
+    </div>
+  </div>
+
+  <script>
+    // Show bubbles only on auth screens (first login, PIN setup, PIN entry)
+    function updateBubblesVisibility() {
+      const authScreen = document.getElementById('auth-screen');
+      const pinLockScreen = document.getElementById('pin-lock-screen');
+      const pinSetupWrapper = document.getElementById('pin-setup-wrapper');
+      const logoBubble = document.getElementById('logo-bubble-container');
+      const videoBubble = document.getElementById('video-bubble-container');
+      
+      if (!logoBubble || !videoBubble) return;
+      
+      // Show bubbles if:
+      // 1. Auth screen is visible (first-time login)
+      // 2. PIN setup screen is visible
+      // 3. PIN lock screen is visible (returning user entering PIN)
+      const isAuthVisible = authScreen && authScreen.style.display !== 'none';
+      const isPinLockVisible = pinLockScreen && pinLockScreen.style.display !== 'none';
+      const isPinSetupVisible = pinSetupWrapper && pinSetupWrapper.style.display !== 'none';
+      
+      if (isAuthVisible || isPinLockVisible || isPinSetupVisible) {
+        logoBubble.style.display = 'flex';
+        videoBubble.style.display = 'flex';
+      } else {
+        logoBubble.style.display = 'none';
+        videoBubble.style.display = 'none';
+      }
+    }
+    
+    // Run check initially and whenever DOM changes
+    updateBubblesVisibility();
+    
+    // Watch for visibility changes
+    const observer = new MutationObserver(updateBubblesVisibility);
+    
+    // Start observing once DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function() {
+        observer.observe(document.body, { 
+          attributes: true, 
+          childList: true, 
+          subtree: true,
+          attributeFilter: ['style', 'class']
+        });
+      });
+    } else {
+      observer.observe(document.body, { 
+        attributes: true, 
+        childList: true, 
+        subtree: true,
+        attributeFilter: ['style', 'class']
+      });
+    }
+    
+    // Also check every 500ms as a fallback
+    setInterval(updateBubblesVisibility, 500);
+  </script>
+
+  <!-- PWA Install Modal -->
+  <div id="pwa-install-modal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); z-index: 10001; align-items: center; justify-content: center; backdrop-filter: blur(8px);">
+    <div style="width: 90%; max-width: 420px; background: var(--bg-card); border-radius: 24px; overflow: hidden; box-shadow: 0 25px 80px rgba(0, 0, 0, 0.8); border: 1px solid rgba(126, 211, 33, 0.3); animation: slideInUp 0.4s ease;">
+      <div style="padding: 28px 24px 20px; background: linear-gradient(135deg, #0d1a0d 0%, #0a0f0a 100%); text-align: center; border-bottom: 1px solid rgba(126, 211, 33, 0.2);">
+        <div style="width: 80px; height: 80px; margin: 0 auto 16px; border-radius: 20px; background: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 30px rgba(126, 211, 33, 0.4); overflow: hidden;">
+          <img src="logo.png" alt="SamKass" style="width: 100%; height: 100%; object-fit: cover;">
+        </div>
+        <h3 style="margin: 0 0 8px 0; color: var(--text-primary); font-size: 1.4rem; font-weight: 800;">Install SamKass</h3>
+        <p style="margin: 0; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5;">Install our app for quick access and a better experience</p>
+      </div>
+      <div style="padding: 24px;">
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
+          <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: rgba(126, 211, 33, 0.08); border-radius: 12px; border: 1px solid rgba(126, 211, 33, 0.2);">
+            <i class="fa-solid fa-bolt" style="color: #7ed321; font-size: 1.3rem;"></i>
+            <span style="color: var(--text-primary); font-size: 0.9rem; font-weight: 500;">Instant access from home screen</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: rgba(126, 211, 33, 0.08); border-radius: 12px; border: 1px solid rgba(126, 211, 33, 0.2);">
+            <i class="fa-solid fa-mobile-screen" style="color: #7ed321; font-size: 1.3rem;"></i>
+            <span style="color: var(--text-primary); font-size: 0.9rem; font-weight: 500;">Works offline</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: rgba(126, 211, 33, 0.08); border-radius: 12px; border: 1px solid rgba(126, 211, 33, 0.2);">
+            <i class="fa-solid fa-bell" style="color: #7ed321; font-size: 1.3rem;"></i>
+            <span style="color: var(--text-primary); font-size: 0.9rem; font-weight: 500;">Get instant notifications</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 12px;">
+          <button id="pwa-cancel-btn" style="flex: 1; padding: 14px 20px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: var(--text-secondary); border-radius: 14px; cursor: pointer; font-weight: 600; font-size: 1rem; transition: all 0.3s ease; font-family: 'Outfit', sans-serif;">
+            Cancel
+          </button>
+          <button id="pwa-install-btn" style="flex: 1; padding: 14px 20px; background: linear-gradient(135deg, #7ed321, #4caf1a); border: none; color: white; border-radius: 14px; cursor: pointer; font-weight: 700; font-size: 1rem; box-shadow: 0 6px 20px rgba(126, 211, 33, 0.4); transition: all 0.3s ease; font-family: 'Outfit', sans-serif;">
+            Install
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tutorial Video Modal -->
+  <div id="tutorial-video-modal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.92); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(8px);">
+    <div style="width: 90%; max-width: 900px; background: var(--bg-card); border-radius: 24px; overflow: hidden; box-shadow: 0 25px 80px rgba(0, 0, 0, 0.8); border: 1px solid rgba(126, 211, 33, 0.3);">
+      <div style="padding: 20px 24px; background: linear-gradient(135deg, #0d1a0d 0%, #0a0f0a 100%); border-bottom: 1px solid rgba(126, 211, 33, 0.2); display: flex; align-items: center; justify-content: space-between;">
+        <h3 style="margin: 0; color: var(--text-primary); font-size: 1.25rem; font-weight: 700;">
+          <i class="fa-solid fa-circle-play" style="color: #00cfff; margin-right: 10px;"></i>
+          Tutorial Video
+        </h3>
+        <button id="close-tutorial-modal" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; font-size: 18px;">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div style="padding: 24px; background: #000;">
+        <div style="position: relative; padding-bottom: 56.25%; height: 0; border-radius: 12px; overflow: hidden; background: #1a1a1a;">
+          <iframe id="tutorial-video-iframe" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          <div id="video-placeholder" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #666; font-size: 1.1rem;">
+            <div style="text-align: center;">
+              <i class="fa-solid fa-video" style="font-size: 3rem; margin-bottom: 16px; color: #00cfff;"></i>
+              <p style="margin: 0;">Add your tutorial video URL</p>
+              <p style="font-size: 0.85rem; margin-top: 8px; color: #888;">YouTube, Vimeo, or direct link</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    /* CRAZY FLOATING ANIMATIONS */
+    @keyframes crazy-bubble-float-1 {
+      0% { 
+        transform: translateY(0) translateX(0) rotate(0deg) scale(1); 
+      }
+      15% {
+        transform: translateY(-30px) translateX(15px) rotate(5deg) scale(1.05);
+      }
+      30% {
+        transform: translateY(-45px) translateX(-10px) rotate(-3deg) scale(0.98);
+      }
+      45% {
+        transform: translateY(-25px) translateX(20px) rotate(7deg) scale(1.08);
+      }
+      60% {
+        transform: translateY(-50px) translateX(-5px) rotate(-5deg) scale(1.02);
+      }
+      75% {
+        transform: translateY(-35px) translateX(12px) rotate(4deg) scale(1.06);
+      }
+      90% {
+        transform: translateY(-20px) translateX(-8px) rotate(-2deg) scale(0.99);
+      }
+      100% { 
+        transform: translateY(0) translateX(0) rotate(0deg) scale(1); 
+      }
+    }
+
+    @keyframes crazy-bubble-float-2 {
+      0% { 
+        transform: translateY(0) translateX(0) rotate(0deg) scale(1); 
+      }
+      12% {
+        transform: translateY(-25px) translateX(-18px) rotate(-6deg) scale(1.04);
+      }
+      28% {
+        transform: translateY(-55px) translateX(8px) rotate(4deg) scale(1.09);
+      }
+      42% {
+        transform: translateY(-30px) translateX(-15px) rotate(-7deg) scale(0.97);
+      }
+      58% {
+        transform: translateY(-48px) translateX(12px) rotate(5deg) scale(1.07);
+      }
+      72% {
+        transform: translateY(-38px) translateX(-10px) rotate(-4deg) scale(1.03);
+      }
+      88% {
+        transform: translateY(-18px) translateX(6px) rotate(3deg) scale(1.01);
+      }
+      100% { 
+        transform: translateY(0) translateX(0) rotate(0deg) scale(1); 
+      }
+    }
+
+    @keyframes bubble-rotate {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes bubble-rotate-reverse {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(-360deg); }
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% { 
+        box-shadow: 0 20px 60px rgba(126, 211, 33, 0.7), 0 0 40px rgba(126, 211, 33, 0.4);
+      }
+      50% { 
+        box-shadow: 0 25px 80px rgba(126, 211, 33, 1), 0 0 60px rgba(126, 211, 33, 0.7);
+      }
+    }
+
+    @keyframes pulse-glow-blue {
+      0%, 100% { 
+        box-shadow: 0 20px 60px rgba(0, 207, 255, 0.7), 0 0 40px rgba(0, 207, 255, 0.4);
+      }
+      50% { 
+        box-shadow: 0 25px 80px rgba(0, 207, 255, 1), 0 0 60px rgba(0, 207, 255, 0.7);
+      }
+    }
+
+    @keyframes slideInUp {
+      from { transform: translateY(30px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .custom-floating-bubble:hover {
+      transform: scale(1.2) rotate(10deg) !important;
+      filter: brightness(1.2);
+      animation: pulse-glow 1.5s ease-in-out infinite !important;
+    }
+
+    .custom-floating-bubble.video-bubble:hover {
+      animation: pulse-glow-blue 1.5s ease-in-out infinite !important;
+    }
+
+    .draggable-bubble.dragging {
+      animation: none !important;
+      cursor: grabbing !important;
+      opacity: 0.85;
+      transform: scale(1.1) !important;
+    }
+
+    .draggable-bubble.dragging * {
+      animation: none !important;
+    }
+
+    #close-tutorial-modal:hover {
+      background: rgba(255, 68, 68, 0.2) !important;
+      border-color: #ff4444 !important;
+      transform: rotate(90deg) scale(1.1);
+    }
+
+    #pwa-cancel-btn:hover {
+      background: rgba(255, 255, 255, 0.15) !important;
+      border-color: rgba(255, 255, 255, 0.3) !important;
+      transform: translateY(-2px);
+    }
+
+    #pwa-install-btn:hover {
+      background: linear-gradient(135deg, #9aff2a, #5ec520) !important;
+      box-shadow: 0 8px 25px rgba(126, 211, 33, 0.6) !important;
+      transform: translateY(-3px) scale(1.05);
+    }
+
+    @media (max-width: 768px) {
+      #logo-bubble-container {
+        bottom: 80px !important;
+        left: 4% !important;
+      }
+      .custom-floating-bubble.logo-bubble {
+        width: 75px !important;
+        height: 75px !important;
+      }
+      .custom-floating-bubble.logo-bubble img {
+        width: 62px !important;
+        height: 62px !important;
+      }
+      #video-bubble-container {
+        bottom: 80px !important;
+        right: 4% !important;
+      }
+      .custom-floating-bubble.video-bubble {
+        width: 75px !important;
+        height: 75px !important;
+      }
+      .custom-floating-bubble.video-bubble svg {
+        width: 35px !important;
+        height: 35px !important;
+      }
+      .install-label, .tutorial-label {
+        font-size: 0.65rem !important;
+        padding: 6px 12px !important;
+      }
+    }
+  </style>
+
+  <script>
+    (function() {
+      let deferredPrompt = null;
+
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+      });
+
+      function makeDraggable(element, onClickCallback) {
+        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+        let isDragging = false;
+        let dragThreshold = 5;
+        let startX = 0, startY = 0;
+
+        element.addEventListener('mousedown', dragMouseDown);
+        element.addEventListener('touchstart', dragTouchStart, { passive: false });
+
+        function dragMouseDown(e) {
+          e.preventDefault();
+          startX = e.clientX;
+          startY = e.clientY;
+          pos3 = e.clientX;
+          pos4 = e.clientY;
+          document.addEventListener('mouseup', closeDragElement);
+          document.addEventListener('mousemove', elementDrag);
+        }
+
+        function dragTouchStart(e) {
+          const touch = e.touches[0];
+          startX = touch.clientX;
+          startY = touch.clientY;
+          pos3 = touch.clientX;
+          pos4 = touch.clientY;
+          document.addEventListener('touchend', closeDragElement);
+          document.addEventListener('touchmove', elementTouchDrag, { passive: false });
+        }
+
+        function elementDrag(e) {
+          e.preventDefault();
+          const moved = Math.abs(e.clientX - startX) + Math.abs(e.clientY - startY);
+          if (moved > dragThreshold && !isDragging) {
+            isDragging = true;
+            element.classList.add('dragging');
+          }
+          if (isDragging) {
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            element.style.top = (element.offsetTop - pos2) + 'px';
+            element.style.left = (element.offsetLeft - pos1) + 'px';
+            element.style.right = 'auto';
+          }
+        }
+
+        function elementTouchDrag(e) {
+          e.preventDefault();
+          const touch = e.touches[0];
+          const moved = Math.abs(touch.clientX - startX) + Math.abs(touch.clientY - startY);
+          if (moved > dragThreshold && !isDragging) {
+            isDragging = true;
+            element.classList.add('dragging');
+          }
+          if (isDragging) {
+            pos1 = pos3 - touch.clientX;
+            pos2 = pos4 - touch.clientY;
+            pos3 = touch.clientX;
+            pos4 = touch.clientY;
+            element.style.top = (element.offsetTop - pos2) + 'px';
+            element.style.left = (element.offsetLeft - pos1) + 'px';
+            element.style.right = 'auto';
+          }
+        }
+
+        function closeDragElement(e) {
+          document.removeEventListener('mouseup', closeDragElement);
+          document.removeEventListener('mousemove', elementDrag);
+          document.removeEventListener('touchend', closeDragElement);
+          document.removeEventListener('touchmove', elementTouchDrag);
+          
+          setTimeout(() => {
+            if (isDragging) {
+              element.classList.remove('dragging');
+            } else if (onClickCallback) {
+              onClickCallback(e);
+            }
+            isDragging = false;
+          }, 100);
+        }
+      }
+
+      const logoBubbleContainer = document.getElementById('logo-bubble-container');
+      const videoBubbleContainer = document.getElementById('video-bubble-container');
+      const pwaModal = document.getElementById('pwa-install-modal');
+      const tutorialModal = document.getElementById('tutorial-video-modal');
+      const videoIframe = document.getElementById('tutorial-video-iframe');
+      const videoPlaceholder = document.getElementById('video-placeholder');
+
+      if (logoBubbleContainer) {
+        makeDraggable(logoBubbleContainer, async function() {
+          // Directly trigger native PWA install prompt (no custom modal)
+          if (deferredPrompt) {
+            try {
+              // Show native browser install prompt
+              await deferredPrompt.prompt();
+              const { outcome } = await deferredPrompt.userChoice;
+              console.log(`User response to install prompt: ${outcome}`);
+              if (outcome === 'accepted') {
+                console.log('✅ User accepted the install prompt');
+              } else {
+                console.log('❌ User dismissed the install prompt');
+              }
+              deferredPrompt = null;
+            } catch (err) {
+              console.error('Install prompt error:', err);
+              // Fallback if native prompt fails
+              alert('To install:\n\n• Chrome/Edge: Click menu (⋮) > Install app\n• Safari: Tap share (↗) > Add to Home Screen\n• Firefox: Tap menu (⋮) > Install');
+            }
+          } else {
+            // Native prompt not available, show instructions
+            alert('To install:\n\n• Chrome/Edge: Click menu (⋮) > Install app\n• Safari: Tap share (↗) > Add to Home Screen\n• Firefox: Tap menu (⋮) > Install');
+          }
+        });
+      }
+
+      if (videoBubbleContainer && tutorialModal) {
+        makeDraggable(videoBubbleContainer, function() {
+          tutorialModal.style.display = 'flex';
+          
+          const videoUrl = 'YOUR_VIDEO_URL_HERE';
+          
+          if (videoUrl && videoUrl !== 'YOUR_VIDEO_URL_HERE') {
+            videoIframe.src = videoUrl;
+            if (videoPlaceholder) videoPlaceholder.style.display = 'none';
+          }
+        });
+      }
+
+      const pwaInstallBtn = document.getElementById('pwa-install-btn');
+      const pwaCancelBtn = document.getElementById('pwa-cancel-btn');
+      
+      if (pwaInstallBtn) {
+        pwaInstallBtn.addEventListener('click', async function() {
+          if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            deferredPrompt = null;
+          } else {
+            alert('To install:\n\n• Chrome/Edge: Click menu (⋮) > Install app\n• Safari: Tap share (↗) > Add to Home Screen\n• Firefox: Tap menu (⋮) > Install');
+          }
+          pwaModal.style.display = 'none';
+        });
+      }
+
+      if (pwaCancelBtn) {
+        pwaCancelBtn.addEventListener('click', function() {
+          pwaModal.style.display = 'none';
+        });
+      }
+
+      const closeTutorialBtn = document.getElementById('close-tutorial-modal');
+      
+      if (closeTutorialBtn && tutorialModal) {
+        closeTutorialBtn.addEventListener('click', function() {
+          tutorialModal.style.display = 'none';
+          videoIframe.src = '';
+          if (videoPlaceholder) videoPlaceholder.style.display = 'flex';
+        });
+
+        tutorialModal.addEventListener('click', function(e) {
+          if (e.target === tutorialModal) {
+            tutorialModal.style.display = 'none';
+            videoIframe.src = '';
+            if (videoPlaceholder) videoPlaceholder.style.display = 'flex';
+          }
+        });
+      }
+
+      if (pwaModal) {
+        pwaModal.addEventListener('click', function(e) {
+          if (e.target === pwaModal) {
+            pwaModal.style.display = 'none';
+          }
+        });
+      }
+    })();
+  </script>
+
+  <!-- ==== MOBILE LOADING INDICATOR ==== -->
+  <div id="app-loading">
+    <div class="loader">
+      <h1>SamKass</h1>
+      <div class="dots">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==== LOADING SCREEN ==== -->
+  <div id="loading-screen" style="display:none;">
+    <div class="loading-content">
+      <div class="loading-logo" style="margin-bottom: 1.5rem; text-align: center; display: flex; flex-direction: column; align-items: center;">
+        <div style="width: 120px; height: 120px; border-radius: 50%; box-shadow: 0 0 25px var(--green-glow); margin-bottom: 16px; border: 2px solid var(--border-default); display: flex; align-items: center; justify-content: center; overflow: hidden; background: white;">
+          <img src="logo.png" alt="Logo" style="width: 100%; height: 100%; object-fit: contain;">
+        </div>
+        <h1 class="auth-logo-title" style="margin-bottom: 0;">SamKass</h1>
+      </div>
+      <div class="loading-spinner"></div>
+      <p class="loading-text" data-i18n="loadingWorkspace">Loading your workspace…</p>
+    </div>
+  </div>
+
+  <!-- ===== AUTH SCREEN ===== -->
+  <!-- ===== AUTH SCREEN ===== -->
+  <div id="auth-screen" style="display:none;">
+    <!-- Ambient Background Layer -->
+    <div class="auth-ambient-bg">
+      <div class="ambient-glow ambient-glow-1"></div>
+      <div class="ambient-glow ambient-glow-2"></div>
+      
+      <!-- Floating Particles -->
+      <div class="floating-particle particle-rupee-1">₹</div>
+      <div class="floating-particle particle-rupee-2">₹</div>
+      <div class="floating-particle particle-rupee-3">₹</div>
+      <div class="floating-particle particle-circle-1"></div>
+      <div class="floating-particle particle-circle-2"></div>
+      
+      <!-- Tiny Animated Graph Lines -->
+      <div class="floating-particle particle-graph">
+        <svg width="60" height="40" viewBox="0 0 60 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2 38L12 28L25 32L42 12L58 2" stroke="rgba(16, 185, 129, 0.25)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M58 2H46M58 2V14" stroke="rgba(16, 185, 129, 0.25)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+
+    </div>
+
+    <div class="auth-container">
+      <div class="auth-slider" id="auth-slider-container">
+        
+        <!-- STEP 1 — FIRST TIME WELCOME SCREEN -->
+        <div class="auth-slide" id="auth-slide-1">
+          <!-- Logo -->
+          <div class="auth-logo">
+            <div class="auth-logo-icon-circle" style="overflow: hidden; background: white;">
+              <img src="logo.png" alt="Logo" style="width: 100%; height: 100%; object-fit: contain;">
+            </div>
+            <h1 class="auth-logo-title">SamKass</h1>
+            <p class="auth-logo-sub">Finance Manager</p>
+          </div>
+
+          <!-- AI Voice Assistant Orb Animation -->
+          <div class="ai-orb-container">
+            <div class="ai-typing-text" id="ai-typing-text"></div>
+          </div>
+
+
+
+          <!-- Bottom Sheet Container -->
+          <div class="onboarding-bottom-sheet">
+            <h2 class="bottom-sheet-title" data-i18n="welcomeToSamKass">Welcome to SamKass</h2>
+            <p class="bottom-sheet-sub" data-i18n="chooseSignInMethod">Choose your sign-in method</p>
+            
+            <!-- Google Sign-in Wrapper -->
+            <div class="mb-2 d-flex flex-column align-items-center w-100">
+              <div id="g_id_onload" 
+                   data-client_id="1008709235007-vh9u2526ol0haffogibri3kno6rtjejl.apps.googleusercontent.com"
+                   data-callback="handleGoogleLogin"
+                   data-auto_prompt="false">
+              </div>
+              <div class="g_id_signin w-100" 
+                   data-type="standard" 
+                   data-shape="pill" 
+                   data-theme="outline"
+                   data-text="continue_with" 
+                   data-size="large" 
+                   data-logo_alignment="left">
+              </div>
+            </div>
+
+            <!-- Try Another Way Button -->
+            <button type="button" class="btn-try-another w-100" id="btn-try-another">
+              Try another way <i class="fa-solid fa-chevron-right ms-1"></i>
+            </button>
+          </div>
+        </div>
+        
+        <!-- STEP 2 — LOGIN / SIGNUP SCREEN -->
+        <div class="auth-slide" id="auth-slide-2">
+          <!-- Back button and centered small logo -->
+          <div class="d-flex align-items-center justify-content-between w-100 mb-2">
+            <button type="button" class="btn-onboarding-back" id="btn-back-to-step-1">
+              <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-right: 38px;">
+              <div style="width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(16,185,129,0.3); overflow: hidden; background: white;">
+                <img src="logo.png" alt="Logo" style="width: 100%; height: 100%; object-fit: contain;">
+              </div>
+              <span style="font-weight: 800; font-size: 1.15rem; color: #059669; margin: 0;">SamKass</span>
+            </div>
+            <div></div> <!-- Spacer -->
+          </div>
+
+          <!-- Title and Subtitle -->
+          <div style="text-align: center; margin-bottom: 0.5rem;">
+            <h2 class="auth-card-title" id="step-2-title">Log in or sign up</h2>
+            <p class="auth-card-sub" id="step-2-subtitle">Manage loans, collections and customer payments smarter with SamKass.</p>
+          </div>
+
+          <!-- Email Login Form Section -->
+          <div id="login-form-wrapper" class="kf-card auth-card auth-form-section active" style="padding: 1.5rem 1.25rem;">
+            <form id="login-form" novalidate>
+              <div class="mb-3">
+                <label class="form-label" for="login-email" data-i18n="emailAddress">Email Address</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
+                  <input type="email" id="login-email" class="form-control" placeholder="name@company.com"
+                    data-ocid="auth.email_input" />
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label" for="login-password" data-i18n="password">Password</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
+                  <input type="password" id="login-password" class="form-control" placeholder="Enter password"
+                    data-ocid="auth.password_input" />
+                  <button type="button" class="input-group-text btn-toggle-pw" data-target="login-password"><i
+                      class="fa-solid fa-eye"></i></button>
+                </div>
+                <div class="text-end mt-1">
+                  <a href="#" id="show-forgot-password" class="text-decoration-none" style="font-size: 0.85rem; color: #059669; font-weight: 600;">Forgot Password?</a>
+                </div>
+              </div>
+              <div id="login-error" class="alert alert-danger d-none" role="alert" data-ocid="auth.error_state" style="font-size: 0.825rem; padding: 0.5rem 0.75rem;"></div>
+              
+              <button type="submit" class="btn-kf-primary-gradient w-100 mb-3" data-ocid="auth.submit_button">
+                <i class="fa-solid fa-right-to-bracket me-2"></i>Login
+              </button>
+            </form>
+
+            <!-- Alternatives Divider -->
+            <div class="divider-text mb-3"><span>or continue with</span></div>
+
+            <!-- Alternative Auth Buttons -->
+            <div class="auth-choices-grid">
+              <!-- Google Button duplication target -->
+              <div class="g_id_signin w-100" 
+                   data-type="standard" 
+                   data-shape="pill" 
+                   data-theme="outline"
+                   data-text="continue_with" 
+                   data-size="large" 
+                   data-logo_alignment="left">
+              </div>
+            </div>
+
+            <div class="auth-switch mt-3">
+              <span data-i18n="noAccount">Don't have an account?</span>
+              <button type="button" class="btn-link" id="show-register" data-ocid="auth.register_link"
+                data-i18n="register" style="font-weight: 700; color: #059669;">Register</button>
+            </div>
+          </div>
+
+          <!-- Register Form Section -->
+          <div id="register-form-wrapper" class="kf-card auth-card auth-form-section" style="display:none; padding: 1.5rem 1.25rem;">
+            <form id="register-form" novalidate>
+              <div class="mb-3">
+                <label class="form-label" for="reg-name" data-i18n="fullName">Full Name</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fa-solid fa-user"></i></span>
+                  <input type="text" id="reg-name" class="form-control" placeholder="Your Name"
+                    data-ocid="auth.name_input" />
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label" for="reg-email" data-i18n="emailAddress">Email Address</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
+                  <input type="email" id="reg-email" class="form-control" placeholder="name@company.com"
+                    data-ocid="auth.reg_email_input" />
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label" for="reg-password" data-i18n="password">Password</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
+                  <input type="password" id="reg-password" class="form-control" placeholder="Min 6 characters"
+                    data-ocid="auth.reg_password_input" />
+                  <button type="button" class="input-group-text btn-toggle-pw" data-target="reg-password"><i
+                      class="fa-solid fa-eye"></i></button>
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label" for="reg-business" data-i18n="businessNameInput">Business / Firm Name</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fa-solid fa-building"></i></span>
+                  <input type="text" id="reg-business" class="form-control" placeholder="My Finance Co."
+                    data-ocid="auth.business_input" />
+                </div>
+              </div>
+              <div id="register-error" class="alert alert-danger d-none" role="alert" data-ocid="auth.reg_error_state" style="font-size: 0.825rem; padding: 0.5rem 0.75rem;"></div>
+              
+              <button type="submit" class="btn-kf-primary-gradient w-100" data-ocid="auth.reg_submit_button">
+                <i class="fa-solid fa-user-plus me-2"></i>Create Account
+              </button>
+            </form>
+
+            <div class="auth-switch mt-3">
+              <span data-i18n="haveAccount">Already have an account?</span>
+              <button type="button" class="btn-link" id="show-login" data-ocid="auth.login_link"
+                data-i18n="login" style="font-weight: 700; color: #059669;">Login</button>
+            </div>
+          </div>
+
+
+          <!-- Forgot Password Form Section -->
+          <div id="forgot-password-wrapper" class="kf-card auth-card auth-form-section" style="display:none; padding: 1.5rem 1.25rem;">
+            <form id="forgot-password-form" novalidate>
+              <div class="mb-3">
+                <label class="form-label" for="forgot-email">Email Address <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
+                  <input type="email" id="forgot-email" class="form-control" placeholder="name@company.com" />
+                </div>
+              </div>
+              <div id="forgot-error" class="alert alert-danger d-none" role="alert" style="font-size: 0.825rem; padding: 0.5rem 0.75rem;"></div>
+              <div id="forgot-success" class="alert alert-success d-none" role="alert" style="font-size: 0.825rem; padding: 0.5rem 0.75rem;"></div>
+              <button type="submit" class="btn-kf-primary-gradient w-100" id="forgot-submit-btn">
+                <i class="fa-solid fa-paper-plane me-2"></i>Send Magic Link
+              </button>
+            </form>
+            <div class="auth-switch mt-3">
+              <span>Remember your password?</span>
+              <button type="button" class="btn-link" id="show-login-from-forgot" style="font-weight: 700; color: #059669;">Back to Login</button>
+            </div>
+          </div>
+
+          <!-- Loading Spinner Wrapper (SamKass rotating logo animation) -->
+          <div id="logo-spinner-wrapper" class="kf-card auth-card auth-form-section" style="display:none; text-align:center;">
+            <div class="logo-spinner-container">
+              <div class="logo-spinner-circle" style="overflow: hidden; background: white;">
+                <img src="logo.png" alt="Logo" style="width: 100%; height: 100%; object-fit: contain;">
+              </div>
+              <p style="color: #64748b; font-weight: 600; font-size: 0.95rem;" id="spinner-message">Connecting to SamKass...</p>
+            </div>
+          </div>
+
+          <!-- ===== STEP 2: SET PIN (after first signup/login) ===== -->
+          <div id="pin-setup-wrapper" class="kf-card auth-card auth-form-section" style="display:none; padding: 1.5rem 1.25rem;">
+            <div style="text-align:center;margin-bottom:1rem">
+              <div style="width:56px;height:56px;background:linear-gradient(135deg, #10b981, #059669);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:1.5rem;color:#ffffff;margin-bottom:.5rem">
+                <i class="fa-solid fa-shield-halved"></i>
+              </div>
+              <h2 class="auth-card-title" style="margin-bottom:.25rem" data-i18n="setSecurityPin">Set Security PIN</h2>
+              <p class="auth-card-sub" style="margin-bottom:0" data-i18n="createPinDesc">Create a 4-digit PIN to protect your app</p>
+            </div>
+            <div id="pin-setup-inputs" style="display:flex;justify-content:center;gap:.75rem;margin-bottom:1.25rem">
+              <input type="password" maxlength="1" class="pin-digit-input" data-pin-idx="0" inputmode="numeric" pattern="[0-9]" autocomplete="off" />
+              <input type="password" maxlength="1" class="pin-digit-input" data-pin-idx="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" />
+              <input type="password" maxlength="1" class="pin-digit-input" data-pin-idx="2" inputmode="numeric" pattern="[0-9]" autocomplete="off" />
+              <input type="password" maxlength="1" class="pin-digit-input" data-pin-idx="3" inputmode="numeric" pattern="[0-9]" autocomplete="off" />
+            </div>
+            <div id="pin-setup-error" class="alert alert-danger d-none" role="alert" style="font-size: 0.825rem; padding: 0.5rem 0.75rem;"></div>
+            <button type="button" class="btn-kf-primary-gradient w-100" id="btn-confirm-pin" data-ocid="auth.confirm_pin_button">
+              <i class="fa-solid fa-lock me-2"></i><span data-i18n="setPinContinue">Set PIN &amp; Continue</span>
+            </button>
+            <p style="font-size:.75rem;color:#64748b;text-align:center;margin-top:.75rem;margin-bottom:0">
+              <i class="fa-solid fa-info-circle me-1"></i><span data-i18n="pinInfoText">You'll use this PIN every time you open the app</span>
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PIN LOCK SCREEN (returning users) ===== -->
+  <div id="pin-lock-screen" style="display:none;">
+    <div class="auth-container" style="align-items:center">
+      <div class="auth-logo" style="text-align: center; display: flex; flex-direction: column; align-items: center; margin-bottom: 1.5rem;">
+        <div style="width: 110px; height: 110px; border-radius: 50%; box-shadow: 0 0 25px var(--green-glow); margin-bottom: 16px; border: 2px solid var(--border-default); display: flex; align-items: center; justify-content: center; overflow: hidden; background: white;">
+          <img src="logo.png" alt="Logo" style="width: 100%; height: 100%; object-fit: contain;">
+        </div>
+        <h1 class="auth-logo-title">SamKass</h1>
+      </div>
+
+      <div class="kf-card auth-card" style="text-align:center">
+        <!-- User avatar & name -->
+        <div style="margin-bottom:1rem">
+          <div id="pin-lock-avatar"
+            style="width:64px;height:64px;background:var(--gradient-green);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:800;color:#ffffff;margin-bottom:.5rem">
+            <i class="fa-solid fa-user"></i>
+          </div>
+          <div id="pin-lock-name" style="font-size:1.0625rem;font-weight:700;color:var(--color-text)">Welcome Back</div>
+          <div id="pin-lock-email" style="font-size:.8125rem;color:var(--color-text-muted)"></div>
+        </div>
+
+        <p style="font-size:.875rem;color:var(--color-text-muted);margin-bottom:1rem">
+          <i class="fa-solid fa-lock me-1"></i><span data-i18n="enterPin">Enter your 4-digit PIN</span>
+        </p>
+
+        <div id="pin-lock-inputs" style="display:flex;justify-content:center;gap:.75rem;margin-bottom:1.25rem">
+          <input type="password" maxlength="1" class="pin-digit-input" data-pin-idx="0" inputmode="numeric"
+            pattern="[0-9]" autocomplete="off" />
+          <input type="password" maxlength="1" class="pin-digit-input" data-pin-idx="1" inputmode="numeric"
+            pattern="[0-9]" autocomplete="off" />
+          <input type="password" maxlength="1" class="pin-digit-input" data-pin-idx="2" inputmode="numeric"
+            pattern="[0-9]" autocomplete="off" />
+          <input type="password" maxlength="1" class="pin-digit-input" data-pin-idx="3" inputmode="numeric"
+            pattern="[0-9]" autocomplete="off" />
+        </div>
+
+        <div id="pin-lock-error" class="alert alert-danger d-none" role="alert"></div>
+
+        <button type="button" class="btn-kf-primary w-100" id="btn-unlock-pin" data-ocid="auth.unlock_pin_button">
+          <i class="fa-solid fa-lock-open me-2"></i><span data-i18n="unlock">Unlock</span>
+        </button>
+
+        <div class="auth-switch" style="margin-top:1rem; display:flex; flex-direction:column; gap:0.5rem; align-items:center;">
+          <button type="button" class="btn-link" id="btn-forgot-pin" style="color:var(--color-primary); font-size:0.875rem;">
+            Forgot Security PIN?
+          </button>
+          <button type="button" class="btn-link text-muted-kf" id="btn-switch-account" data-ocid="auth.switch_account_link" style="font-size:0.8125rem;">
+            <i class="fa-solid fa-arrow-right-from-bracket me-1"></i><span data-i18n="switchAccount">Switch Account</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Floating Install App Bubble (Only visible on auth screen) -->
+    <div id="pwa-install-bubble" style="position: fixed; bottom: 80px; right: 20px; z-index: 9999; display: none;">
+      <div style="width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(135deg, #7ed321, #4caf1a); box-shadow: 0 8px 24px rgba(126, 211, 33, 0.4), 0 0 0 0 rgba(126, 211, 33, 0.7); display: flex; align-items: center; justify-content: center; cursor: pointer; animation: pulse-bubble 2s infinite; overflow: hidden; border: 3px solid rgba(255,255,255,0.3);" onclick="handleBubbleInstall()">
+        <img src="logo.png" alt="Install SamKass" style="width: 50px; height: 50px; object-fit: contain;">
+      </div>
+      <div style="position: absolute; bottom: -30px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.9); color: white; padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; white-space: nowrap; pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+        Install SamKass
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MAIN APP ===== -->
+  <div id="main-app" style="display:none;">
+
+    <!-- Floating Chatbot Widget -->
+    <div id="chatbot-widget" style="display: none;">
+      <!-- Floating Bot Icon with Cute Robot -->
+      <div id="chatbot-icon" class="chatbot-icon" onclick="window.openChatbot && window.openChatbot()" style="position: fixed; bottom: 250px; right: 20px; width: 60px; height: 60px; background: linear-gradient(135deg, #7ed321, #4caf1a); border-radius: 50%; box-shadow: 0 4px 20px rgba(126, 211, 33, 0.4); cursor: grab; z-index: 9998; display: flex; align-items: center; justify-content: center; animation: float 3s ease-in-out infinite; transition: transform 0.2s ease;">
+        <!-- Cute Robot SVG -->
+        <svg width="36" height="36" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Antenna -->
+          <rect x="47" y="8" width="6" height="8" rx="1" fill="white"/>
+          <circle cx="50" cy="6" r="4" fill="#00cfff"/>
+          
+          <!-- Head -->
+          <rect x="30" y="20" width="40" height="30" rx="8" fill="white"/>
+          
+          <!-- Screen face -->
+          <rect x="34" y="24" width="32" height="22" rx="4" fill="#1a2332"/>
+          
+          <!-- Eyes -->
+          <ellipse cx="42" cy="32" rx="4" ry="5" fill="#00cfff"/>
+          <ellipse cx="58" cy="32" rx="4" ry="5" fill="#00cfff"/>
+          
+          <!-- Smile -->
+          <path d="M 44 40 Q 50 44 56 40" stroke="#00cfff" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          
+          <!-- Ears/Side panels -->
+          <circle cx="26" cy="35" r="6" fill="#e0e0e0"/>
+          <circle cx="74" cy="35" r="6" fill="#e0e0e0"/>
+          
+          <!-- Neck -->
+          <rect x="45" y="50" width="10" height="6" rx="2" fill="#d0d0d0"/>
+          
+          <!-- Body -->
+          <ellipse cx="50" cy="70" rx="18" ry="20" fill="white"/>
+          
+          <!-- Body panel -->
+          <path d="M 38 65 Q 50 68 62 65" stroke="#c0c0c0" stroke-width="1.5" fill="none"/>
+          
+          <!-- Arms -->
+          <ellipse cx="30" cy="68" rx="6" ry="12" fill="#e0e0e0"/>
+          <ellipse cx="70" cy="68" rx="6" ry="12" fill="#e0e0e0"/>
+        </svg>
+      </div>
+
+      <!-- Chat Interface - Centered Modal -->
+      <div id="chatbot-interface" class="chatbot-interface" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90vw; max-width: 500px; height: 85vh; background: var(--bg-card); border: 1px solid var(--border-default); border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); z-index: 9999; display: none; flex-direction: column; backdrop-filter: blur(20px);">
+        <!-- Chat Header -->
+        <div class="chatbot-header" style="padding: 20px; border-bottom: 1px solid var(--border-default); border-radius: 20px 20px 0 0; background: linear-gradient(135deg, #7ed321, #4caf1a); color: white; display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 44px; height: 44px; background: rgba(255,255,255,0.25); border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 4px;">
+              <!-- Cute Robot Avatar -->
+              <svg width="36" height="36" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="47" y="8" width="6" height="8" rx="1" fill="white"/>
+                <circle cx="50" cy="6" r="4" fill="#00cfff"/>
+                <rect x="30" y="20" width="40" height="30" rx="8" fill="white"/>
+                <rect x="34" y="24" width="32" height="22" rx="4" fill="#1a2332"/>
+                <ellipse cx="42" cy="32" rx="4" ry="5" fill="#00cfff"/>
+                <ellipse cx="58" cy="32" rx="4" ry="5" fill="#00cfff"/>
+                <path d="M 44 40 Q 50 44 56 40" stroke="#00cfff" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+                <circle cx="26" cy="35" r="6" fill="#e0e0e0"/>
+                <circle cx="74" cy="35" r="6" fill="#e0e0e0"/>
+                <rect x="45" y="50" width="10" height="6" rx="2" fill="#d0d0d0"/>
+                <ellipse cx="50" cy="70" rx="18" ry="20" fill="white"/>
+                <path d="M 38 65 Q 50 68 62 65" stroke="#c0c0c0" stroke-width="1.5" fill="none"/>
+                <ellipse cx="30" cy="68" rx="6" ry="12" fill="#e0e0e0"/>
+                <ellipse cx="70" cy="68" rx="6" ry="12" fill="#e0e0e0"/>
+              </svg>
+            </div>
+            <div>
+              <div style="font-weight: 700; font-size: 16px;" id="chatbot-title">SamKass Assistant</div>
+              <div style="font-size: 12px; opacity: 0.9;" id="chatbot-subtitle">Ask me anything about your finances</div>
+            </div>
+          </div>
+          <button id="chatbot-close" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer; padding: 4px; opacity: 0.8; transition: opacity 0.2s;" onclick="closeChatbot()">×</button>
+        </div>
+
+        <!-- Chat Messages -->
+        <div id="chatbot-messages" class="chatbot-messages" style="flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; background: var(--bg-card); overflow-x: hidden;">
+          <div class="bot-message" style="display: flex; align-items: flex-start; gap: 10px;">
+            <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #7ed321, #4caf1a); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 3px;">
+              <!-- Small Robot Avatar -->
+              <svg width="28" height="28" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="47" y="8" width="6" height="8" rx="1" fill="white"/>
+                <circle cx="50" cy="6" r="4" fill="#00cfff"/>
+                <rect x="30" y="20" width="40" height="30" rx="8" fill="white"/>
+                <rect x="34" y="24" width="32" height="22" rx="4" fill="#1a2332"/>
+                <ellipse cx="42" cy="32" rx="4" ry="5" fill="#00cfff"/>
+                <ellipse cx="58" cy="32" rx="4" ry="5" fill="#00cfff"/>
+                <path d="M 44 40 Q 50 44 56 40" stroke="#00cfff" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+                <circle cx="26" cy="35" r="6" fill="#e0e0e0"/>
+                <circle cx="74" cy="35" r="6" fill="#e0e0e0"/>
+                <rect x="45" y="50" width="10" height="6" rx="2" fill="#d0d0d0"/>
+                <ellipse cx="50" cy="70" rx="18" ry="20" fill="white"/>
+                <path d="M 38 65 Q 50 68 62 65" stroke="#c0c0c0" stroke-width="1.5" fill="none"/>
+                <ellipse cx="30" cy="68" rx="6" ry="12" fill="#e0e0e0"/>
+                <ellipse cx="70" cy="68" rx="6" ry="12" fill="#e0e0e0"/>
+              </svg>
+            </div>
+            <div style="background: var(--bg-input); padding: 12px 16px; border-radius: 16px 16px 16px 4px; color: var(--text-primary); font-size: 14px; line-height: 1.4; max-width: 75%; word-wrap: break-word;">
+              <span id="welcome-message">Hello! I'm your SamKass assistant. Ask me about your clients, loans, payments, or any app feature!</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chat Input -->
+        <div class="chatbot-input-area" style="padding: 16px; border-top: 1px solid var(--border-default); background: var(--bg-card); border-radius: 0 0 20px 20px;">
+          <div style="display: flex; gap: 8px; align-items: flex-end;">
+            <div style="flex: 1; position: relative;">
+              <textarea id="chatbot-input" placeholder="Type your question here..." style="width: 100%; resize: none; border: 1px solid var(--border-default); border-radius: 12px; padding: 12px 16px; background: var(--bg-input); color: var(--text-primary); font-size: 14px; line-height: 1.4; min-height: 44px; max-height: 100px; outline: none; font-family: inherit;" rows="1"></textarea>
+            </div>
+            <button id="chatbot-send" style="background: linear-gradient(135deg, #7ed321, #4caf1a); color: white; border: none; border-radius: 12px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s; flex-shrink: 0;" onclick="sendMessage()">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+                <path d="M2,21L23,12L2,3V10L17,12L2,14V21Z"/>
+              </svg>
+            </button>
+            <button id="chatbot-voice" style="background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-default); border-radius: 12px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; flex-shrink: 0;" onclick="toggleVoiceInput()">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Header -->
+    <header id="top-header">
+      <div class="header-left" style="display: flex; align-items: center; gap: 10px;">
+        <div style="width: 42px; height: 42px; border-radius: 50%; box-shadow: 0 0 10px var(--green-glow); border: 1px solid var(--border-default); display: flex; align-items: center; justify-content: center; overflow: hidden; background: white;">
+          <img src="logo.png" alt="Logo" style="width: 100%; height: 100%; object-fit: contain;">
+        </div>
+        <span class="header-title" style="font-size: 1.25rem;">SamKass</span>
+      </div>
+      <div class="header-right">
+        <span id="sync-indicator" style="display:none; font-size:0.75rem; color:var(--color-text-muted); margin-right:8px; align-items:center; gap:4px; font-weight:600;"></span>
+        <button id="theme-toggle" class="header-icon-btn" aria-label="Toggle theme" data-ocid="settings.toggle">
+          <i class="fa-solid fa-moon" id="theme-icon"></i>
+        </button>
+        <button id="notif-bell" class="header-icon-btn" aria-label="Notifications" data-ocid="notifications.button">
+          <i class="fa-solid fa-bell"></i>
+          <span id="notif-badge" class="notif-badge d-none"></span>
+        </button>
+        <button id="user-avatar-btn" class="header-avatar" aria-label="Account" data-ocid="user.menu_button">
+          <i class="fa-solid fa-circle-user"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Notifications Dropdown -->
+    <div id="notif-dropdown" class="notif-dropdown d-none" data-ocid="notifications.popover">
+      <div class="notif-header">
+        <span data-i18n="notifications">Notifications</span>
+        <button type="button" id="clear-notifs" class="btn-link small" data-ocid="notifications.clear_button"
+          data-i18n="clearAll">Clear all</button>
+      </div>
+      <div id="notif-list" class="notif-list"></div>
+      <div id="notif-empty" class="notif-empty" data-i18n="noNewNotifications">No new notifications</div>
+    </div>
+
+    <!-- Plan Banner (trial / expiry warning) -->
+    <div id="plan-banner" class="plan-banner d-none">
+      <i class="fa-solid fa-triangle-exclamation me-2"></i>
+      <span id="plan-banner-text"></span>
+      <button type="button" class="btn-upgrade-sm ms-auto" id="banner-upgrade-btn" data-ocid="upgrade.banner_button"
+        data-i18n="upgrade">Upgrade</button>
+    </div>
+
+    <!-- Page Content -->
+    <main id="page-content" role="main">
+      <!-- Pages are dynamically rendered here by app.js -->
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav id="bottom-nav" role="navigation" aria-label="Main Navigation">
+      <a href="#" class="nav-tab active" data-page="home" aria-label="Home" data-ocid="nav.home_tab">
+        <i class="fa-solid fa-house"></i>
+        <span data-i18n="home">Home</span>
+      </a>
+      <a href="#" class="nav-tab" data-page="clients" aria-label="Clients" data-ocid="nav.clients_tab">
+        <i class="fa-solid fa-users"></i>
+        <span data-i18n="clients">Clients</span>
+      </a>
+      <a href="#" class="nav-tab" data-page="loans" aria-label="Loans" data-ocid="nav.loans_tab">
+        <i class="fa-solid fa-money-bill-wave"></i>
+        <span data-i18n="loans">Loans</span>
+      </a>
+      <a href="#" class="nav-tab" data-page="collection" aria-label="Collection" data-ocid="nav.collection_tab">
+        <i class="fa-solid fa-calendar-check"></i>
+        <span data-i18n="collect">Collect</span>
+      </a>
+      <a href="#" class="nav-tab" data-page="reports" aria-label="Reports" data-ocid="nav.reports_tab">
+        <i class="fa-solid fa-chart-pie"></i>
+        <span data-i18n="reports">Reports</span>
+      </a>
+      <a href="#" class="nav-tab" data-page="settings" aria-label="Settings" data-ocid="nav.settings_tab">
+        <i class="fa-solid fa-gear"></i>
+        <span data-i18n="settings">Settings</span>
+      </a>
+    </nav>
+  </div>
+
+  <!-- ===== MODALS ===== -->
+
+  <!-- Add Client Modal -->
+  <div class="modal fade" id="clientModal" tabindex="-1" aria-labelledby="clientModalLabel" aria-hidden="true"
+    data-ocid="client.dialog">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content kf-modal-content">
+        <div class="modal-header kf-modal-header">
+          <h5 class="modal-title" id="clientModalLabel" data-i18n="addClient">Add Client</h5>
+          <button type="button" class="btn-close kf-btn-close" data-bs-dismiss="modal" aria-label="Close"
+            data-ocid="client.close_button"></button>
+        </div>
+        <div class="modal-body">
+          <form id="client-form" novalidate>
+            <input type="hidden" id="client-edit-id" />
+            <div class="mb-3">
+              <label class="form-label" for="client-name">Full Name <span class="text-danger">*</span></label>
+              <input type="text" id="client-name" class="form-control kf-input" placeholder="Client name"
+                data-ocid="client.name_input" />
+              <div class="invalid-feedback" data-ocid="client.name_field_error">Name is required.</div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="client-phone">Phone Number <span class="text-danger">*</span></label>
+              <input type="tel" id="client-phone" class="form-control kf-input" placeholder="9876543210" maxlength="10"
+                data-ocid="client.phone_input" />
+              <div class="invalid-feedback" data-ocid="client.phone_field_error">Valid 10-digit phone required.</div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="client-address" data-i18n="address">Address</label>
+              <textarea id="client-address" class="form-control kf-input" rows="2" placeholder="Street, City"
+                data-ocid="client.address_input"></textarea>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="client-id-num">ID Number (Aadhaar / PAN)</label>
+              <input type="text" id="client-id-num" class="form-control kf-input" placeholder="Optional"
+                data-ocid="client.id_input" />
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="client-occupation">Occupation</label>
+              <input type="text" id="client-occupation" class="form-control kf-input" placeholder="e.g. Farmer, Trader"
+                data-ocid="client.occupation_input" />
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer kf-modal-footer">
+          <button type="button" class="btn-kf-outline" data-bs-dismiss="modal" data-ocid="client.cancel_button"
+            data-i18n="cancel">Cancel</button>
+          <button type="button" class="btn-kf-primary" id="save-client-btn" data-ocid="client.save_button">
+            <i class="fa-solid fa-floppy-disk me-2"></i><span data-i18n="saveClient">Save Client</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Loan Modal -->
+  <div class="modal fade" id="loanModal" tabindex="-1" aria-labelledby="loanModalLabel" aria-hidden="true"
+    data-ocid="loan.dialog">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content kf-modal-content">
+        <div class="modal-header kf-modal-header">
+          <h5 class="modal-title" id="loanModalLabel" data-i18n="addLoan">Add Loan</h5>
+          <button type="button" class="btn-close kf-btn-close" data-bs-dismiss="modal" aria-label="Close"
+            data-ocid="loan.close_button"></button>
+        </div>
+        <div class="modal-body">
+          <form id="loan-form" novalidate>
+            <input type="hidden" id="loan-edit-id" />
+            <div class="mb-3">
+              <label class="form-label" for="loan-client-select">Client <span class="text-danger">*</span></label>
+              <select id="loan-client-select" class="form-select kf-input" data-ocid="loan.client_select">
+                <option value="">Select client…</option>
+              </select>
+            </div>
+            
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <label class="form-label" for="loan-interest-type">Interest Type</label>
+                <select id="loan-interest-type" class="form-select kf-input">
+                  <option value="percentage">Percentage Interest</option>
+                  <option value="fixed">Fixed Interest</option>
+                </select>
+              </div>
+              <div class="col-6">
+                <label class="form-label" for="loan-type">Collection Type</label>
+                <select id="loan-type" class="form-select kf-input" data-ocid="loan.type_select">
+                  <option value="monthly">Monthly</option>
+                  <option value="weekly">Weekly</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <label class="form-label" for="loan-principal">Principal (₹) <span class="text-danger">*</span></label>
+                <input type="number" id="loan-principal" class="form-control kf-input" placeholder="50000" min="1"
+                  data-ocid="loan.principal_input" />
+              </div>
+              <div class="col-6">
+                <label class="form-label" id="label-loan-interest" for="loan-interest">Interest Percentage <span class="text-danger">*</span></label>
+                <input type="number" id="loan-interest" class="form-control kf-input" placeholder="2" min="0" step="0.1"
+                  data-ocid="loan.interest_input" />
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label" for="loan-duration">Duration (months)</label>
+              <input type="number" id="loan-duration" class="form-control kf-input" placeholder="Optional" min="1"
+                data-ocid="loan.duration_input" />
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label" for="loan-start-date">Start Date</label>
+              <input type="date" id="loan-start-date" class="form-control kf-input" data-ocid="loan.start_date_input" />
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label" for="loan-next-due-date">Next Due Date</label>
+              <input type="date" id="loan-next-due-date" class="form-control kf-input" data-ocid="loan.next_due_date_input" placeholder="When is the next payment due?" />
+              <small class="form-text text-muted" style="font-size: 0.8rem; display: block; margin-top: 4px;">Set when the client needs to pay next</small>
+            </div>
+
+            <!-- EMI Preview -->
+            <div id="emi-preview" class="emi-preview-box d-none">
+              <div class="emi-preview-row">
+                <span>Monthly Interest</span><strong id="emi-preview-monthly-interest">—</strong>
+              </div>
+              <div class="emi-preview-row">
+                <span>Weekly Interest</span><strong id="emi-preview-weekly-interest">—</strong>
+              </div>
+              <div class="emi-preview-row" style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--color-border-muted);">
+                <span>Total Payable</span><strong id="emi-preview-total">—</strong>
+              </div>
+              <div class="emi-preview-row">
+                <span>Remaining Balance</span><strong id="emi-preview-remaining">—</strong>
+              </div>
+              <div class="emi-preview-row" style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--color-border-muted);">
+                <span id="emi-preview-collection-label" style="font-weight:700; color:var(--color-primary);">Collection Amount</span>
+                <strong id="emi-preview-amount" style="font-size:1.1rem; color:var(--color-primary);">—</strong>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer kf-modal-footer">
+          <button type="button" class="btn-kf-outline" data-bs-dismiss="modal" data-ocid="loan.cancel_button"
+            data-i18n="cancel">Cancel</button>
+          <button type="button" class="btn-kf-primary" id="save-loan-btn" data-ocid="loan.save_button">
+            <i class="fa-solid fa-floppy-disk me-2"></i><span data-i18n="saveLoan">Save Loan</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Record Payment Modal -->
+  <div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true"
+    data-ocid="payment.dialog">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content kf-modal-content">
+        <div class="modal-header kf-modal-header">
+          <h5 class="modal-title" id="paymentModalLabel" data-i18n="recordPayment">Record Payment</h5>
+          <button type="button" class="btn-close kf-btn-close" data-bs-dismiss="modal" aria-label="Close"
+            data-ocid="payment.close_button"></button>
+        </div>
+        <div class="modal-body">
+          <form id="payment-form" novalidate>
+            <input type="hidden" id="payment-loan-id" />
+            <div id="payment-loan-summary" class="emi-preview-box mb-3"></div>
+            <div class="row g-2">
+              <div class="col-6">
+                <label class="form-label" for="payment-amount">Amount (₹) <span class="text-danger">*</span></label>
+                <input type="number" id="payment-amount" class="form-control kf-input" placeholder="EMI amount" min="1"
+                  data-ocid="payment.amount_input" />
+              </div>
+              <div class="col-6">
+                <label class="form-label" for="payment-date">Date</label>
+                <input type="date" id="payment-date" class="form-control kf-input" data-ocid="payment.date_input" />
+              </div>
+            </div>
+            <div class="mb-3 mt-2">
+              <label class="form-label" for="payment-note" data-i18n="noteOptional">Note (optional)</label>
+              <input type="text" id="payment-note" class="form-control kf-input" placeholder="e.g. Cash collected"
+                data-ocid="payment.note_input" />
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer kf-modal-footer">
+          <button type="button" class="btn-kf-outline" data-bs-dismiss="modal" data-ocid="payment.cancel_button"
+            data-i18n="cancel">Cancel</button>
+          <button type="button" class="btn-kf-primary" id="save-payment-btn" data-ocid="payment.save_button">
+            <i class="fa-solid fa-check me-2"></i><span data-i18n="confirmPayment">Confirm Payment</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payment Receipt Modal -->
+  <div class="modal fade" id="receiptModal" tabindex="-1" aria-hidden="true" data-ocid="receipt.dialog">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+      <div class="modal-content kf-modal-content">
+        <div class="modal-header kf-modal-header">
+          <h5 class="modal-title"><i class="fa-solid fa-receipt me-2" style="color:var(--color-primary)"></i>Payment Receipt</h5>
+          <button type="button" class="btn-close kf-btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="receipt-modal-body">
+          <!-- Details injected by app.js -->
+        </div>
+        <div class="modal-footer kf-modal-footer flex-column gap-2">
+          <button type="button" class="btn-kf-primary w-100" id="btn-download-receipt">
+            <i class="fa-solid fa-file-pdf me-2"></i>Download PDF
+          </button>
+          <button type="button" class="btn-kf-outline w-100" id="btn-whatsapp-receipt" style="color:#25D366; border-color:#25D366;">
+            <i class="fa-brands fa-whatsapp me-2" style="font-size:1.2rem;"></i>Share on WhatsApp
+          </button>
+          <button type="button" class="btn-link text-muted-kf mt-1" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- About Loan Modal -->
+  <div class="modal fade" id="loanInfoModal" tabindex="-1" aria-hidden="true" data-ocid="loan.info_dialog">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+      <div class="modal-content kf-modal-content">
+        <div class="modal-header kf-modal-header">
+          <h5 class="modal-title"><i class="fa-solid fa-circle-info me-2" style="color:var(--color-primary)"></i>About Loan</h5>
+          <button type="button" class="btn-close kf-btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="loan-info-body">
+          <!-- Details injected by app.js -->
+        </div>
+        <div class="modal-footer kf-modal-footer">
+          <button type="button" class="btn-kf-outline w-100" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Client Modal -->
+  <div class="modal fade" id="clientProfileModal" tabindex="-1" aria-hidden="true" data-ocid="client.profile_dialog">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
+      <div class="modal-content kf-modal-content">
+        <div class="modal-header kf-modal-header">
+          <h5 class="modal-title" id="clientProfileName" data-i18n="clientProfile">Client Profile</h5>
+          <button type="button" class="btn-close kf-btn-close" data-bs-dismiss="modal" aria-label="Close"
+            data-ocid="client.profile_close_button"></button>
+        </div>
+        <div class="modal-body" id="client-profile-body"></div>
+        <div class="modal-footer kf-modal-footer">
+          <button type="button" class="btn-kf-outline" data-bs-dismiss="modal" data-ocid="client.profile_cancel_button"
+            data-i18n="close">Close</button>
+          <button type="button" class="btn-kf-primary" id="add-loan-from-profile" data-ocid="client.add_loan_button">
+            <i class="fa-solid fa-plus me-2"></i><span data-i18n="addLoan">Add Loan</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Delete Modal -->
+  <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true" data-ocid="delete.dialog">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+      <div class="modal-content kf-modal-content">
+        <div class="modal-header kf-modal-header">
+          <h5 class="modal-title" data-i18n="confirmDelete">Confirm Delete</h5>
+          <button type="button" class="btn-close kf-btn-close" data-bs-dismiss="modal" aria-label="Close"
+            data-ocid="delete.close_button"></button>
+        </div>
+        <div class="modal-body">
+          <p id="confirm-delete-msg" class="mb-0">Are you sure you want to delete this item? This cannot be undone.</p>
+        </div>
+        <div class="modal-footer kf-modal-footer">
+          <button type="button" class="btn-kf-outline" data-bs-dismiss="modal" data-ocid="delete.cancel_button"
+            data-i18n="cancel">Cancel</button>
+          <button type="button" class="btn-kf-danger" id="confirm-delete-btn" data-ocid="delete.confirm_button"
+            data-i18n="delete">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upgrade Modal -->
+  <div class="modal fade" id="upgradeModal" tabindex="-1" aria-labelledby="upgradeModalLabel" aria-hidden="true"
+    data-ocid="upgrade.dialog">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content kf-modal-content">
+        <div class="modal-header kf-modal-header">
+          <h5 class="modal-title" id="upgradeModalLabel">
+            <i class="fa-solid fa-crown me-2" style="color:var(--color-primary)"></i><span
+              data-i18n="upgradePlan">Upgrade Plan</span>
+          </h5>
+          <button type="button" class="btn-close kf-btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-center text-muted mb-3" style="font-size: 0.875rem;">Choose a plan to unlock unlimited clients & all features</p>
+          <div class="plan-cards-wrapper">
+            <!-- Monthly Plan -->
+            <div class="plan-card">
+              <div class="plan-label">Monthly Plan</div>
+              <div class="plan-price">₹270<span>/30 days</span></div>
+              <ul class="plan-features">
+                <li><i class="fa-solid fa-check"></i> Unlimited clients</li>
+                <li><i class="fa-solid fa-check"></i> 30 days full access</li>
+                <li><i class="fa-solid fa-check"></i> Premium finance tracking</li>
+              </ul>
+              <button type="button" class="btn-plan-choose btn-plan-choose-featured" onclick="initiatePlanPayment('monthly')">
+                Choose Plan
+              </button>
+            </div>
+            <!-- Quarterly Plan -->
+            <div class="plan-card">
+              <div class="plan-label">Quarterly Plan</div>
+              <div class="plan-price">₹850<span>/90 days</span></div>
+              <div class="plan-saving-badge">Save ₹60</div>
+              <ul class="plan-features">
+                <li><i class="fa-solid fa-check"></i> Unlimited clients</li>
+                <li><i class="fa-solid fa-check"></i> 90 days full access</li>
+                <li><i class="fa-solid fa-check"></i> Premium finance tracking</li>
+              </ul>
+              <button type="button" class="btn-plan-choose btn-plan-choose-featured" onclick="initiatePlanPayment('quarterly')">
+                Choose Plan
+              </button>
+            </div>
+            <!-- Yearly Plan -->
+            <div class="plan-card plan-card-featured">
+              <div class="plan-badge-top">Best Value ⭐</div>
+              <div class="plan-label">Yearly Plan</div>
+              <div class="plan-price">₹1,999<span>/365 days</span></div>
+              <div class="plan-saving-badge">Save ₹1,241</div>
+              <ul class="plan-features">
+                <li><i class="fa-solid fa-check"></i> Unlimited clients</li>
+                <li><i class="fa-solid fa-check"></i> 365 days full access</li>
+                <li><i class="fa-solid fa-check"></i> Premium finance tracking</li>
+              </ul>
+              <button type="button" class="btn-plan-choose btn-plan-choose-featured" onclick="initiatePlanPayment('yearly')">
+                Choose Plan
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Blocking Upgrade Modal -->
+  <div class="modal fade" id="blockingUpgradeModal" tabindex="-1" aria-labelledby="blockingUpgradeModalLabel" aria-hidden="true"
+    data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content kf-modal-content">
+        <div class="modal-header kf-modal-header border-0 justify-content-center">
+          <h5 class="modal-title w-100 text-center text-danger fw-bold" id="blockingUpgradeModalLabel">
+            <i class="fa-solid fa-circle-exclamation me-2"></i><span>Your plan has expired. You must pay to continue.</span>
+          </h5>
+        </div>
+        <div class="modal-body">
+          <p class="text-center text-muted mb-3" style="font-size: 0.875rem;">Choose a plan below to renew and restore full access to your account.</p>
+          <div class="plan-cards-wrapper">
+            <!-- Monthly Plan -->
+            <div class="plan-card">
+              <div class="plan-label">Monthly Plan</div>
+              <div class="plan-price">₹270<span>/30 days</span></div>
+              <ul class="plan-features">
+                <li><i class="fa-solid fa-check"></i> Unlimited clients</li>
+                <li><i class="fa-solid fa-check"></i> 30 days full access</li>
+                <li><i class="fa-solid fa-check"></i> Premium finance tracking</li>
+              </ul>
+              <button type="button" class="btn-plan-choose btn-plan-choose-featured" onclick="initiatePlanPayment('monthly')">
+                Choose Plan
+              </button>
+            </div>
+            <!-- Quarterly Plan -->
+            <div class="plan-card">
+              <div class="plan-label">Quarterly Plan</div>
+              <div class="plan-price">₹850<span>/90 days</span></div>
+              <div class="plan-saving-badge">Save ₹60</div>
+              <ul class="plan-features">
+                <li><i class="fa-solid fa-check"></i> Unlimited clients</li>
+                <li><i class="fa-solid fa-check"></i> 90 days full access</li>
+                <li><i class="fa-solid fa-check"></i> Premium finance tracking</li>
+              </ul>
+              <button type="button" class="btn-plan-choose btn-plan-choose-featured" onclick="initiatePlanPayment('quarterly')">
+                Choose Plan
+              </button>
+            </div>
+            <!-- Yearly Plan -->
+            <div class="plan-card plan-card-featured">
+              <div class="plan-badge-top">Best Value ⭐</div>
+              <div class="plan-label">Yearly Plan</div>
+              <div class="plan-price">₹1,999<span>/365 days</span></div>
+              <div class="plan-saving-badge">Save ₹1,241</div>
+              <ul class="plan-features">
+                <li><i class="fa-solid fa-check"></i> Unlimited clients</li>
+                <li><i class="fa-solid fa-check"></i> 365 days full access</li>
+                <li><i class="fa-solid fa-check"></i> Premium finance tracking</li>
+              </ul>
+              <button type="button" class="btn-plan-choose btn-plan-choose-featured" onclick="initiatePlanPayment('yearly')">
+                Choose Plan
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ── TERMS & CONDITIONS MODAL ── -->
+  <div id="termsModal" class="info-modal" style="display:none;">
+    <div class="info-modal-header">
+      <span class="info-modal-title">Terms & Conditions</span>
+      <button class="info-modal-close" onclick="closeModal('termsModal')">✕</button>
+    </div>
+    <div class="info-modal-body" id="termsContent">
+      <p><strong>Effective Date:</strong> [Insert Date]</p>
+      
+      <h4>1. Acceptance of Terms</h4>
+      <p>By accessing or using the SamKass Finance Manager web application ("SamKass"), you agree to be bound by these Terms and Conditions. If you do not agree to these terms, please do not use our services.</p>
+      
+      <h4>2. Description of Service</h4>
+      <p>SamKass is a Software-as-a-Service (SaaS) ledger and management tool designed for small-scale financiers to track loans, calculate EMIs, generate receipts, and manage daily collections.</p>
+      
+      <h4>3. Nature of the Platform</h4>
+      <p>SamKass is strictly a technology provider. We are not a bank, NBFC, registered financial institution, or lending entity. We do not issue loans, process actual loan disbursements, or act as an intermediary in your financial transactions. The platform is solely a digital ledger for your business record-keeping.</p>
+      
+      <h4>4. User Obligations & Legal Compliance</h4>
+      <p>You agree to use SamKass in compliance with all applicable local, state, and national laws regarding money lending, interest rates, and financial regulations (including but not limited to laws in India / Tamil Nadu). You are solely responsible for the accuracy of the data you input, the terms of the loans you issue, and your collection practices. You must not use SamKass for any illegal, fraudulent, or unauthorized activities.</p>
+      
+      <h4>5. Data Backups & Device Loss</h4>
+      <p>While SamKass provides export functionality (JSON, CSV, PDF), your primary business data is stored locally on your device's browser unless actively synced to a cloud backend. You are solely responsible for regularly exporting and backing up your data. SamKass is not liable for data loss due to device formatting, browser cache clearing, or hardware failure.</p>
+      
+      <h4>6. Subscriptions and Payments</h4>
+      <p>SamKass offers a free tier (limited to 20 clients) and premium subscription plans (Monthly, Quarterly, Yearly) for extended usage. Purchases for premium plans and additional client slots are final. Refunds are processed solely at our discretion and according to our internal refund policy. We reserve the right to modify subscription pricing with prior notice.</p>
+      
+      <h4>7. Intellectual Property</h4>
+      <p>All branding, logos (including the SamKass logo), software code, and UI/UX designs within the application are the exclusive intellectual property of SamKass. You may not copy, reverse-engineer, or distribute our software without written permission.</p>
+      
+      <h4>8. Limitation of Liability</h4>
+      <p>To the maximum extent permitted by law, SamKass and its developers shall not be liable for any direct, indirect, incidental, consequential, or financial damages resulting from the use or inability to use the service, including but not limited to lost profits, lost data, or disputes between you and your clients.</p>
+      
+      <h4>9. Termination</h4>
+      <p>We reserve the right to suspend or terminate your account at any time if we suspect a violation of these Terms and Conditions, unauthorized use, or illegal activities.</p>
+      
+      <h4>10. Contact Information</h4>
+      <p>For any inquiries regarding these Terms and Conditions, please reach out to us at: <a href="mailto:mohansampath098@gmail.com" style="color:var(--text-accent-blue);">mohansampath098@gmail.com</a></p>
+    </div>
+  </div>
+
+  <!-- ── PRIVACY POLICY MODAL ── -->
+  <div id="privacyModal" class="info-modal" style="display:none;">
+    <div class="info-modal-header">
+      <span class="info-modal-title">Privacy Policy</span>
+      <button class="info-modal-close" onclick="closeModal('privacyModal')">✕</button>
+    </div>
+    <div class="info-modal-body" id="privacyContent">
+      <p><strong>Effective Date:</strong> [Insert Date]</p>
+      
+      <h4>Founder</h4>
+      <p><strong>Mohanakannan S</strong> is the Founder of <strong>SAMKASS Finance Web App</strong>, a SAAS web app developer focused on technology innovation, AI-powered solutions, finance systems, and modern web development.</p>
+      
+      <p>He is a student at <strong>Karpagam Institute of Technology</strong>, pursuing a degree in <strong>Electrical and Electronics Engineering</strong> in the software batch. He is passionate about the IT sector and actively engages in various projects, including building browser games, AI-powered platforms, SaaS web applications, and full-stack development projects.</p>
+      
+      <p>Mohanakannan has programming knowledge in <strong>Java, C, and Python</strong>, along with experience in modern web technologies and software development. He is also a member of the <strong>AWS Club</strong>, where he focuses on cloud technologies, programming skills, and modern computing solutions.</p>
+      
+      <p>He has completed several certifications in networking, data science, and related technical fields, reflecting his commitment to mastering technology and contributing to meaningful and innovative projects.</p>
+      
+      <p>Mohanakannan is interested in <strong>Artificial Intelligence, cloud computing, startup development, and future technologies</strong>. Through his platforms and projects, he aims to build impactful digital solutions that combine software, electronics, AI, and finance systems for real-world applications.</p>
+      
+      <p>His vision is to become a successful technology entrepreneur and contribute meaningful innovations to the global tech industry.</p>
+      
+      <h4>1. Introduction</h4>
+      <p>Welcome to SamKass ("we," "our," or "us"). We are committed to protecting your privacy and ensuring that your personal and business data is handled securely. This Privacy Policy explains how we collect, use, and protect your information when you use the SamKass Finance Manager web application.</p>
+      
+      <h4>2. Information We Collect</h4>
+      <p><strong>Account Information:</strong> When you register, we collect your name, email address, business/firm name, and an encrypted password. If you log in using Google OAuth, we collect your basic profile information (name, email, and profile picture).<br>
+      <strong>Business & Financial Data:</strong> Information regarding your clients, loan details, EMIs, and payment records.<br>
+      <strong>Usage Data:</strong> We may collect basic diagnostic data and usage metrics to improve application performance.</p>
+      
+      <h4>3. How Your Data is Stored</h4>
+      <p><strong>Local Storage Architecture:</strong> To ensure high performance and privacy, SamKass is built with an offline-first architecture. Your core business data (clients, loans, payments) is primarily stored locally on your device/browser via localStorage.<br>
+      <strong>Cloud Sync & Authentication:</strong> Your account credentials and subscription status are securely managed by our backend servers. Passwords are cryptographically hashed (bcrypt), and sessions are managed via secure JWT cookies.</p>
+      
+      <h4>4. How We Use Your Information</h4>
+      <p>To authenticate your account and secure your data. To provide the core functionalities of the app, including EMI tracking, receipt generation, and WhatsApp reminder formatting. To process subscription upgrades and payments. To send you essential account updates (e.g., Magic Login links, plan expiry notices).</p>
+      
+      <h4>5. Data Sharing & Third Parties</h4>
+      <p>We do not sell, rent, or trade your personal or business data to third parties. We only share data with essential service providers necessary to operate the app (e.g., Google for OAuth login, email providers for sending login links).</p>
+      
+      <h4>6. User Responsibilities</h4>
+      <p>Because you act as a financier entering data about your clients, you are responsible for obtaining the necessary consent from your clients to store their personal information (such as phone numbers, addresses, and ID numbers) within the SamKass application.</p>
+      
+      <h4>7. Data Retention & Deletion</h4>
+      <p>You have full control over your business data. You can delete individual records or completely clear your local data using the "Clear All Data" feature in the Settings menu. If you wish to permanently delete your SamKass account and cloud data, please contact our support team.</p>
+      
+      <h4>8. Contact Us</h4>
+      <p>If you have any questions or concerns about this Privacy Policy, please contact us at: <a href="mailto:mohansampath098@gmail.com" style="color:var(--text-accent-blue);">mohansampath098@gmail.com</a></p>
+    </div>
+  </div>
+
+  <!-- ── CONTACT US MODAL ── -->
+  <div id="contactModal" class="contact-modal-overlay" style="display:none;" onclick="closeContactOnOverlay(event)">
+    <div class="contact-modal-card">
+      <h3 style="font-size:1.2rem; font-weight:700; margin-bottom:6px; color:var(--text-primary);">Contact Us</h3>
+      <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:20px;">Reach us through any of the channels below</p>
+
+      <!-- Instagram -->
+      <a href="https://www.instagram.com/samkassfinance?igsh=MXF4NjRhbXN2aGlndg==" target="_blank" class="contact-item-row">
+        <div class="contact-item-icon">📸</div>
+        <div>
+          <div class="contact-item-label">Instagram</div>
+          <div class="contact-item-value">@samkassfinance</div>
+        </div>
+      </a>
+
+      <!-- Phone / WhatsApp -->
+      <a href="https://wa.me/917904987242" target="_blank" class="contact-item-row">
+        <div class="contact-item-icon">💬</div>
+        <div>
+          <div class="contact-item-label">WhatsApp / Phone</div>
+          <div class="contact-item-value">+91 7904987242</div>
+        </div>
+      </a>
+
+      <!-- Email -->
+      <a href="mailto:mohansampath098@gmail.com" class="contact-item-row">
+        <div class="contact-item-icon">✉️</div>
+        <div>
+          <div class="contact-item-label">Email Support</div>
+          <div class="contact-item-value">mohansampath098@gmail.com</div>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <!-- [NEW] Import / Export Data: Hidden file input for import -->
+  <input type="file" id="import-file-input" accept=".json" style="display:none" />
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container" aria-live="polite" data-ocid="toast"></div>
+
+  <!-- Forgot PIN Modal -->
+  <div class="modal fade" id="forgotPinModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content kf-modal">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="fa-solid fa-key me-2 text-primary-kf"></i>Reset Security PIN</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" style="padding:1.5rem">
+          
+          <!-- Step 1: Send OTP -->
+          <div id="forgot-pin-step-1">
+            <p class="text-muted-kf" style="font-size:0.875rem; margin-bottom:1rem;">
+              We will send a 6-digit OTP to your registered email to reset your PIN.
+            </p>
+            <div class="mb-3">
+              <label class="form-label text-muted-kf" style="font-size:0.75rem">Registered Email</label>
+              <input type="email" id="forgot-pin-email" class="form-control" readonly />
+            </div>
+            <button type="button" class="btn-kf-primary w-100" id="btn-send-pin-otp">
+              Send OTP <i class="fa-solid fa-paper-plane ms-1"></i>
+            </button>
+          </div>
+
+          <!-- Step 2: Verify OTP -->
+          <div id="forgot-pin-step-2" style="display:none;">
+            <p class="text-muted-kf" style="font-size:0.875rem; margin-bottom:1rem; text-align:center;">
+              Enter the 6-digit code sent to your email.
+            </p>
+            <div style="display:flex; justify-content:center; gap:0.5rem; margin-bottom:1.5rem">
+              <input type="text" maxlength="1" class="pin-digit-input reset-otp-input" data-idx="0" inputmode="numeric" pattern="[0-9]" />
+              <input type="text" maxlength="1" class="pin-digit-input reset-otp-input" data-idx="1" inputmode="numeric" pattern="[0-9]" />
+              <input type="text" maxlength="1" class="pin-digit-input reset-otp-input" data-idx="2" inputmode="numeric" pattern="[0-9]" />
+              <input type="text" maxlength="1" class="pin-digit-input reset-otp-input" data-idx="3" inputmode="numeric" pattern="[0-9]" />
+              <input type="text" maxlength="1" class="pin-digit-input reset-otp-input" data-idx="4" inputmode="numeric" pattern="[0-9]" />
+              <input type="text" maxlength="1" class="pin-digit-input reset-otp-input" data-idx="5" inputmode="numeric" pattern="[0-9]" />
+            </div>
+            <button type="button" class="btn-kf-primary w-100" id="btn-verify-pin-otp">
+              Verify OTP <i class="fa-solid fa-check ms-1"></i>
+            </button>
+          </div>
+
+          <!-- Step 3: Set New PIN -->
+          <div id="forgot-pin-step-3" style="display:none;">
+            <p class="text-muted-kf" style="font-size:0.875rem; margin-bottom:1rem; text-align:center;">
+              Create your new 4-digit Security PIN.
+            </p>
+            <div style="display:flex; justify-content:center; gap:0.75rem; margin-bottom:1.5rem">
+              <input type="password" maxlength="1" class="pin-digit-input reset-new-pin-input" data-idx="0" inputmode="numeric" pattern="[0-9]" />
+              <input type="password" maxlength="1" class="pin-digit-input reset-new-pin-input" data-idx="1" inputmode="numeric" pattern="[0-9]" />
+              <input type="password" maxlength="1" class="pin-digit-input reset-new-pin-input" data-idx="2" inputmode="numeric" pattern="[0-9]" />
+              <input type="password" maxlength="1" class="pin-digit-input reset-new-pin-input" data-idx="3" inputmode="numeric" pattern="[0-9]" />
+            </div>
+            <button type="button" class="btn-kf-primary w-100" id="btn-save-new-pin">
+              Save New PIN <i class="fa-solid fa-lock ms-1"></i>
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EMERGENCY INLINE SCRIPT - FORCE HIDE LOADER -->
+  <script>
+    console.log('🚨 EMERGENCY: Inline script running');
+    
+    // Immediate fallback - hide loader after 1 second if app.js hasn't loaded
+    setTimeout(function() {
+      var loader = document.getElementById('app-loading');
+      if (loader && window.getComputedStyle(loader).display !== 'none') {
+        console.error('❌ CRITICAL: app.js failed to load or execute');
+        loader.style.display = 'none';
+        
+        var authScreen = document.getElementById('auth-screen');
+        if (authScreen) {
+          authScreen.style.display = 'block';
+          console.log('✅ EMERGENCY: Forced auth screen visible');
+        }
+      }
+    }, 1000);
+  </script>
+
+  <!-- Bootstrap 5.3 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Supabase JS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- App Script - MUST LOAD FIRST -->
+  <script src="app.js?v=18"></script>
+
+  <!-- Feature Scripts - Load after app.js -->
+  <script src="supabase_sync.js?v=3" defer></script>
+  <script src="secondary_supabase.js" defer></script>
+  <script src="razorpay.js" defer></script>
+  <script src="subscription.js?v=3" defer></script>
+  <script src="client-limit-enforcement.js" defer></script>
+  
+  <!-- Final Fallback Script -->
+  <script>
+    // Ultra-safe fallback - if nothing else works, at least show something
+    setTimeout(function() {
+      var loader = document.getElementById('app-loading');
+      var authScreen = document.getElementById('auth-screen');
+      
+      if (loader && loader.style.display !== 'none' && authScreen) {
+        console.log('🔥 ULTIMATE FALLBACK: Forcing app to show');
+        loader.style.display = 'none';
+        authScreen.style.display = 'block';
+      }
+    }, 3000);
+  </script>
+</body>
+
+</html>

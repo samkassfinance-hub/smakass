@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "kaasflow/backend/app.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "kaasflow/frontend/**",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "kaasflow/backend/app.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "kaasflow/frontend/$1"
+    }
+  ],
+  "env": {
+    "FLASK_ENV": "production"
+  }
+}
