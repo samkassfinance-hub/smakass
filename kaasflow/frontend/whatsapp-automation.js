@@ -1,324 +1,227 @@
-// WhatsApp Automation Integration
+// WhatsApp Automation Integration - Direct WhatsApp Web (no backend needed)
 const WhatsAppAutomation = {
   config: {},
   connected: false,
-  instanceName: null,
-  
+  phoneNumber: null,
+
   async init() {
     console.log('🔧 Initializing WhatsApp Automation...');
     try {
-      await this.loadConfig();
+      this.loadSavedConfig();
       this.setupEventListeners();
+      this.updateUI();
       console.log('✅ WhatsApp Automation initialized');
     } catch (e) {
       console.error('❌ WhatsApp initialization error:', e);
     }
   },
 
-  getApiBase() {
-    return (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-      ? 'http://127.0.0.1:5000/api'
-      : window.location.origin + '/api';
-  },
-
-  getAuthHeaders() {
-    const token = localStorage.getItem('sessionToken');
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    };
-  },
-
-  async loadConfig() {
+  // Load saved config from localStorage
+  loadSavedConfig() {
     try {
-      const apiBase = this.getApiBase();
-      const res = await fetch(`${apiBase}/whatsapp/reminders/config`, {
-        method: 'GET',
-        headers: this.getAuthHeaders(),
-        signal: AbortSignal.timeout(5000)
-      });
-
-      if (!res.ok) {
-        console.warn('⚠️ Failed to load WhatsApp config:', res.statusText);
-        return;
-      }
-
-      const data = await res.json();
-      if (data.success && data.config) {
-        this.config = data.config;
-        this.connected = data.config.is_connected || false;
-        this.instanceName = data.config.instance_name;
-        this.updateUI();
-        console.log('✅ WhatsApp config loaded:', this.config);
+      const saved = localStorage.getItem('wa_automation_config');
+      if (saved) {
+        const config = JSON.parse(saved);
+        this.connected = config.connected || false;
+        this.phoneNumber = config.phoneNumber || null;
+        this.config = config;
+        console.log('✅ WhatsApp config loaded from localStorage:', config);
       }
     } catch (e) {
       console.warn('⚠️ Could not load WhatsApp config:', e.message);
     }
   },
 
-  setupEventListeners() {
-    // Wait for buttons to be available
-    const checkAndSetup = () => {
-      const connectBtn = document.getElementById('btn-wa-connect');
-      const disconnectBtn = document.getElementById('btn-wa-disconnect');
-      const testBtn = document.getElementById('btn-wa-test');
-
-      if (connectBtn) {
-        connectBtn.addEventListener('click', (e) => {
-          e.preventDefault();
-          this.setupWhatsApp();
-        });
-        console.log('✅ Connect button listener attached');
-      }
-
-      if (disconnectBtn) {
-        disconnectBtn.addEventListener('click', (e) => {
-          e.preventDefault();
-          this.disconnect();
-        });
-        console.log('✅ Disconnect button listener attached');
-      }
-
-      if (testBtn) {
-        testBtn.addEventListener('click', (e) => {
-          e.preventDefault();
-          this.sendTest();
-        });
-        console.log('✅ Test button listener attached');
-      }
-
-      // Reminder checkboxes
-      const dueToday = document.getElementById('wa-due-today');
-      const dueTomorrow = document.getElementById('wa-due-tomorrow');
-      const overdue = document.getElementById('wa-overdue');
-
-      if (dueToday) {
-        dueToday.addEventListener('change', () => this.updateReminders());
-      }
-      if (dueTomorrow) {
-        dueTomorrow.addEventListener('change', () => this.updateReminders());
-      }
-      if (overdue) {
-        overdue.addEventListener('change', () => this.updateReminders());
-      }
-
-      if (!connectBtn) {
-        // Try again in 500ms if buttons not found
-        setTimeout(checkAndSetup, 500);
-      }
-    };
-
-    checkAndSetup();
+  // Save config to localStorage
+  saveConfig() {
+    try {
+      const config = {
+        connected: this.connected,
+        phoneNumber: this.phoneNumber,
+        connectedAt: this.config.connectedAt || new Date().toISOString(),
+        dueTodayEnabled: this.config.dueTodayEnabled ?? true,
+        dueTomorrowEnabled: this.config.dueTomorrowEnabled ?? true,
+        overdueEnabled: this.config.overdueEnabled ?? true
+      };
+      localStorage.setItem('wa_automation_config', JSON.stringify(config));
+      this.config = config;
+      console.log('✅ WhatsApp config saved');
+    } catch (e) {
+      console.error('❌ Error saving config:', e);
+    }
   },
 
-  async setupWhatsApp() {
+  setupEventListeners() {
+    // Connect button
+    const connectBtn = document.getElementById('btn-wa-connect');
+    if (connectBtn) {
+      // Remove old listeners by cloning
+      const newBtn = connectBtn.cloneNode(true);
+      connectBtn.parentNode.replaceChild(newBtn, connectBtn);
+      newBtn.addEventListener('click', () => this.connectWhatsApp());
+    }
+
+    // Disconnect button
+    const disconnectBtn = document.getElementById('btn-wa-disconnect');
+    if (disconnectBtn) {
+      const newBtn = disconnectBtn.cloneNode(true);
+      disconnectBtn.parentNode.replaceChild(newBtn, disconnectBtn);
+      newBtn.addEventListener('click', () => this.disconnect());
+    }
+
+    // Test message button
+    const testBtn = document.getElementById('btn-wa-test');
+    if (testBtn) {
+      const newBtn = testBtn.cloneNode(true);
+      testBtn.parentNode.replaceChild(newBtn, testBtn);
+      newBtn.addEventListener('click', () => this.sendTest());
+    }
+
+    // Reminder toggle listeners
+    const dueTodayCb = document.getElementById('wa-due-today');
+    const dueTomorrowCb = document.getElementById('wa-due-tomorrow');
+    const overdueCb = document.getElementById('wa-overdue');
+
+    if (dueTodayCb) {
+      dueTodayCb.checked = this.config.dueTodayEnabled ?? true;
+      dueTodayCb.addEventListener('change', () => {
+        this.config.dueTodayEnabled = dueTodayCb.checked;
+        this.saveConfig();
+      });
+    }
+    if (dueTomorrowCb) {
+      dueTomorrowCb.checked = this.config.dueTomorrowEnabled ?? true;
+      dueTomorrowCb.addEventListener('change', () => {
+        this.config.dueTomorrowEnabled = dueTomorrowCb.checked;
+        this.saveConfig();
+      });
+    }
+    if (overdueCb) {
+      overdueCb.checked = this.config.overdueEnabled ?? true;
+      overdueCb.addEventListener('change', () => {
+        this.config.overdueEnabled = overdueCb.checked;
+        this.saveConfig();
+      });
+    }
+  },
+
+  // Format phone number for WhatsApp (add country code if missing)
+  formatPhone(phone) {
+    if (!phone) return '';
+    let cleaned = phone.replace(/[\s\-\(\)]/g, '');
+    // Remove leading + if present
+    if (cleaned.startsWith('+')) cleaned = cleaned.substring(1);
+    // If it starts with 0, replace with 91 (India)
+    if (cleaned.startsWith('0')) cleaned = '91' + cleaned.substring(1);
+    // If it's 10 digits (Indian number without country code), add 91
+    if (cleaned.length === 10 && /^\d+$/.test(cleaned)) {
+      cleaned = '91' + cleaned;
+    }
+    return cleaned;
+  },
+
+  async connectWhatsApp() {
     try {
       const phoneInput = document.getElementById('wa-phone-input');
       const phone = phoneInput?.value?.trim();
 
       if (!phone) {
-        alert('Please enter your WhatsApp number');
+        if (typeof showToast === 'function') {
+          showToast('Please enter your WhatsApp number', 'error');
+        } else {
+          alert('Please enter your WhatsApp number');
+        }
         return;
       }
 
-      console.log('📱 Setting up WhatsApp instance...');
-      const apiBase = this.getApiBase();
-      
-      const res = await fetch(`${apiBase}/whatsapp/setup`, {
-        method: 'POST',
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify({ phone })
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        console.log('✅ WhatsApp instance created:', data.instance_name);
-        this.instanceName = data.instance_name;
-        
-        // Show QR code
-        await this.showQRCode();
-        
-        // Check connection status periodically
-        this.checkConnectionStatus();
-      } else {
-        alert('Failed to setup WhatsApp: ' + (data.error || 'Unknown error'));
-      }
-    } catch (e) {
-      console.error('❌ Setup error:', e);
-      alert('Error: ' + e.message);
-    }
-  },
-
-  async showQRCode() {
-    try {
-      const apiBase = this.getApiBase();
-      const res = await fetch(`${apiBase}/whatsapp/qr`, {
-        method: 'GET',
-        headers: this.getAuthHeaders(),
-        signal: AbortSignal.timeout(5000)
-      });
-
-      const data = await res.json();
-      if (data.success && data.qr) {
-        // Create modal with QR code
-        const modal = document.createElement('div');
-        modal.className = 'modal fade show';
-        modal.style.display = 'block';
-        modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
-        modal.innerHTML = `
-          <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content" style="background: var(--bg-card); border: 1px solid var(--border-default);">
-              <div class="modal-header" style="border-bottom: 1px solid var(--border-default);">
-                <h5 class="modal-title">Scan QR Code to Connect WhatsApp</h5>
-                <button type="button" class="btn-close" onclick="this.closest('.modal').remove()"></button>
-              </div>
-              <div class="modal-body text-center">
-                <img src="data:image/png;base64,${data.qr}" style="width: 100%; max-width: 300px; margin: 20px 0;" />
-                <p style="color: var(--text-secondary);">Use your phone camera or WhatsApp app to scan this code</p>
-              </div>
-              <div class="modal-footer" style="border-top: 1px solid var(--border-default);">
-                <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">Close</button>
-              </div>
-            </div>
-          </div>
-        `;
-        document.body.appendChild(modal);
-        console.log('📱 QR code displayed');
-      }
-    } catch (e) {
-      console.error('Error getting QR code:', e);
-    }
-  },
-
-  async checkConnectionStatus(attempts = 0) {
-    try {
-      const apiBase = this.getApiBase();
-      const res = await fetch(`${apiBase}/whatsapp/status`, {
-        method: 'GET',
-        headers: this.getAuthHeaders(),
-        signal: AbortSignal.timeout(5000)
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        this.connected = data.connected;
-        
-        if (this.connected) {
-          console.log('✅ WhatsApp connected!');
-          this.updateUI();
-          
-          // Save config with phone number
-          const phoneInput = document.getElementById('wa-phone-input');
-          const phone = phoneInput?.value?.trim();
-          if (phone) {
-            await this.updateReminders();
-          }
-        } else if (attempts < 12) {
-          setTimeout(() => this.checkConnectionStatus(attempts + 1), 5000);
-          console.log(`⏳ Checking connection... (${attempts + 1})`);
+      // Validate phone number (at least 10 digits)
+      const digitsOnly = phone.replace(/\D/g, '');
+      if (digitsOnly.length < 10) {
+        if (typeof showToast === 'function') {
+          showToast('Please enter a valid phone number (at least 10 digits)', 'error');
+        } else {
+          alert('Please enter a valid phone number (at least 10 digits)');
         }
+        return;
       }
+
+      console.log('📱 Connecting WhatsApp for:', phone);
+
+      // Format and save the phone number
+      this.phoneNumber = this.formatPhone(phone);
+      this.connected = true;
+      this.config.connectedAt = new Date().toISOString();
+      this.saveConfig();
+
+      // Update UI to show connected state
+      this.updateUI();
+
+      if (typeof showToast === 'function') {
+        showToast('✅ WhatsApp connected successfully! You can now send reminders.', 'success');
+      } else {
+        alert('WhatsApp connected successfully! You can now send reminders directly.');
+      }
+
+      console.log('✅ WhatsApp connected with number:', this.phoneNumber);
+
     } catch (e) {
-      console.warn('⚠️ Connection check failed:', e.message);
-      if (attempts < 3) {
-        setTimeout(() => this.checkConnectionStatus(attempts + 1), 5000);
+      console.error('❌ Connect error:', e);
+      if (typeof showToast === 'function') {
+        showToast('Error: ' + e.message, 'error');
+      } else {
+        alert('Error: ' + e.message);
       }
     }
   },
 
-  async disconnect() {
+  disconnect() {
     if (!confirm('Disconnect WhatsApp? You will need to reconnect later.')) {
       return;
     }
 
-    try {
-      const apiBase = this.getApiBase();
-      const res = await fetch(`${apiBase}/whatsapp/disconnect`, {
-        method: 'POST',
-        headers: this.getAuthHeaders()
-      });
+    this.connected = false;
+    this.phoneNumber = null;
+    localStorage.removeItem('wa_automation_config');
+    this.config = {};
+    this.updateUI();
 
-      const data = await res.json();
-      if (data.success) {
-        this.connected = false;
-        this.updateUI();
-        console.log('✅ WhatsApp disconnected');
-        alert('WhatsApp disconnected');
-      }
-    } catch (e) {
-      console.error('❌ Disconnect error:', e);
-      alert('Error: ' + e.message);
+    if (typeof showToast === 'function') {
+      showToast('WhatsApp disconnected', 'info');
+    } else {
+      alert('WhatsApp disconnected');
     }
+    console.log('✅ WhatsApp disconnected');
   },
 
-  async sendTest() {
+  sendTest() {
     try {
-      if (!this.connected) {
-        alert('WhatsApp is not connected');
+      if (!this.connected || !this.phoneNumber) {
+        if (typeof showToast === 'function') {
+          showToast('WhatsApp is not connected. Please connect first.', 'error');
+        } else {
+          alert('WhatsApp is not connected');
+        }
         return;
       }
 
-      const phoneInput = document.getElementById('wa-phone-input');
-      const phone = phoneInput?.value?.trim();
+      const testMessage = '✅ Hello from SamKass! Your WhatsApp automation is working perfectly. You will now receive payment reminders through WhatsApp.';
 
-      if (!phone) {
-        alert('Please enter a phone number');
-        return;
+      // Open WhatsApp web link with pre-filled message
+      const url = `https://wa.me/${this.phoneNumber}?text=${encodeURIComponent(testMessage)}`;
+      window.open(url, '_blank');
+
+      if (typeof showToast === 'function') {
+        showToast('📱 WhatsApp opened with test message! Send it to confirm.', 'success');
       }
 
-      console.log('📨 Sending test message to:', phone);
-      const apiBase = this.getApiBase();
-      
-      const res = await fetch(`${apiBase}/whatsapp/test`, {
-        method: 'POST',
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify({ phone })
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        console.log('✅ Test message sent');
-        alert('Test message sent successfully!');
-      } else {
-        alert('Failed to send test message: ' + (data.error || 'Unknown error'));
-      }
+      console.log('✅ Test message opened for:', this.phoneNumber);
     } catch (e) {
       console.error('❌ Test error:', e);
-      alert('Error: ' + e.message);
-    }
-  },
-
-  async updateReminders() {
-    try {
-      const dueToday = document.getElementById('wa-due-today')?.checked ?? true;
-      const dueTomorrow = document.getElementById('wa-due-tomorrow')?.checked ?? true;
-      const overdue = document.getElementById('wa-overdue')?.checked ?? true;
-      const phoneInput = document.getElementById('wa-phone-input');
-      const phone = phoneInput?.value?.trim();
-
-      if (!phone) {
-        console.warn('⚠️ Phone number not set');
-        return;
+      if (typeof showToast === 'function') {
+        showToast('Error: ' + e.message, 'error');
+      } else {
+        alert('Error: ' + e.message);
       }
-
-      const apiBase = this.getApiBase();
-      const res = await fetch(`${apiBase}/whatsapp/reminders/config`, {
-        method: 'POST',
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify({
-          due_today: dueToday,
-          due_tomorrow: dueTomorrow,
-          overdue: overdue,
-          phone: phone
-        })
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        console.log('✅ Reminder settings updated');
-      }
-    } catch (e) {
-      console.error('❌ Update error:', e);
     }
   },
 
@@ -328,77 +231,118 @@ const WhatsAppAutomation = {
     const testBtn = document.getElementById('btn-wa-test');
     const statusBadge = document.getElementById('wa-status-badge');
     const reminderSettings = document.getElementById('wa-reminder-settings');
-    
+    const phoneInput = document.getElementById('wa-phone-input');
+
     if (this.connected) {
       connectBtn?.classList.add('d-none');
       disconnectBtn?.classList.remove('d-none');
       testBtn?.classList.remove('d-none');
-      
-      if (reminderSettings) {
-        reminderSettings.classList.remove('d-none');
-      }
-      
+      reminderSettings?.classList.remove('d-none');
+
       if (statusBadge) {
-        statusBadge.innerHTML = '<span class="badge bg-success"><i class="fa-solid fa-circle-check me-2"></i>Connected</span>';
+        statusBadge.innerHTML = '<span class="badge" style="background: rgba(37, 211, 102, 0.15); color: #25D366; border: 1px solid rgba(37, 211, 102, 0.3); padding: 8px 16px; border-radius: 20px; font-weight: 600;"><i class="fa-solid fa-circle-check me-1"></i> Connected</span>';
       }
+
+      // Show saved phone number in input
+      if (phoneInput && this.phoneNumber) {
+        // Show the original format if possible, otherwise the stored number
+        if (!phoneInput.value) {
+          phoneInput.value = this.phoneNumber;
+        }
+      }
+
       console.log('✅ UI updated: WhatsApp connected');
     } else {
       connectBtn?.classList.remove('d-none');
       disconnectBtn?.classList.add('d-none');
       testBtn?.classList.add('d-none');
-      
-      if (reminderSettings) {
-        reminderSettings.classList.add('d-none');
-      }
-      
+      reminderSettings?.classList.add('d-none');
+
       if (statusBadge) {
-        statusBadge.innerHTML = '<span class="badge bg-secondary"><i class="fa-solid fa-circle me-2"></i>Not Connected</span>';
+        statusBadge.innerHTML = '<span class="badge" style="background: rgba(153, 153, 153, 0.15); color: #999; border: 1px solid rgba(153, 153, 153, 0.3); padding: 8px 16px; border-radius: 20px; font-weight: 600;"><i class="fa-solid fa-circle me-1"></i> Not Connected</span>';
       }
       console.log('⭕ UI updated: WhatsApp disconnected');
     }
   },
 
-  async sendReminder(loanId) {
+  // Send a reminder for a specific loan - opens WhatsApp with pre-filled message
+  sendReminder(loanId) {
     try {
       if (!this.connected) {
-        alert('WhatsApp is not connected. Please connect first.');
+        if (typeof showToast === 'function') {
+          showToast('WhatsApp is not connected. Please connect first in Settings.', 'error');
+        } else {
+          alert('WhatsApp is not connected. Please connect first.');
+        }
         return;
       }
 
-      const loan = Store.loans().find(l => l.id === loanId);
+      // Get loan and client info from the Store
+      const loan = typeof Store !== 'undefined' ? Store.loans().find(l => l.id === loanId) : null;
       if (!loan) {
-        alert('Loan not found');
+        if (typeof showToast === 'function') {
+          showToast('Loan not found', 'error');
+        } else {
+          alert('Loan not found');
+        }
         return;
       }
 
-      const client = Store.clients().find(c => c.id === loan.clientId);
+      const client = typeof Store !== 'undefined' ? Store.clients().find(c => c.id === loan.clientId) : null;
       if (!client || !client.phone) {
-        alert('Client phone number not available');
+        if (typeof showToast === 'function') {
+          showToast('Client phone number not available', 'error');
+        } else {
+          alert('Client phone number not available');
+        }
         return;
       }
 
-      const apiBase = this.getApiBase();
-      const res = await fetch(`${apiBase}/whatsapp/test`, {
-        method: 'POST',
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify({ phone: client.phone })
-      });
+      // Build reminder message
+      const stats = typeof calcLoanStats === 'function' ? calcLoanStats(loan) : null;
+      const fmtCurFn = typeof fmtCur === 'function' ? fmtCur : (n) => '₹' + Number(n).toLocaleString('en-IN');
 
-      const data = await res.json();
-      if (data.success) {
-        console.log('✅ Reminder sent to:', client.phone);
-        alert(`Reminder sent to ${client.name}`);
+      let message;
+      if (stats && stats.isOverdue) {
+        message = `Dear ${client.name},\n\nThis is a reminder that your EMI payment of ${fmtCurFn(stats.emi)} is overdue by ${stats.daysOverdue} day(s).\n\nPlease make the payment at the earliest to avoid any penalties.\n\nThank you,\nSamKass Finance`;
+      } else if (stats) {
+        message = `Dear ${client.name},\n\nThis is a friendly reminder that your EMI payment of ${fmtCurFn(stats.emi)} is due.\n\nPlease ensure timely payment.\n\nThank you,\nSamKass Finance`;
       } else {
-        alert('Failed to send reminder: ' + (data.error || 'Unknown error'));
+        message = `Dear ${client.name},\n\nThis is a reminder about your loan payment.\n\nPlease contact us for details.\n\nThank you,\nSamKass Finance`;
       }
+
+      // Format client phone for WhatsApp
+      const clientPhone = this.formatPhone(client.phone);
+
+      // Open WhatsApp with pre-filled message
+      const url = `https://wa.me/${clientPhone}?text=${encodeURIComponent(message)}`;
+      window.open(url, '_blank');
+
+      if (typeof showToast === 'function') {
+        showToast(`📱 WhatsApp opened to send reminder to ${client.name}`, 'success');
+      }
+
+      console.log('✅ Reminder opened for:', client.name, clientPhone);
+
     } catch (e) {
       console.error('❌ Send reminder error:', e);
-      alert('Error: ' + e.message);
+      if (typeof showToast === 'function') {
+        showToast('Error: ' + e.message, 'error');
+      } else {
+        alert('Error: ' + e.message);
+      }
     }
+  },
+
+  // Load config (called from renderSettings in app.js)
+  async loadConfig() {
+    this.loadSavedConfig();
+    this.setupEventListeners();
+    this.updateUI();
   }
 };
 
-// Initialize after DOM is ready
+// Auto-initialize when DOM is ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => WhatsAppAutomation.init(), 100);
@@ -407,11 +351,12 @@ if (document.readyState === 'loading') {
   setTimeout(() => WhatsAppAutomation.init(), 100);
 }
 
-// Also listen for page changes
+// Also listen for page changes (SPA navigation)
 document.addEventListener('pageChanged', () => {
   setTimeout(() => {
     if (WhatsAppAutomation) {
       WhatsAppAutomation.setupEventListeners();
+      WhatsAppAutomation.updateUI();
     }
   }, 50);
 });

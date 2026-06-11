@@ -2400,51 +2400,56 @@ function renderSettings(container) {
           <i class="fa-brands fa-whatsapp"></i> WhatsApp Automation
         </div>
         <p class="text-muted-kf fs-sm mb-3">
-          Connect your WhatsApp to send automatic payment reminders to customers.
+          Connect your WhatsApp number to send payment reminders directly to customers via WhatsApp.
         </p>
         
-        <!-- Error Message Display -->
-        <div id="wa-error-msg" class="alert alert-danger d-none" role="alert" style="font-size: 0.875rem; margin-bottom: 1rem;">
-        </div>
-        
         <!-- WhatsApp Number Input -->
-        <div class="settings-row pro-row">
-          <div>
-            <div class="settings-row-label">WhatsApp Number</div>
+        <div class="settings-row pro-row mb-3">
+          <div style="width:100%">
+            <div class="settings-row-label mb-2">WhatsApp Number</div>
             <input type="tel" id="wa-phone-input" class="form-control kf-input" 
-                   placeholder="+91 XXXXXXXXXX" />
+                   placeholder="+91 XXXXXXXXXX"
+                   value="${(() => { try { const c = JSON.parse(localStorage.getItem('wa_automation_config') || '{}'); return c.phoneNumber || ''; } catch(e) { return ''; } })()" />
           </div>
         </div>
         
         <!-- Connection Status Badge -->
         <div id="wa-status-badge" class="mb-3">
-          <span class="badge bg-secondary">Not Connected</span>
+          ${(() => {
+            try {
+              const c = JSON.parse(localStorage.getItem('wa_automation_config') || '{}');
+              if (c.connected) {
+                return '<span class="badge" style="background: rgba(37,211,102,0.15); color: #25D366; border: 1px solid rgba(37,211,102,0.3); padding: 8px 16px; border-radius: 20px; font-weight: 600;"><i class=\'fa-solid fa-circle-check me-1\'></i> Connected</span>';
+              }
+            } catch(e) {}
+            return '<span class="badge" style="background: rgba(153,153,153,0.15); color: #999; border: 1px solid rgba(153,153,153,0.3); padding: 8px 16px; border-radius: 20px; font-weight: 600;"><i class=\'fa-solid fa-circle me-1\'></i> Not Connected</span>';
+          })()}
         </div>
         
         <!-- Action Buttons -->
-        <button class="btn-kf-primary w-100 mb-2" id="btn-wa-connect">
+        <button class="btn-kf-primary w-100 mb-2 ${(() => { try { const c = JSON.parse(localStorage.getItem('wa_automation_config') || '{}'); return c.connected ? 'd-none' : ''; } catch(e) { return ''; } })()" id="btn-wa-connect">
           <i class="fa-brands fa-whatsapp me-2"></i>Connect WhatsApp
         </button>
-        <button class="btn-kf-outline w-100 mb-2 d-none" id="btn-wa-disconnect">
+        <button class="btn-kf-outline w-100 mb-2 ${(() => { try { const c = JSON.parse(localStorage.getItem('wa_automation_config') || '{}'); return c.connected ? '' : 'd-none'; } catch(e) { return 'd-none'; } })()" id="btn-wa-disconnect" style="color:#ff4444; border-color:#ff4444;">
           <i class="fa-solid fa-link-slash me-2"></i>Disconnect
         </button>
-        <button class="btn-kf-outline w-100 mb-2 d-none" id="btn-wa-test">
+        <button class="btn-kf-outline w-100 mb-2 ${(() => { try { const c = JSON.parse(localStorage.getItem('wa_automation_config') || '{}'); return c.connected ? '' : 'd-none'; } catch(e) { return 'd-none'; } })()" id="btn-wa-test" style="color:#25D366; border-color:#25D366;">
           <i class="fa-solid fa-paper-plane me-2"></i>Send Test Message
         </button>
         
         <!-- Reminder Settings (shown when connected) -->
-        <div id="wa-reminder-settings" class="d-none mt-3">
+        <div id="wa-reminder-settings" class="${(() => { try { const c = JSON.parse(localStorage.getItem('wa_automation_config') || '{}'); return c.connected ? 'mt-3' : 'd-none mt-3'; } catch(e) { return 'd-none mt-3'; } })()}">
           <div class="settings-row pro-row">
             <div><div class="settings-row-label">Due Today Reminders</div></div>
-            <label class="kf-toggle"><input type="checkbox" id="wa-due-today" checked /><span class="kf-toggle-slider"></span></label>
+            <label class="kf-toggle"><input type="checkbox" id="wa-due-today" ${(() => { try { const c = JSON.parse(localStorage.getItem('wa_automation_config') || '{}'); return c.dueTodayEnabled !== false ? 'checked' : ''; } catch(e) { return 'checked'; } })()} /><span class="kf-toggle-slider"></span></label>
           </div>
           <div class="settings-row pro-row">
             <div><div class="settings-row-label">Due Tomorrow Reminders</div></div>
-            <label class="kf-toggle"><input type="checkbox" id="wa-due-tomorrow" checked /><span class="kf-toggle-slider"></span></label>
+            <label class="kf-toggle"><input type="checkbox" id="wa-due-tomorrow" ${(() => { try { const c = JSON.parse(localStorage.getItem('wa_automation_config') || '{}'); return c.dueTomorrowEnabled !== false ? 'checked' : ''; } catch(e) { return 'checked'; } })()} /><span class="kf-toggle-slider"></span></label>
           </div>
           <div class="settings-row pro-row">
             <div><div class="settings-row-label">Overdue Reminders</div></div>
-            <label class="kf-toggle"><input type="checkbox" id="wa-overdue" checked /><span class="kf-toggle-slider"></span></label>
+            <label class="kf-toggle"><input type="checkbox" id="wa-overdue" ${(() => { try { const c = JSON.parse(localStorage.getItem('wa_automation_config') || '{}'); return c.overdueEnabled !== false ? 'checked' : ''; } catch(e) { return 'checked'; } })()} /><span class="kf-toggle-slider"></span></label>
           </div>
         </div>
       </div>
