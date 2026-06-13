@@ -2275,18 +2275,7 @@ function renderSettings(container) {
         </div>
       </div>
 
-      <div class="kf-card pro-card" data-ocid="settings.whatsapp_card">
-        <div class="section-title"><i class="fa-brands fa-whatsapp"></i> WhatsApp Reminders</div>
-        <div class="settings-row pro-row">
-          <div>
-            <div class="settings-row-label">Automated Payment Reminders</div>
-            <div class="settings-row-sub text-muted-kf">Configure WhatsApp to send automatic loan payment reminders</div>
-          </div>
-          <button class="btn-kf-primary" id="btn-whatsapp-settings" style="min-height:40px;font-size:.875rem; min-width:120px;">
-            <i class="fa-solid fa-gear me-2"></i>Configure
-          </button>
-        </div>
-      </div>
+
     <div class="kf-card pro-card" data-ocid="settings.recycle_bin_card">
       <div class="section-title"><i class="fa-solid fa-trash-can-arrow-up"></i> Recycle Bin</div>
       <div class="settings-row pro-row">
@@ -2433,10 +2422,7 @@ function renderSettings(container) {
     navigateTo('profile');
   });
 
-  // WhatsApp settings button
-  container.querySelector('#btn-whatsapp-settings')?.addEventListener('click', () => {
-    window.location.href = 'whatsapp-settings.html';
-  });
+
 
   // Upgrade button - preload orders when modal opens
   $('#btn-upgrade')?.addEventListener('click', () => {
