@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Settings - KaasFlow (Standalone)</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --kf-surface: #ffffff;
+            --kf-background: #f8f9fa;
+            --kf-primary: #7ed321;
+            --kf-primary-dark: #6bb01a;
+            --color-text: #333333;
+            --color-text-muted: #6c757d;
+            --color-border: #dee2e6;
+            --color-border-muted: #e9ecef;
+        }
+
+        [data-theme="dark"] {
+            --kf-surface: #1a1a1a;
+            --kf-background: #0a0a0a;
+            --color-text: #e0e0e0;
+            --color-text-muted: #a0a0a0;
+            --color-border: #333333;
+            --color-border-muted: #2a2a2a;
+        }
+
+        body {
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--kf-background);
+            color: var(--color-text);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 40px auto;
+            padding: 30px;
+            background: var(--kf-surface);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            color: var(--kf-primary);
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: var(--color-text-muted);
+            font-size: 14px;
+        }
+
+        .status-box {
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .status-box.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .status-box.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .status-box.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--color-text);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            font-size: 16px;
+            background: var(--kf-background);
+            color: var(--color-text);
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--kf-primary);
+        }
+
+        .form-group small {
+            display: block;
+            margin-top: 6px;
+            color: var(--color-text-muted);
+            font-size: 13px;
+        }
+
+        .btn {
+            padding: 14px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            margin-bottom: 12px;
+        }
+
+        .btn-primary {
+            background: var(--kf-primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--kf-primary-dark);
+        }
+
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .info-box {
+            background: var(--kf-background);
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid var(--kf-primary);
+            margin-top: 30px;
+        }
+
+        .info-box h3 {
+            margin-top: 0;
+            color: var(--kf-primary);
+        }
+
+        .info-box ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .info-box li {
+            margin: 6px 0;
+            color: var(--color-text);
+        }
+
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: var(--kf-primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding-bottom: 30px;
+            border-bottom: 1px solid var(--color-border-muted);
+        }
+
+        .section:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="javascript:history.back()" class="back-link" onclick="window.location.href='index.html'; return false;">← Back to Dashboard</a>
+        
+        <div class="header">
+            <h1>📱 WhatsApp Automation Setup</h1>
+            <p>Standalone version - No backend required!</p>
+        </div>
+
+        <div id="status-box" class="status-box"></div>
+
+        <!-- Settings Form -->
+        <div class="section">
+            <h2>Step 1: Save Your WhatsApp Settings</h2>
+            <form id="settings-form">
+                <div class="form-group">
+                    <label for="whatsapp_number">Your WhatsApp Number *</label>
+                    <input 
+                        type="tel" 
+                        id="whatsapp_number" 
+                        name="whatsapp_number" 
+                        placeholder="+91 9876543210" 
+                        required
+                    >
+                    <small>Format: +[country code][number] (e.g., +919876543210)</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="business_name">Business Name</label>
+                    <input 
+                        type="text" 
+                        id="business_name" 
+                        name="business_name" 
+                        placeholder="Your Business Name" 
+                        value="KaasFlow"
+                    >
+                </div>
+
+                <button type="submit" class="btn btn-primary">💾 Save Settings Locally</button>
+            </form>
+        </div>
+
+        <!-- Saved Settings Display -->
+        <div class="section" id="saved-settings" style="display:none;">
+            <h2>✅ Saved Settings</h2>
+            <div style="background: var(--kf-background); padding: 15px; border-radius: 8px;">
+                <p><strong>WhatsApp Number:</strong> <span id="display-number"></span></p>
+                <p><strong>Business Name:</strong> <span id="display-business"></span></p>
+                <p style="margin: 0;"><small>Saved in browser localStorage</small></p>
+            </div>
+        </div>
+
+        <!-- Setup Instructions -->
+        <div class="section">
+            <h2>Step 2: Install Python & PyWhatKit</h2>
+            <div class="info-box">
+                <h3>📥 Install Python</h3>
+                <ol>
+                    <li>Download from: <a href="https://www.python.org/downloads/" target="_blank">python.org/downloads</a></li>
+                    <li>During installation: ✅ Check "Add Python to PATH"</li>
+                    <li>Open terminal and verify:
+                        <br><code>python --version</code>
+                    </li>
+                </ol>
+            </div>
+
+            <div class="info-box" style="border-left-color: #ffc107;">
+                <h3>📦 Install PyWhatKit</h3>
+                <p>Open terminal/command prompt and run:</p>
+                <code style="display:block; padding:10px; margin:10px 0;">pip install pywhatkit</code>
+                <p><small>This is the only package required for WhatsApp automation!</small></p>
+            </div>
+        </div>
+
+        <!-- Test Instructions -->
+        <div class="section">
+            <h2>Step 3: Test WhatsApp Sending</h2>
+            <div class="info-box">
+                <h3>🧪 Run Test Script</h3>
+                <p>In terminal, navigate to backend folder and run:</p>
+                <code style="display:block; padding:10px; margin:10px 0;">
+cd kaasflow/backend<br>
+python test_whatsapp_direct.py <span id="test-number">+919876543210</span>
+                </code>
+                <p><strong>What happens:</strong></p>
+                <ul>
+                    <li>Script schedules a test message for 2 minutes from now</li>
+                    <li>WhatsApp Web opens automatically in your browser</li>
+                    <li>Message is sent to your number</li>
+                    <li>You receive it on your phone</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Daily Automation Setup -->
+        <div class="section">
+            <h2>Step 4: Setup Daily Automation</h2>
+            <div class="info-box" style="border-left-color: #17a2b8;">
+                <h3>📅 Windows Task Scheduler</h3>
+                <ol>
+                    <li>Open Task Scheduler (search in Start menu)</li>
+                    <li>Create Basic Task → Name: "WhatsApp Loan Reminders"</li>
+                    <li>Trigger: Daily at 9:00 AM</li>
+                    <li>Action: Start a program
+                        <br><code>C:\path\to\kaasflow\backend\run_daily_reminders.bat</code>
+                    </li>
+                    <li>Save and test</li>
+                </ol>
+
+                <h3>🐧 Linux/Mac (Cron)</h3>
+                <p>Edit crontab:</p>
+                <code style="display:block; padding:10px; margin:10px 0;">
+crontab -e<br>
+# Add this line:<br>
+0 9 * * * /path/to/kaasflow/backend/run_daily_reminders.sh
+                </code>
+            </div>
+        </div>
+
+        <!-- Important Notes -->
+        <div class="info-box" style="border-left-color: #dc3545;">
+            <h3>⚠️ Important Requirements</h3>
+            <ul>
+                <li><strong>WhatsApp Web:</strong> You must be logged into WhatsApp Web</li>
+                <li><strong>Computer ON:</strong> Keep computer running at reminder time</li>
+                <li><strong>Browser:</strong> Chrome or Firefox must be installed</li>
+                <li><strong>Client Numbers:</strong> Must be valid WhatsApp numbers with country code</li>
+            </ul>
+        </div>
+
+        <!-- Quick Commands -->
+        <div class="info-box">
+            <h3>🚀 Quick Reference Commands</h3>
+            <p><strong>Test sending:</strong></p>
+            <code style="display:block; padding:10px; margin:5px 0;">python test_whatsapp_direct.py +919876543210</code>
+            
+            <p><strong>Run reminders manually:</strong></p>
+            <code style="display:block; padding:10px; margin:5px 0;">python whatsapp_reminder.py</code>
+            
+            <p><strong>Check logs:</strong></p>
+            <code style="display:block; padding:10px; margin:5px 0;">type whatsapp_reminder.log</code>
+        </div>
+    </div>
+
+    <script>
+        // Load saved settings
+        function loadSettings() {
+            const settings = JSON.parse(localStorage.getItem('kf_whatsapp_settings') || '{}');
+            
+            if (settings.whatsapp_number) {
+                document.getElementById('whatsapp_number').value = settings.whatsapp_number;
+                document.getElementById('business_name').value = settings.business_name || 'KaasFlow';
+                
+                // Show saved settings
+                document.getElementById('display-number').textContent = settings.whatsapp_number;
+                document.getElementById('display-business').textContent = settings.business_name || 'KaasFlow';
+                document.getElementById('saved-settings').style.display = 'block';
+                
+                // Update test command with actual number
+                document.getElementById('test-number').textContent = settings.whatsapp_number;
+                
+                showStatus('Settings loaded from browser storage', 'info');
+            }
+        }
+
+        // Save settings
+        document.getElementById('settings-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const whatsappNumber = document.getElementById('whatsapp_number').value.trim();
+            const businessName = document.getElementById('business_name').value.trim();
+            
+            // Validate phone number
+            if (!whatsappNumber.startsWith('+')) {
+                showStatus('Phone number must start with + and country code (e.g., +919876543210)', 'error');
+                return;
+            }
+            
+            // Save to localStorage
+            const settings = {
+                whatsapp_number: whatsappNumber,
+                business_name: businessName,
+                saved_at: new Date().toISOString()
+            };
+            
+            localStorage.setItem('kf_whatsapp_settings', JSON.stringify(settings));
+            
+            // Show saved settings
+            document.getElementById('display-number').textContent = whatsappNumber;
+            document.getElementById('display-business').textContent = businessName;
+            document.getElementById('saved-settings').style.display = 'block';
+            
+            // Update test command
+            document.getElementById('test-number').textContent = whatsappNumber;
+            
+            showStatus('✅ Settings saved successfully! Now follow Step 2 below to install Python.', 'success');
+            
+            // Scroll to instructions
+            setTimeout(() => {
+                document.querySelector('.section:nth-of-type(2)').scrollIntoView({ behavior: 'smooth' });
+            }, 1000);
+        });
+
+        // Show status message
+        function showStatus(message, type) {
+            const box = document.getElementById('status-box');
+            box.textContent = message;
+            box.className = 'status-box ' + type;
+            
+            // Auto-hide after 5 seconds for success/error
+            if (type !== 'info') {
+                setTimeout(() => {
+                    box.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        // Load on page load
+        loadSettings();
+    </script>
+</body>
+</html>

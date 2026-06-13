@@ -32,7 +32,8 @@
   // ─── Helper: Get Current User ────────────────────────────────
   function _getUserId() {
     const session = JSON.parse(localStorage.getItem('kf_session') || '{}');
-    return (session.user && session.user.email) ? session.user.email : 'local_user';
+    const user = session.user || {};
+    return (user.id || user.sub || user.email || 'local_user').toLowerCase();
   }
 
   // ─── Public API ──────────────────────────────────────────────
@@ -48,7 +49,7 @@
 
     const userId = _getUserId();
     const payload = {
-      clients:  JSON.parse(localStorage.getItem('kf_clients')  || '[]').map(x => ({
+      clients: JSON.parse(localStorage.getItem('kf_clients') || '[]').map(x => ({
         id: x.id,
         user_id: userId,
         name: x.name,
@@ -58,7 +59,7 @@
         occupation: x.occupation,
         createdat: x.createdAt
       })),
-      loans:    JSON.parse(localStorage.getItem('kf_loans')    || '[]').map(x => ({
+      loans: JSON.parse(localStorage.getItem('kf_loans') || '[]').map(x => ({
         id: x.id,
         user_id: userId,
         clientid: x.clientId,
@@ -88,7 +89,7 @@
         const { error: err2 } = await db.from('kf_loans').upsert(payload.loans);
         if (err2) console.error('Failed to sync kf_loans to table:', err2);
       }
-      
+
       // Note: We skip kf_payments for explicit upsert because the table might not exist, 
       // but the data is safely stored in kf_settings below.
 
@@ -119,7 +120,7 @@
   async function restore() {
     window._kfRestoring = true;
     if (window._kfSyncTimer) clearTimeout(window._kfSyncTimer);
-    
+
     const db = getSupabase();
     if (!db) { window._kfRestoring = false; return null; }
     const userId = _getUserId();
@@ -135,7 +136,7 @@
       }
 
       const cloudData = resSettings.data ? resSettings.data.data : {};
-      
+
       // Map lowercase columns (from old format) back to camelCase for the frontend, or use them directly if new format
       const rawClients = cloudData.clients || [];
       const clients = rawClients.map(x => ({
@@ -162,14 +163,14 @@
       // Merge strategy: cloud records override local by id
       const merge = (localKey, cloudArr, idKey = 'id') => {
         const local = JSON.parse(localStorage.getItem(localKey) || '[]');
-        const map   = {};
+        const map = {};
         local.forEach(r => { map[r[idKey]] = r; });
         cloudArr.forEach(r => { map[r[idKey]] = r; }); // cloud wins
         localStorage.setItem(localKey, JSON.stringify(Object.values(map)));
       };
 
-      merge('kf_clients',  clients);
-      merge('kf_loans',    loans);
+      merge('kf_clients', clients);
+      merge('kf_loans', loans);
       merge('kf_payments', payments);
 
       // Settings: merge object keys (cloud wins)
@@ -227,7 +228,7 @@
       }]);
 
       if (!error) sessionStorage.setItem('kf_login_tracked', 'true');
-    } catch (e) {}
+    } catch (e) { }
   }
 
   /**

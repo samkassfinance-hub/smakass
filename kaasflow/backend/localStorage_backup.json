@@ -1,0 +1,50 @@
+{
+  "kf_clients": [
+    {
+      "id": "c1",
+      "name": "Demo Client 1",
+      "phone": "+919344208525",
+      "address": "Sample Address",
+      "occupation": "Business",
+      "createdAt": "2026-06-13"
+    },
+    {
+      "id": "c2",
+      "name": "Demo Client 2",
+      "phone": "+919344208525",
+      "address": "Sample Address",
+      "occupation": "Service",
+      "createdAt": "2026-06-13"
+    }
+  ],
+  "kf_loans": [
+    {
+      "id": "l1",
+      "clientId": "c1",
+      "principal": 10000,
+      "interestRate": 2,
+      "duration": 12,
+      "type": "monthly",
+      "startDate": "2026-05-14",
+      "status": "active",
+      "createdAt": "2026-05-14"
+    },
+    {
+      "id": "l2",
+      "clientId": "c2",
+      "principal": 15000,
+      "interestRate": 2.5,
+      "duration": 6,
+      "type": "monthly",
+      "startDate": "2026-05-14",
+      "status": "active",
+      "createdAt": "2026-05-14"
+    }
+  ],
+  "kf_payments": [],
+  "kf_settings": {
+    "financierName": "Test User",
+    "businessName": "Test Business"
+  },
+  "exported_at": "2026-06-13T11:15:00.000Z"
+}

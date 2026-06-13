@@ -21,10 +21,10 @@ if (window.location.hostname.includes('samkass.site')) {
   console.log('🔧 API_BASE:', API_BASE);
 }
 const LS = {
-  session:  'kf_session',
+  session: 'kf_session',
   settings: 'kf_settings',
-  clients:  'kf_clients',
-  loans:    'kf_loans',
+  clients: 'kf_clients',
+  loans: 'kf_loans',
   payments: 'kf_payments',
   recycleBin: 'kf_recycle_bin',
 };
@@ -340,7 +340,7 @@ const state = {
   lang: 'en',
   theme: 'light',
   session: null,
-  collectionFilter: 'all',
+  collectionFilter: 'today',
   loanFilter: 'all',
   clientSearch: '',
   charts: {},
@@ -633,7 +633,7 @@ function saveSessionIsolated(token, user) {
 // Google Sign-In is initialized via HTML (g_id_onload) and handled by handleGoogleLogin below
 
 // Google Login Callback
-window.handleGoogleLogin = async function(response) {
+window.handleGoogleLogin = async function (response) {
   // Remove loading state from buttons
   const btns = document.querySelectorAll('.btn-google-signin');
   btns.forEach(b => b.classList.remove('loading'));
@@ -662,7 +662,7 @@ window.handleGoogleLogin = async function(response) {
     if (res.user?.name && !s.financierName) { s.financierName = res.user.name; Store.saveSettings(s); }
     if (res.user?.appPin) { s.appPin = res.user.appPin; Store.saveSettings(s); }
     state.session = getSession();
-    
+
     // Crucial: Restore from cloud BEFORE checking PIN
     // so we don't overwrite data for an existing user logging into a new device
     if (window.KFSync) await KFSync.restore();
@@ -693,10 +693,10 @@ window.handleGoogleLogin = async function(response) {
     const s = Store.settings();
     if (!s.financierName) { s.financierName = googleUser.name; Store.saveSettings(s); }
     state.session = getSession();
-    
+
     // Crucial: Restore from cloud BEFORE checking PIN
     if (window.KFSync) await KFSync.restore();
-    
+
     if (hasPin()) { showPinLock(); } else { showPinSetup(); }
   } else {
     const errEl = $('#login-error');
@@ -732,7 +732,7 @@ async function logout() {
     const token = session?.token;
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
-    
+
     await fetch(`${API_BASE}/logout`, {
       method: 'POST',
       headers
@@ -749,13 +749,20 @@ async function logout() {
   localStorage.removeItem(LS.recycleBin);
   clearAllUserData();
   state.session = null;
+
+  // Clear background sync interval
+  if (window._kfRealtimeSync) {
+    clearInterval(window._kfRealtimeSync);
+    window._kfRealtimeSync = null;
+  }
+
   showAuth();
 }
 
 // ── INIT ──────────────────────────────────────────────────────
 function init() {
   console.log('🚀 INIT: Starting app initialization...');
-  
+
   try {
     // Hide mobile loading indicator
     const mobileLoader = document.getElementById('app-loading');
@@ -780,11 +787,11 @@ function init() {
 
     const settings = Store.settings();
     console.log('⚙️ INIT: Settings loaded:', settings);
-    
+
     // Default to light mode for better mobile compatibility
     applyTheme(settings.theme || 'light');
     applyLang(settings.lang || 'en');
-    
+
     console.log('🎨 INIT: Theme and language applied');
 
     // ── Register Service Worker for notification action buttons ──
@@ -796,8 +803,8 @@ function init() {
           // Listen for messages from SW (Paid / Pending button taps)
           navigator.serviceWorker.addEventListener('message', e => {
             const msg = e.data || {};
-            if      (msg.type === 'NOTIF_MARK_PAID')       handleNotifMarkPaid(msg.loanId, msg.emi);
-            else if (msg.type === 'NOTIF_MARK_PENDING')    handleNotifMarkPending(msg.loanId);
+            if (msg.type === 'NOTIF_MARK_PAID') handleNotifMarkPaid(msg.loanId, msg.emi);
+            else if (msg.type === 'NOTIF_MARK_PENDING') handleNotifMarkPending(msg.loanId);
             else if (msg.type === 'NOTIF_OPEN_COLLECTION') navigateTo('collection');
           });
         })
@@ -811,7 +818,7 @@ function init() {
       console.log('✅ INIT: User is logged in');
       state.session = getSession();
       console.log('👤 INIT: Session:', state.session);
-      
+
       if (hasPin()) {
         console.log('🔒 INIT: PIN exists, showing PIN lock');
         showPinLock();
@@ -826,25 +833,25 @@ function init() {
 
     console.log('🔗 INIT: Binding global events');
     bindGlobal();
-    
+
     console.log('⏰ INIT: Scheduling notifications');
     scheduleNotifications();
-    
+
     console.log('✅ INIT: Initialization complete!');
   } catch (error) {
     console.error('❌ INIT: Fatal error during initialization:', error);
     console.error('Stack trace:', error.stack);
-    
+
     // Emergency fallback: Show auth screen
     const mobileLoader = document.getElementById('app-loading');
     if (mobileLoader) mobileLoader.style.display = 'none';
-    
+
     const authScreen = document.getElementById('auth-screen');
     if (authScreen) {
       authScreen.style.display = 'block';
       console.log('✅ INIT: Emergency fallback - showing auth screen');
     }
-    
+
     // Don't re-throw the error to avoid breaking the app completely
   }
 }
@@ -854,8 +861,8 @@ function handleNotifMarkPaid(loanId, emiAmount) {
   if (!loanId) return;
   const loan = Store.loans().find(l => l.id === loanId);
   if (!loan) { showToast('Loan not found', 'error'); return; }
-  const stats   = calcLoanStats(loan);
-  const amount  = emiAmount || stats.emi;
+  const stats = calcLoanStats(loan);
+  const amount = emiAmount || stats.emi;
   const payment = {
     id: uid(), loanId, amount, date: today(),
     note: 'Paid via notification', createdAt: new Date().toISOString()
@@ -866,7 +873,7 @@ function handleNotifMarkPaid(loanId, emiAmount) {
   // Auto-complete if fully paid
   if (stats.remaining - amount <= 0) {
     const loans = Store.loans();
-    const idx   = loans.findIndex(l => l.id === loanId);
+    const idx = loans.findIndex(l => l.id === loanId);
     if (idx !== -1) { loans[idx].status = 'completed'; Store.saveLoans(loans); }
   }
   updateNotifBadge();
@@ -906,24 +913,24 @@ function showAuth() {
   $('#auth-screen').style.display = '';
   $('#pin-lock-screen').style.display = 'none';
   $('#main-app').style.display = 'none';
-  
+
   // Show PWA install bubble on auth screen - enhanced for samkass.site
   const bubble = $('#pwa-install-bubble');
   if (bubble) {
     bubble.style.display = 'block';
     console.log('🔘 PWA install bubble shown on samkass.site');
   }
-  
+
   const aiText = document.getElementById('ai-typing-text');
   if (aiText && !aiText.dataset.typingStarted) {
     aiText.dataset.typingStarted = 'true';
     typeAIOrbText();
   }
-  
+
   // Slide back to Step 1 (Welcome Screen)
   const slider = $('#auth-slider-container');
   if (slider) slider.classList.remove('slide-to-step-2');
-  
+
   // Show default email login section in Step 2
   showFormSection('#login-form-wrapper');
   updateAuthHeader('Log in or sign up', 'Manage loans, collections and customer payments smarter with SamKass.');
@@ -934,15 +941,15 @@ function showPinSetup() {
   $('#auth-screen').style.display = '';
   $('#pin-lock-screen').style.display = 'none';
   $('#main-app').style.display = 'none';
-  
+
   // Slide to Step 2
   const slider = $('#auth-slider-container');
   if (slider) slider.classList.add('slide-to-step-2');
-  
+
   // Show PIN Setup form section
   showFormSection('#pin-setup-wrapper');
   updateAuthHeader('Set Security PIN', 'Create a 4-digit PIN to protect your app');
-  
+
   // Clear & focus first digit
   const inputs = $$('#pin-setup-inputs .pin-digit-input');
   inputs.forEach(i => { i.value = ''; i.classList.remove('shake', 'success'); });
@@ -956,7 +963,7 @@ function showPinLock() {
   $('#auth-screen').style.display = 'none';
   $('#pin-lock-screen').style.display = '';
   $('#main-app').style.display = 'none';
-  
+
   // Hide PWA install bubble
   const bubble = $('#pwa-install-bubble');
   if (bubble) bubble.style.display = 'none';
@@ -986,16 +993,16 @@ async function showApp() {
   $('#auth-screen').style.display = 'none';
   $('#pin-lock-screen').style.display = 'none';
   $('#main-app').style.display = '';
-  
+
   // Show chatbot for logged-in users
   showChatbotForLoggedInUser();
-  
+
   updatePlanBanner();
   checkAccessControl();
-  
+
   // Render immediately with local data for zero-delay UX
   navigateTo(state.page || 'dashboard');
-  
+
   // Asynchronously query the backend subscription status
   if (window.RazorpayPayment) {
     window.RazorpayPayment.checkSubscriptionStatus().then(status => {
@@ -1005,12 +1012,12 @@ async function showApp() {
         settings.plan = status.plan_type;
         settings.paymentDate = status.end_date ? new Date(new Date(status.end_date).getTime() - (status.plan_type === 'yearly' ? 365 : status.plan_type === 'quarterly' ? 90 : 30) * 24 * 60 * 60 * 1000).toISOString() : new Date().toISOString();
         Store.saveSettings(settings);
-        
+
         // Update subscription manager local state
         if (window.KFSubscription) {
           window.KFSubscription.syncFromSettings();
         }
-        
+
         if (oldPlan !== status.plan_type) {
           updatePlanBanner();
           if (state.page === 'settings') {
@@ -1020,14 +1027,25 @@ async function showApp() {
       }
     }).catch(e => console.warn("Failed to check subscription status:", e));
   }
-  
+
   // Seamlessly sync with cloud in the background and soft-refresh if needed
   if (window.KFSync) {
     KFSync.restore().then(() => {
       navigateTo(state.page || 'dashboard');
     });
+
+    // BACKGROUND REAL-TIME SYNC: Poll for cloud updates every 30 seconds
+    if (window._kfRealtimeSync) clearInterval(window._kfRealtimeSync);
+    window._kfRealtimeSync = setInterval(async () => {
+      // Sync only if app is visible and no modal is open to prevent UI flickering during input
+      const isModalOpen = document.body.classList.contains('modal-open');
+      if (isLoggedIn() && document.visibilityState === 'visible' && !isModalOpen) {
+        const res = await KFSync.restore();
+        if (res) navigateTo(state.page); // Refresh current view with fresh cloud data
+      }
+    }, 30000);
   }
-  
+
   // Fire today's payment notifications when app becomes visible
   fireTodayNotifications();
 }
@@ -1045,18 +1063,18 @@ function navigateTo(page) {
 
   const pages = {
     home: renderHome,
-    clients:   renderClients,
-    loans:     renderLoans,
+    clients: renderClients,
+    loans: renderLoans,
     collection: renderCollection,
-    reports:   renderReports,
-    profile:   renderProfile,
-    settings:  renderSettings,
+    reports: renderReports,
+    profile: renderProfile,
+    settings: renderSettings,
   };
   if (pages[page]) pages[page](content);
 }
 
 function destroyCharts() {
-  Object.values(state.charts).forEach(c => { try { c.destroy(); } catch {} });
+  Object.values(state.charts).forEach(c => { try { c.destroy(); } catch { } });
   state.charts = {};
 }
 
@@ -1069,7 +1087,7 @@ function getPlan() {
 function getPlanExpiryTime() {
   const s = Store.settings();
   if (!s.paymentDate || !s.plan || s.plan === 'free') return 0;
-  
+
   const paymentTime = new Date(s.paymentDate).getTime();
   let durationMs = 0;
   if (s.plan === 'monthly') {
@@ -1144,7 +1162,7 @@ function updatePlanBanner() {
 }
 
 window.KF = window.KF || {};
-window.KF.upgradePro = function(planType) {
+window.KF.upgradePro = function (planType) {
   initiatePlanPayment(planType);
 };
 
@@ -1152,24 +1170,24 @@ window.KF.upgradePro = function(planType) {
 function generateSampleData() {
   if (Store.clients().length > 0) return;
   const clients = [
-    { id: 'c1', name: 'Rajesh Kumar', phone: '9876543210', address: 'Connaught Place, Delhi', idNum: 'ABCDE1234F', occupation: 'Trader', createdAt: '2024-01-15' },
-    { id: 'c2', name: 'Priya Singh', phone: '9845012345', address: 'Andheri, Mumbai', idNum: '', occupation: 'Shop Owner', createdAt: '2024-02-01' },
-    { id: 'c3', name: 'Mohammed Ali', phone: '9787654321', address: 'Kothrud, Pune', idNum: 'QWERT5678G', occupation: 'Teacher', createdAt: '2024-02-20' },
-    { id: 'c4', name: 'Sneha Patel', phone: '9765432109', address: 'Navrangpura, Ahmedabad', idNum: '', occupation: 'Tailor', createdAt: '2024-03-05' },
-    { id: 'c5', name: 'Amit Sharma', phone: '9843210987', address: 'Bandra, Mumbai', idNum: 'ZXCVB9012H', occupation: 'Driver', createdAt: '2024-03-18' },
-    { id: 'c6', name: 'Lakshmi Narayanan', phone: '9812345670', address: 'T Nagar, Chennai', idNum: '', occupation: 'IT Professional', createdAt: '2024-03-20' },
-    { id: 'c7', name: 'Vikram Reddy', phone: '9823456701', address: 'Banjara Hills, Hyderabad', idNum: 'DFGHI2345J', occupation: 'Carpenter', createdAt: '2024-03-21' },
-    { id: 'c8', name: 'Pooja Desai', phone: '9834567012', address: 'Salt Lake, Kolkata', idNum: '', occupation: 'Nurse', createdAt: '2024-03-22' },
-    { id: 'c9', name: 'Sanjay Gupta', phone: '9845670123', address: 'MG Road, Bangalore', idNum: 'JKLMN3456K', occupation: 'Mechanic', createdAt: '2024-03-23' },
-    { id: 'c10', name: 'Anita Bose', phone: '9856701234', address: 'Fort, Mumbai', idNum: '', occupation: 'Chef', createdAt: '2024-03-24' },
-    { id: 'c11', name: 'Rahul Verma', phone: '9867012345', address: 'Indiranagar, Bangalore', idNum: 'PQRST4567L', occupation: 'Plumber', createdAt: '2024-03-25' },
-    { id: 'c12', name: 'Kavita Iyer', phone: '9870123456', address: 'Mylapore, Chennai', idNum: '', occupation: 'Electrician', createdAt: '2024-03-26' },
-    { id: 'c13', name: 'John Fernandez', phone: '9801234567', address: 'Panjim, Goa', idNum: 'UVWXY5678M', occupation: 'Manager', createdAt: '2024-03-27' },
-    { id: 'c14', name: 'Meera Chopra', phone: '9812345098', address: 'Karol Bagh, Delhi', idNum: '', occupation: 'Artist', createdAt: '2024-03-28' },
-    { id: 'c15', name: 'Deepak Saxena', phone: '9823456109', address: 'Gomti Nagar, Lucknow', idNum: 'ZABCD6789N', occupation: 'Receptionist', createdAt: '2024-03-29' },
-    { id: 'c16', name: 'Swati Kapoor', phone: '9834567210', address: 'Vasant Kunj, Delhi', idNum: '', occupation: 'Security Guard', createdAt: '2024-03-30' },
-    { id: 'c17', name: 'Anil Thakur', phone: '9845678321', address: 'Colaba, Mumbai', idNum: 'EFGHI7890O', occupation: 'Sales Executive', createdAt: '2024-03-31' },
-    { id: 'c18', name: 'Divya Bhatia', phone: '9856789432', address: 'Saket, Delhi', idNum: '', occupation: 'Photographer', createdAt: '2024-04-01' },
+    { id: 'c1', name: 'Rajesh Kumar', phone: '+919344208525', address: 'Connaught Place, Delhi', idNum: 'ABCDE1234F', occupation: 'Trader', createdAt: '2024-01-15' },
+    { id: 'c2', name: 'Priya Singh', phone: '+919344208525', address: 'Andheri, Mumbai', idNum: '', occupation: 'Shop Owner', createdAt: '2024-02-01' },
+    { id: 'c3', name: 'Mohammed Ali', phone: '+919344208525', address: 'Kothrud, Pune', idNum: 'QWERT5678G', occupation: 'Teacher', createdAt: '2024-02-20' },
+    { id: 'c4', name: 'Sneha Patel', phone: '+919344208525', address: 'Navrangpura, Ahmedabad', idNum: '', occupation: 'Tailor', createdAt: '2024-03-05' },
+    { id: 'c5', name: 'Amit Sharma', phone: '+919344208525', address: 'Bandra, Mumbai', idNum: 'ZXCVB9012H', occupation: 'Driver', createdAt: '2024-03-18' },
+    { id: 'c6', name: 'Lakshmi Narayanan', phone: '+919344208525', address: 'T Nagar, Chennai', idNum: '', occupation: 'IT Professional', createdAt: '2024-03-20' },
+    { id: 'c7', name: 'Vikram Reddy', phone: '+919344208525', address: 'Banjara Hills, Hyderabad', idNum: 'DFGHI2345J', occupation: 'Carpenter', createdAt: '2024-03-21' },
+    { id: 'c8', name: 'Pooja Desai', phone: '+919344208525', address: 'Salt Lake, Kolkata', idNum: '', occupation: 'Nurse', createdAt: '2024-03-22' },
+    { id: 'c9', name: 'Sanjay Gupta', phone: '+919344208525', address: 'MG Road, Bangalore', idNum: 'JKLMN3456K', occupation: 'Mechanic', createdAt: '2024-03-23' },
+    { id: 'c10', name: 'Anita Bose', phone: '+919344208525', address: 'Fort, Mumbai', idNum: '', occupation: 'Chef', createdAt: '2024-03-24' },
+    { id: 'c11', name: 'Rahul Verma', phone: '+919344208525', address: 'Indiranagar, Bangalore', idNum: 'PQRST4567L', occupation: 'Plumber', createdAt: '2024-03-25' },
+    { id: 'c12', name: 'Kavita Iyer', phone: '+919344208525', address: 'Mylapore, Chennai', idNum: '', occupation: 'Electrician', createdAt: '2024-03-26' },
+    { id: 'c13', name: 'John Fernandez', phone: '+919344208525', address: 'Panjim, Goa', idNum: 'UVWXY5678M', occupation: 'Manager', createdAt: '2024-03-27' },
+    { id: 'c14', name: 'Meera Chopra', phone: '+919344208525', address: 'Karol Bagh, Delhi', idNum: '', occupation: 'Artist', createdAt: '2024-03-28' },
+    { id: 'c15', name: 'Deepak Saxena', phone: '+919344208525', address: 'Gomti Nagar, Lucknow', idNum: 'ZABCD6789N', occupation: 'Receptionist', createdAt: '2024-03-29' },
+    { id: 'c16', name: 'Swati Kapoor', phone: '+919344208525', address: 'Vasant Kunj, Delhi', idNum: '', occupation: 'Security Guard', createdAt: '2024-03-30' },
+    { id: 'c17', name: 'Anil Thakur', phone: '+919344208525', address: 'Colaba, Mumbai', idNum: 'EFGHI7890O', occupation: 'Sales Executive', createdAt: '2024-03-31' },
+    { id: 'c18', name: 'Divya Bhatia', phone: '+919344208525', address: 'Saket, Delhi', idNum: '', occupation: 'Photographer', createdAt: '2024-04-01' },
   ];
 
   const td = today();
@@ -1180,7 +1198,7 @@ function generateSampleData() {
     const duration = [6, 10, 12, 24][i % 4];
     const type = i % 2 === 0 ? 'weekly' : 'monthly';
     const interestType = 'percentage';
-    
+
     // Spread start dates over the last few months
     const start = new Date();
     start.setMonth(start.getMonth() - (i % 5));
@@ -1208,11 +1226,11 @@ function generateSampleData() {
     const totalPayable = loan.principal + (monthlyInterest * loan.duration);
     const installments = loan.type === 'weekly' ? loan.duration * 4 : loan.duration;
     const emi = +(totalPayable / installments).toFixed(2);
-    
+
     const d = new Date(loan.startDate);
     if (loan.type === 'monthly') d.setMonth(d.getMonth() + 1);
     else if (loan.type === 'weekly') d.setDate(d.getDate() + 7);
-    
+
     // Ensure the payment date is not in the future
     const paymentDate = d <= new Date() ? d.toISOString().split('T')[0] : td;
 
@@ -1245,13 +1263,13 @@ function calcLoanStats(loan) {
   const monthlyInterest = calcMonthlyInterest(loan.principal, loan.interestRate, loan.interestType || 'percentage');
   const totalInterest = monthlyInterest * duration;
   const totalPayable = duration > 0 ? loan.principal + totalInterest : loan.principal;
-  
+
   let emi = 0;
   if (duration > 0) {
     const installments = loan.type === 'weekly' ? duration * 4 : duration;
     emi = +(totalPayable / installments).toFixed(2);
   }
-  
+
   const payments = Store.payments().filter(p => p.loanId === loan.id);
   const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
   const remaining = Math.max(0, totalPayable - totalPaid);
@@ -1265,25 +1283,27 @@ function calcLoanStats(loan) {
 function calcNextDue(loan, payments = null) {
   if (!loan.duration || loan.duration <= 0) return null;
   if (!payments) payments = Store.payments().filter(p => p.loanId === loan.id);
-  const d = new Date(loan.startDate);
-  const typeMap = { monthly: 'month', weekly: 'week' };
-  const step = typeMap[loan.type] || 'month';
-  const totalInstallments = loan.type === 'weekly' ? loan.duration * 4 : loan.duration;
-  let installments = 0;
-  
+
+  const duration = loan.duration || 0;
   const monthlyInterest = calcMonthlyInterest(loan.principal, loan.interestRate, loan.interestType || 'percentage');
-  const totalPayable = loan.principal + (monthlyInterest * loan.duration);
-  const emi = +(totalPayable / totalInstallments).toFixed(2);
-  
-  while (installments < totalInstallments) {
-    if (step === 'month') d.setMonth(d.getMonth() + 1);
-    else if (step === 'week') d.setDate(d.getDate() + 7);
-    installments++;
-    const due = d.toISOString().split('T')[0];
-    const paid = payments.filter(p => p.date === due).reduce((s, p) => s + p.amount, 0);
-    if (paid < emi * 0.9) return due;
+  const totalPayable = duration > 0 ? loan.principal + (monthlyInterest * duration) : loan.principal;
+  const totalInstallments = loan.type === 'weekly' ? duration * 4 : duration;
+  const emi = totalInstallments > 0 ? +(totalPayable / totalInstallments).toFixed(2) : 0;
+
+  const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
+
+  // How many full installments are covered by the total paid amount?
+  // Using a very small epsilon (0.0001) for strict matching
+  const installmentsCovered = emi > 0 ? Math.floor((totalPaid + 0.0001) / emi) : 0;
+
+  if (installmentsCovered >= totalInstallments) return null;
+
+  const d = new Date(loan.startDate);
+  for (let i = 0; i < installmentsCovered + 1; i++) {
+    if (loan.type === 'weekly') d.setDate(d.getDate() + 7);
+    else d.setMonth(d.getMonth() + 1);
   }
-  return null;
+  return d.toISOString().split('T')[0];
 }
 
 // ── HOME ─────────────────────────────────────────────────
@@ -1334,8 +1354,8 @@ function renderHome(container) {
       <div class="kf-card" data-ocid="home.due_today_card">
         <div class="section-title"><i class="fa-solid fa-calendar-day"></i>${t('dueToday')} (${dueToday.length})</div>
         <div class="stagger-children">${dueToday.length === 0
-          ? `<p class="text-muted-kf" style="font-size:.875rem;margin:0">${t('noDueToday')}</p>`
-          : dueToday.slice(0, 6).map(({ loan, stats, client }, i) => `
+      ? `<p class="text-muted-kf" style="font-size:.875rem;margin:0">${t('noDueToday')}</p>`
+      : dueToday.slice(0, 6).map(({ loan, stats, client }, i) => `
             <div class="due-today-item" data-ocid="home.due_today.item.${i + 1}">
               <div>
                 <div class="due-today-name">${client ? client.name : 'Unknown'}</div>
@@ -1343,7 +1363,7 @@ function renderHome(container) {
               </div>
               <div class="due-today-amount">${fmtCur(stats.emi)}</div>
             </div>`).join('')
-        }
+    }
         </div></div>
 
       <div class="kf-card" data-ocid="home.monthly_chart_card">
@@ -1356,19 +1376,19 @@ function renderHome(container) {
       <div class="kf-card" data-ocid="home.recent_payments_card">
         <div class="section-title"><i class="fa-solid fa-receipt"></i>${t('recentPayments')}</div>
         <div class="stagger-children">${recentPayments.length === 0
-          ? `<p class="text-muted-kf" style="font-size:.875rem;margin:0">${t('noPayments')}</p>`
-          : recentPayments.map((p, i) => {
-              const loan = loans.find(l => l.id === p.loanId);
-              const client = loan ? clients.find(c => c.id === loan.clientId) : null;
-              return `<div class="payment-row" data-ocid="home.payment.item.${i + 1}">
+      ? `<p class="text-muted-kf" style="font-size:.875rem;margin:0">${t('noPayments')}</p>`
+      : recentPayments.map((p, i) => {
+        const loan = loans.find(l => l.id === p.loanId);
+        const client = loan ? clients.find(c => c.id === loan.clientId) : null;
+        return `<div class="payment-row" data-ocid="home.payment.item.${i + 1}">
                 <div>
                   <div style="font-weight:700">${client ? client.name : 'Unknown'}</div>
                   <div class="payment-row-date">${fmtDate(p.date)}${p.note ? ' · ' + p.note : ''}</div>
                 </div>
                 <div class="payment-row-amount">${fmtCur(p.amount)}</div>
               </div>`;
-            }).join('')
-        }
+      }).join('')
+    }
         </div></div>
     </div>`;
 
@@ -1391,10 +1411,10 @@ function renderMonthlyChart(canvasId, payments) {
   }
   const isDark = state.theme === 'dark';
   const chartColor = '#f59e0b';
-  if (state.charts[canvasId]) { try { state.charts[canvasId].destroy(); } catch {} }
+  if (state.charts[canvasId]) { try { state.charts[canvasId].destroy(); } catch { } }
   const ctx = canvas.getContext('2d');
   let gradient = chartColor + 'cc';
-  if(ctx) {
+  if (ctx) {
     gradient = ctx.createLinearGradient(0, 0, 0, 400);
     gradient.addColorStop(0, 'rgba(245, 158, 11, 0.9)');
     gradient.addColorStop(1, 'rgba(245, 158, 11, 0.1)');
@@ -1408,7 +1428,7 @@ function renderMonthlyChart(canvasId, payments) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { 
+      plugins: {
         legend: { display: false },
         tooltip: {
           backgroundColor: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
@@ -1445,7 +1465,7 @@ function renderClients(container) {
   const clientsCount = clients.length;
   const s = Store.settings();
   const limit = FREE_CLIENT_LIMIT + (s.extraClients || 0);
-  
+
   const usageIndicator = isFree ? `<div style="font-size: 0.85rem; color: ${clientsCount >= limit ? 'var(--kf-danger)' : 'var(--kf-text-muted)'}; font-weight: 600; margin-top: 4px;"><i class="fa-solid fa-chart-pie me-1"></i>${clientsCount} / ${limit} Trial Clients Used</div>` : '';
 
   container.innerHTML = `
@@ -1577,8 +1597,8 @@ function openClientProfile(clientId) {
     </div>
     <div class="section-title"><i class="fa-solid fa-money-bill-wave"></i>Loans (${clientLoans.length})</div>
     ${clientLoans.length === 0 ? '<p class="text-muted-kf fs-sm">No loans yet.</p>' : clientLoans.map(l => {
-      const stats = calcLoanStats(l);
-      return `<div class="loan-card ${stats.isOverdue ? 'overdue' : l.status === 'completed' ? 'completed' : ''}" style="margin-bottom:.625rem">
+    const stats = calcLoanStats(l);
+    return `<div class="loan-card ${stats.isOverdue ? 'overdue' : l.status === 'completed' ? 'completed' : ''}" style="margin-bottom:.625rem">
         <div class="loan-card-header">
           <div>${fmtCur(l.principal)}${l.duration ? ` · ${l.duration}mo` : ''}</div>
           <span class="badge-kf ${stats.isOverdue ? 'badge-overdue' : l.status === 'completed' ? 'badge-completed' : 'badge-active'}">${stats.isOverdue ? 'OVERDUE' : l.status.toUpperCase()}</span>
@@ -1601,7 +1621,7 @@ function openClientProfile(clientId) {
           </button>
         </div>
       </div>`;
-    }).join('')}
+  }).join('')}
     ${clientLoans.length > 0 ? `<div class="section-title mt-2"><i class="fa-solid fa-receipt"></i>Recent Payments</div>
       ${payments.filter(p => clientLoans.some(l => l.id === p.loanId)).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5).map(p => `
         <div class="payment-row">
@@ -1719,7 +1739,7 @@ function openLoanInfo(loanId) {
   if (!loan) return;
   const client = Store.clients().find(c => c.id === loan.clientId);
   const stats = calcLoanStats(loan);
-  
+
   let html = `
     <div style="text-align:center; margin-bottom:1.5rem;">
       <div style="width:56px;height:56px;background:var(--gradient-green);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:1.5rem;color:#ffffff;margin-bottom:0.5rem;box-shadow:0 4px 15px var(--green-glow);">
@@ -1765,7 +1785,7 @@ function openLoanInfo(loanId) {
         </div>` : ''}
     </div>
   `;
-  
+
   $('#loan-info-body').innerHTML = html;
   new bootstrap.Modal($('#loanInfoModal')).show();
 }
@@ -1814,9 +1834,9 @@ function updateEMIPreview() {
   const type = $('#loan-type').value;
   const intType = $('#loan-interest-type').value || 'percentage';
 
-  if (!p || p <= 0) { 
-    $('#emi-preview').classList.add('d-none'); 
-    return; 
+  if (!p || p <= 0) {
+    $('#emi-preview').classList.add('d-none');
+    return;
   }
 
   const monthlyInterest = calcMonthlyInterest(p, r, intType);
@@ -1831,7 +1851,7 @@ function updateEMIPreview() {
     $('#emi-preview').classList.remove('d-none');
     return;
   }
-  
+
   const totalInterest = monthlyInterest * d;
   const totalPayable = p + totalInterest;
   const installments = type === 'weekly' ? d * 4 : d;
@@ -1858,9 +1878,9 @@ function renderCollection(container) {
     <div class="page-section" data-ocid="collection.page">
       <div class="page-title"><i class="fa-solid fa-calendar-check"></i>Daily Collection</div>
       <div class="filter-tabs">
-        <button class="filter-tab ${state.collectionFilter === 'all' ? 'active' : ''}" data-filter="all" data-ocid="collection.filter.all_tab">${t('all')}</button>
-        <button class="filter-tab ${state.collectionFilter === 'overdue' ? 'active' : ''}" data-filter="overdue" data-ocid="collection.filter.overdue_tab">${t('overdue')}</button>
         <button class="filter-tab ${state.collectionFilter === 'today' ? 'active' : ''}" data-filter="today" data-ocid="collection.filter.today_tab">${t('dueToday')}</button>
+        <button class="filter-tab ${state.collectionFilter === 'overdue' ? 'active' : ''}" data-filter="overdue" data-ocid="collection.filter.overdue_tab">${t('overdue')}</button>
+        <button class="filter-tab ${state.collectionFilter === 'all' ? 'active' : ''}" data-filter="all" data-ocid="collection.filter.all_tab">${t('all')}</button>
       </div>
       <div id="collection-list" class="stagger-children"></div>
     </div>`;
@@ -1900,19 +1920,29 @@ function renderCollectionList(loans, clients, todayStr) {
 
   listEl.innerHTML = items.map(({ loan, stats, client }, i) => {
     const isOverdue = stats.isOverdue;
+    const currentInstCount = stats.emi > 0 ? Math.floor((stats.totalPaid + 0.0001) / stats.emi) : 0;
+    const paidForThisInst = Math.max(0, stats.totalPaid - (currentInstCount * stats.emi));
+    const isPartiallyPaid = paidForThisInst > 0.0001;
+    const amountToCollect = isPartiallyPaid ? (stats.emi - paidForThisInst) : stats.emi;
     return `
     <div class="collection-item ${isOverdue ? 'overdue' : ''}" data-ocid="collection.item.${i + 1}">
       <div class="collection-item-header">
         <div class="collection-item-name">${client ? client.name : 'Unknown'}</div>
         <span class="badge-kf ${isOverdue ? 'badge-overdue' : 'badge-pending'}">${isOverdue ? `${stats.daysOverdue}d OVERDUE` : 'DUE'}</span>
       </div>
-      <div class="collection-item-meta">${client ? client.phone : ''} · ${t(loan.type)} EMI · Next: ${fmtDate(stats.nextDueDate)}</div>
+      <div class="collection-item-meta">
+        ${client ? client.phone : ''} · ${t(loan.type)} EMI · Next: ${fmtDate(stats.nextDueDate)}
+        ${isPartiallyPaid ? `<div style="color:var(--kf-danger); font-weight:700; margin-top:4px;">Remaining to close this due: ${fmtCur(amountToCollect)}</div>` : ''}
+      </div>
       <div class="collection-item-actions">
         <button class="btn-kf-primary" style="min-height:40px;padding:.375rem 1rem;font-size:.875rem" data-action="collect" data-id="${loan.id}" data-ocid="collection.collect_button.${i + 1}">
-          <i class="fa-solid fa-check me-1"></i>${t('collect')} ${fmtCur(stats.emi)}
+          <i class="fa-solid fa-check me-1"></i>${t('collect')} ${fmtCur(amountToCollect)}
         </button>
         <button class="btn-kf-ghost" style="min-height:40px;padding:.375rem .875rem;font-size:.875rem" data-action="missed" data-id="${loan.id}" data-ocid="collection.missed_button.${i + 1}">
           <i class="fa-solid fa-xmark me-1"></i>${t('missed')}
+        </button>
+        <button class="btn-kf-ghost" style="min-height:40px;padding:.375rem .875rem;font-size:.875rem" data-action="partial" data-id="${loan.id}">
+          <i class="fa-solid fa-calculator me-1"></i>Partly Paid
         </button>
         <button class="btn-icon" data-action="download" data-id="${loan.id}" data-ocid="collection.download_button.${i + 1}"><i class="fa-solid fa-download"></i></button>
         <button class="btn-kf-ghost" style="min-height:40px;padding:.375rem .875rem;font-size:.875rem" data-action="remind" data-id="${loan.id}" title="Send WhatsApp Message" aria-label="WhatsApp Message" data-ocid="collection.remind_button.${i + 1}">
@@ -1928,18 +1958,34 @@ function renderCollectionList(loans, clients, todayStr) {
     const id = btn.dataset.id;
     if (btn.dataset.action === 'collect') quickCollect(id);
     if (btn.dataset.action === 'missed') markMissed(id);
+    if (btn.dataset.action === 'partial') openPartialPaymentModal(id);
     if (btn.dataset.action === 'download') downloadCollectionDetailsPDF(id);
     if (btn.dataset.action === 'remind') sendReminder(id);
   });
+}
+
+function openPartialPaymentModal(loanId) {
+  const loan = Store.loans().find(l => l.id === loanId);
+  if (!loan) return;
+  const modalEl = document.getElementById('partialPaymentModal');
+  if (!modalEl) return;
+  document.getElementById('partial-payment-loan-id').value = loanId;
+  document.getElementById('partial-payment-amount').value = '';
+  document.getElementById('partial-payment-note').value = 'Partial payment';
+
+  bootstrap.Modal.getOrCreateInstance(modalEl).show();
 }
 
 function quickCollect(loanId) {
   const loan = Store.loans().find(l => l.id === loanId);
   if (!loan) return;
   const stats = calcLoanStats(loan);
+  const instCount = stats.emi > 0 ? Math.floor((stats.totalPaid + 0.0001) / stats.emi) : 0;
+  const paidForThisInst = Math.max(0, stats.totalPaid - (instCount * stats.emi));
+  const amountToCollect = paidForThisInst > 0.0001 ? (stats.emi - paidForThisInst) : stats.emi;
   const payment = {
     id: uid(), loanId,
-    amount: stats.emi,
+    amount: amountToCollect,
     date: today(),
     note: 'Quick collect',
     createdAt: new Date().toISOString(),
@@ -1948,7 +1994,7 @@ function quickCollect(loanId) {
   payments.push(payment);
   Store.savePayments(payments);
   generateReceipt(payment, loan);
-  showToast(`Payment of ${fmtCur(stats.emi)} recorded!`, 'success');
+  showToast(`Payment of ${fmtCur(amountToCollect)} recorded!`, 'success');
   renderCollectionList(Store.loans().filter(l => l.status === 'active'), Store.clients(), today());
 }
 
@@ -2010,13 +2056,13 @@ function renderReports(container) {
       <div class="kf-card" data-ocid="reports.defaulters_card">
         <div class="section-title"><i class="fa-solid fa-triangle-exclamation"></i>${t('topDefaulters')}</div>
         ${defaulters.length === 0
-          ? '<p class="text-muted-kf fs-sm">No defaulters. Great recovery rate!</p>'
-          : defaulters.map((d, i) => `
+      ? '<p class="text-muted-kf fs-sm">No defaulters. Great recovery rate!</p>'
+      : defaulters.map((d, i) => `
             <div class="payment-row" data-ocid="reports.defaulter.item.${i + 1}">
               <div><div style="font-weight:700">${d.client.name}</div><div class="text-muted-kf fs-xs">${d.client.phone}</div></div>
               <div style="color:var(--color-danger);font-weight:700">${fmtCur(d.overdueAmount)}</div>
             </div>`).join('')
-        }
+    }
       </div>
 
       <div class="kf-card" data-ocid="reports.client_summary_card">
@@ -2033,17 +2079,17 @@ function renderReports(container) {
             </thead>
             <tbody>
               ${clients.map((c, i) => {
-                const cloans = loans.filter(l => l.clientId === c.id);
-                const given = cloans.reduce((s, l) => s + l.principal, 0);
-                const paid = payments.filter(p => cloans.some(l => l.id === p.loanId)).reduce((s, p) => s + p.amount, 0);
-                const pending = Math.max(0, cloans.reduce((s, l) => s + calcLoanStats(l).totalPayable, 0) - paid);
-                return `<tr style="border-bottom:1px solid var(--color-border-muted)" data-ocid="reports.client.item.${i + 1}">
+      const cloans = loans.filter(l => l.clientId === c.id);
+      const given = cloans.reduce((s, l) => s + l.principal, 0);
+      const paid = payments.filter(p => cloans.some(l => l.id === p.loanId)).reduce((s, p) => s + p.amount, 0);
+      const pending = Math.max(0, cloans.reduce((s, l) => s + calcLoanStats(l).totalPayable, 0) - paid);
+      return `<tr style="border-bottom:1px solid var(--color-border-muted)" data-ocid="reports.client.item.${i + 1}">
                   <td style="padding:.5rem .375rem;font-weight:600">${c.name}</td>
                   <td style="text-align:right;padding:.5rem .375rem">${fmtCur(given)}</td>
                   <td style="text-align:right;padding:.5rem .375rem;color:var(--color-success)">${fmtCur(paid)}</td>
                   <td style="text-align:right;padding:.5rem .375rem;color:var(--color-danger)">${fmtCur(pending)}</td>
                 </tr>`;
-              }).join('')}
+    }).join('')}
             </tbody>
           </table>
         </div>
@@ -2106,20 +2152,20 @@ function renderProfile(container) {
       s.financierName = n;
       s.businessName = b;
       Store.saveSettings(s);
-      
+
       const sess = getSession();
       if (sess?.user) {
         sess.user.financierName = n;
         sess.user.businessName = b;
         Store.saveSession(sess);
       }
-      
+
       showToast('Profile saved successfully', 'success');
-      
+
       // Update header instantly
       const headerName = document.querySelector('.header-profile .profile-name');
       if (headerName) headerName.textContent = n || 'Profile';
-      
+
       // Re-render profile view to reflect new avatar
       renderProfile(container);
     });
@@ -2136,7 +2182,7 @@ function renderSettings(container) {
 
   const plan = getPlan();
   const planExpiry = getPlanExpiryTime();
-  
+
   const settings = Store.settings();
   const session = getSession();
   const financierName = settings.financierName || session?.user?.financierName || 'Your Name';
@@ -2229,7 +2275,18 @@ function renderSettings(container) {
         </div>
       </div>
 
-
+      <div class="kf-card pro-card" data-ocid="settings.whatsapp_card">
+        <div class="section-title"><i class="fa-brands fa-whatsapp"></i> WhatsApp Reminders</div>
+        <div class="settings-row pro-row">
+          <div>
+            <div class="settings-row-label">Automated Payment Reminders</div>
+            <div class="settings-row-sub text-muted-kf">Configure WhatsApp to send automatic loan payment reminders</div>
+          </div>
+          <button class="btn-kf-primary" id="btn-whatsapp-settings" style="min-height:40px;font-size:.875rem; min-width:120px;">
+            <i class="fa-solid fa-gear me-2"></i>Configure
+          </button>
+        </div>
+      </div>
     <div class="kf-card pro-card" data-ocid="settings.recycle_bin_card">
       <div class="section-title"><i class="fa-solid fa-trash-can-arrow-up"></i> Recycle Bin</div>
       <div class="settings-row pro-row">
@@ -2244,6 +2301,9 @@ function renderSettings(container) {
 
       <div class="kf-card pro-card" data-ocid="settings.data_card">
         <div class="section-title"><i class="fa-solid fa-database"></i>Data Management</div>
+        <button class="btn-kf-primary w-100 mb-3" id="btn-load-dummy-clients">
+          <i class="fa-solid fa-vial me-2"></i>Load 5 Dummy Clients
+        </button>
         <button class="btn-kf-outline pro-btn-outline w-100 mb-3" id="btn-settings-export-pdf" data-ocid="settings.export_pdf_button"><i class="fa-solid fa-file-pdf me-1"></i>Export Data (PDF)</button>
         <button class="btn-kf-danger pro-btn-danger w-100" id="btn-clear-data" data-ocid="settings.clear_data_button"><i class="fa-solid fa-trash me-1"></i><span data-i18n="clearData">${t('clearData')}</span></button>
       </div>
@@ -2298,6 +2358,34 @@ function renderSettings(container) {
 
   translateDOM();
 
+  $('#btn-load-dummy-clients')?.addEventListener('click', () => {
+    const todayStr = today();
+    const d = new Date();
+    d.setMonth(d.getMonth() - 1); // Set start date to 1 month ago for monthly loan
+    const startStr = d.toISOString().split('T')[0];
+
+    const dummyClients = [];
+    const dummyLoans = [];
+
+    for (let i = 1; i <= 5; i++) {
+      const cid = 'c_dummy_' + uid();
+      dummyClients.push({
+        id: cid, name: 'Demo Client ' + i, phone: '+919344208525',
+        address: 'Sample Address', occupation: 'Demo', createdAt: todayStr
+      });
+      dummyLoans.push({
+        id: 'l_dummy_' + uid(), clientId: cid, principal: 10000,
+        interestRate: 2, interestType: 'percentage', duration: 12,
+        type: 'monthly', startDate: startStr, status: 'active', createdAt: startStr
+      });
+    }
+
+    Store.set('clients', [...Store.clients(), ...dummyClients]);
+    Store.set('loans', [...Store.loans(), ...dummyLoans]);
+    showToast('5 dummy clients with dues today loaded!', 'success');
+    navigateTo('settings');
+  });
+
   // Toggle Recycle Bin visibility
   $('#btn-open-recycle-bin').addEventListener('click', (e) => {
     const list = $('#settings-recycle-bin-list');
@@ -2343,6 +2431,11 @@ function renderSettings(container) {
 
   container.querySelector('#btn-goto-profile')?.addEventListener('click', () => {
     navigateTo('profile');
+  });
+
+  // WhatsApp settings button
+  container.querySelector('#btn-whatsapp-settings')?.addEventListener('click', () => {
+    window.location.href = 'whatsapp-settings.html';
   });
 
   // Upgrade button - preload orders when modal opens
@@ -2410,7 +2503,7 @@ function renderSettings(container) {
         statusEl.textContent = getStatusText(status);
         statusEl.style.color = getStatusColor(status);
         dotEl.style.backgroundColor = getStatusColor(status);
-        
+
         // Remove old animations
         dotEl.className = 'status-dot';
         if (status === 'syncing') dotEl.classList.add('pulse-syncing');
@@ -2638,9 +2731,10 @@ create table if not exists payments (
         localStorage.removeItem(LS.loans);
         localStorage.removeItem(LS.payments);
         localStorage.removeItem(LS.recycleBin);
-        triggerAutoSync();
+        if (window.KFSync) KFSync.backup(true);
+        clearAllUserData();
         showToast('All data cleared!', 'info');
-        navigateTo('dashboard');
+        navigateTo('home');
       });
     };
     $('#confirm-delete-msg').textContent = 'Are you sure you want to delete ALL clients, loans and payment data? This cannot be undone.';
@@ -2679,9 +2773,9 @@ create table if not exists payments (
   // PWA Install App Button - Attach after DOM is ready
   setTimeout(() => {
     const installBtn = $('#btn-install-app');
-    
+
     if (!installBtn) return;
-    
+
     // Check if already installed (standalone mode)
     if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
       console.log('✅ App already running in standalone mode');
@@ -2690,22 +2784,22 @@ create table if not exists payments (
       installBtn.style.opacity = '0.6';
       return;
     }
-    
+
     installBtn.addEventListener('click', async () => {
       console.log('🔘 Install button clicked');
       console.log('📦 deferredPrompt:', window.deferredPrompt);
-      
+
       if (!window.deferredPrompt) {
         // If beforeinstallprompt not available, show manual install instructions
         showToast('To install: Tap browser menu (⋮) → "Add to Home screen" or "Install app"', 'info');
         return;
       }
-      
+
       try {
         window.deferredPrompt.prompt();
         const { outcome } = await window.deferredPrompt.userChoice;
         console.log('👤 User choice:', outcome);
-        
+
         if (outcome === 'accepted') {
           showToast('App installed successfully! Check your home screen.', 'success');
           installBtn.innerHTML = '<i class="fa-solid fa-check me-2"></i>App Installed';
@@ -2718,7 +2812,7 @@ create table if not exists payments (
         console.error('❌ Install prompt error:', err);
         showToast('To install: Tap browser menu (⋮) → "Add to Home screen"', 'info');
       }
-      
+
       window.deferredPrompt = null;
     });
   }, 100);
@@ -2795,46 +2889,46 @@ function generateReceipt(payment, loan) {
 
 function downloadSingleReceiptPDF(payment, loan) {
   if (typeof window.jspdf === 'undefined') {
-      showToast('PDF library not loaded', 'error');
-      return;
+    showToast('PDF library not loaded', 'error');
+    return;
   }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF('p', 'pt', 'a5');
   const client = Store.clients().find(c => c.id === loan.clientId);
   const settings = Store.settings();
-  
+
   const pdfCur = (n) => 'Rs. ' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
   doc.setFontSize(18);
   doc.setTextColor(41, 128, 185);
   doc.text(settings.businessName || 'KaasFlow Finance', doc.internal.pageSize.getWidth() / 2, 40, { align: 'center' });
-  
+
   doc.setFontSize(14);
   doc.setTextColor(50, 50, 50);
   doc.text('Payment Receipt', doc.internal.pageSize.getWidth() / 2, 65, { align: 'center' });
-  
+
   doc.setFontSize(10);
   doc.setTextColor(100, 100, 100);
   doc.text(`Receipt ID: ${payment.id.toUpperCase()}`, 20, 100);
   doc.text(`Date: ${fmtDate(payment.date)}`, 20, 115);
-  
+
   doc.setLineWidth(1);
   doc.setDrawColor(220, 220, 220);
   doc.line(20, 125, doc.internal.pageSize.getWidth() - 20, 125);
-  
+
   doc.setFontSize(12);
   doc.setTextColor(0, 0, 0);
   doc.text(`Received From: ${client ? client.name : 'Unknown'}`, 20, 150);
   doc.text(`Amount Paid: ${pdfCur(payment.amount)}`, 20, 175);
   doc.text(`Loan ID: ${loan.id.toUpperCase()}`, 20, 200);
   if (payment.note) doc.text(`Notes: ${payment.note}`, 20, 225);
-  
+
   doc.line(20, 245, doc.internal.pageSize.getWidth() - 20, 245);
-  
+
   doc.setFontSize(10);
   doc.setTextColor(100, 100, 100);
   doc.text('Thank you for your payment!', doc.internal.pageSize.getWidth() / 2, 275, { align: 'center' });
-  
+
   doc.save(`Receipt_${payment.id}.pdf`);
   showToast('Receipt Downloaded!', 'success');
 }
@@ -2844,17 +2938,17 @@ function shareReceiptWhatsApp(payment, loan) {
   if (!client) return;
   const settings = Store.settings();
   const businessName = settings.businessName || 'KaasFlow Finance';
-  
+
   const msg = `🧾 *Payment Receipt*\n\n` +
-              `*${businessName}*\n` +
-              `------------------------\n` +
-              `*Date:* ${fmtDate(payment.date)}\n` +
-              `*Amount Paid:* ₹${payment.amount.toLocaleString('en-IN')}\n` +
-              `*Loan ID:* ${loan.id.toUpperCase()}\n` +
-              (payment.note ? `*Note:* ${payment.note}\n` : '') +
-              `------------------------\n` +
-              `Thank you for your payment!`;
-              
+    `*${businessName}*\n` +
+    `------------------------\n` +
+    `*Date:* ${fmtDate(payment.date)}\n` +
+    `*Amount Paid:* ₹${payment.amount.toLocaleString('en-IN')}\n` +
+    `*Loan ID:* ${loan.id.toUpperCase()}\n` +
+    (payment.note ? `*Note:* ${payment.note}\n` : '') +
+    `------------------------\n` +
+    `Thank you for your payment!`;
+
   const phone = client.phone.replace(/\D/g, '');
   const url = `https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`;
   window.open(url, '_blank');
@@ -2877,247 +2971,247 @@ function sendReminder(loanId) {
 
 // [NEW] PDF Download Requirements: Improved Client Details PDF
 function downloadClientDetailsPDF(clientId) {
-    if (typeof window.jspdf === 'undefined') {
-        showToast('PDF core library (jsPDF) not loaded', 'error');
-        return;
-    }
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const client = Store.clients().find(c => c.id === clientId);
-    if (!client) { showToast('Client not found', 'error'); return; }
-    
-    const clientLoans = Store.loans().filter(l => l.clientId === clientId);
-    const settings = Store.settings();
+  if (typeof window.jspdf === 'undefined') {
+    showToast('PDF core library (jsPDF) not loaded', 'error');
+    return;
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const client = Store.clients().find(c => c.id === clientId);
+  if (!client) { showToast('Client not found', 'error'); return; }
 
-    const pdfCur = (n) => 'Rs. ' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+  const clientLoans = Store.loans().filter(l => l.clientId === clientId);
+  const settings = Store.settings();
 
-    // Header
-    doc.setFontSize(22);
-    doc.setTextColor(41, 128, 185);
-    doc.text(settings.businessName || 'KaasFlow Finance', 14, 22);
-    doc.setFontSize(14);
-    doc.setTextColor(50, 50, 50);
-    doc.text(`Client Profile`, 14, 32);
-    
+  const pdfCur = (n) => 'Rs. ' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+
+  // Header
+  doc.setFontSize(22);
+  doc.setTextColor(41, 128, 185);
+  doc.text(settings.businessName || 'KaasFlow Finance', 14, 22);
+  doc.setFontSize(14);
+  doc.setTextColor(50, 50, 50);
+  doc.text(`Client Profile`, 14, 32);
+
+  doc.setFontSize(10);
+  doc.setTextColor(100, 100, 100);
+  doc.text(`Report Date: ${fmtDate(today())}`, 196, 22, { align: 'right' });
+
+  // Client Summary using AutoTable
+  doc.autoTable({
+    startY: 40,
+    head: [['Client Details', '']],
+    body: [
+      ['Name', client.name],
+      ['Phone', client.phone],
+      ['Address', client.address || '-'],
+      ['ID Number', client.idNum || '-'],
+      ['Occupation', client.occupation || '-'],
+      ['Registered On', fmtDate(client.createdAt)]
+    ],
+    theme: 'grid',
+    headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold' },
+    columnStyles: {
+      0: { fontStyle: 'bold', cellWidth: 60, fillColor: [245, 245, 245] }
+    },
+    styles: { fontSize: 10, cellPadding: 3 },
+  });
+
+  let finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY : doc.autoTable.previous.finalY;
+
+  doc.setFontSize(12);
+  doc.setTextColor(41, 128, 185);
+  doc.text(`Loans (${clientLoans.length})`, 14, finalY + 15);
+
+  if (clientLoans.length > 0) {
+    doc.autoTable({
+      startY: finalY + 20,
+      head: [['Principal', 'EMI', 'Duration', 'Paid', 'Balance', 'Status']],
+      body: clientLoans.map(l => {
+        const stats = calcLoanStats(l);
+        return [
+          pdfCur(l.principal),
+          pdfCur(stats.emi),
+          l.duration ? `${l.duration}m` : '-',
+          pdfCur(stats.totalPaid),
+          pdfCur(stats.remaining),
+          stats.isOverdue ? 'OVERDUE' : l.status.toUpperCase()
+        ];
+      }),
+      theme: 'striped',
+      headStyles: { fillColor: [44, 62, 80] },
+      styles: { fontSize: 9 }
+    });
+  } else {
     doc.setFontSize(10);
     doc.setTextColor(100, 100, 100);
-    doc.text(`Report Date: ${fmtDate(today())}`, 196, 22, { align: 'right' });
+    doc.text('No loans recorded for this client.', 14, finalY + 25);
+  }
 
-    // Client Summary using AutoTable
-    doc.autoTable({
-        startY: 40,
-        head: [['Client Details', '']],
-        body: [
-            ['Name', client.name],
-            ['Phone', client.phone],
-            ['Address', client.address || '-'],
-            ['ID Number', client.idNum || '-'],
-            ['Occupation', client.occupation || '-'],
-            ['Registered On', fmtDate(client.createdAt)]
-        ],
-        theme: 'grid',
-        headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold' },
-        columnStyles: {
-            0: { fontStyle: 'bold', cellWidth: 60, fillColor: [245, 245, 245] }
-        },
-        styles: { fontSize: 10, cellPadding: 3 },
-    });
-
-    let finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY : doc.autoTable.previous.finalY;
-
-    doc.setFontSize(12);
-    doc.setTextColor(41, 128, 185);
-    doc.text(`Loans (${clientLoans.length})`, 14, finalY + 15);
-
-    if (clientLoans.length > 0) {
-        doc.autoTable({
-            startY: finalY + 20,
-            head: [['Principal', 'EMI', 'Duration', 'Paid', 'Balance', 'Status']],
-            body: clientLoans.map(l => {
-                const stats = calcLoanStats(l);
-                return [
-                    pdfCur(l.principal), 
-                    pdfCur(stats.emi), 
-                    l.duration ? `${l.duration}m` : '-', 
-                    pdfCur(stats.totalPaid), 
-                    pdfCur(stats.remaining), 
-                    stats.isOverdue ? 'OVERDUE' : l.status.toUpperCase()
-                ];
-            }),
-            theme: 'striped',
-            headStyles: { fillColor: [44, 62, 80] },
-            styles: { fontSize: 9 }
-        });
-    } else {
-        doc.setFontSize(10);
-        doc.setTextColor(100, 100, 100);
-        doc.text('No loans recorded for this client.', 14, finalY + 25);
-    }
-
-    doc.save(`Client-Profile-${client.name.replace(/\s/g, '_')}.pdf`);
-    showToast('Profile Downloaded!', 'success');
+  doc.save(`Client-Profile-${client.name.replace(/\s/g, '_')}.pdf`);
+  showToast('Profile Downloaded!', 'success');
 }
 
 // [NEW] PDF Download Requirements: Improved Loan Details PDF
 function downloadLoanDetailsPDF(loanId) {
-    if (typeof window.jspdf === 'undefined') {
-        showToast('PDF core library (jsPDF) not loaded', 'error');
-        return;
-    }
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const loan = Store.loans().find(l => l.id === loanId);
-    if (!loan) { showToast('Loan not found', 'error'); return; }
-    const client = Store.clients().find(c => c.id === loan.clientId);
-    const payments = Store.payments().filter(p => p.loanId === loanId).sort((a, b) => new Date(b.date) - new Date(a.date));
-    const stats = calcLoanStats(loan);
-    const settings = Store.settings();
+  if (typeof window.jspdf === 'undefined') {
+    showToast('PDF core library (jsPDF) not loaded', 'error');
+    return;
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const loan = Store.loans().find(l => l.id === loanId);
+  if (!loan) { showToast('Loan not found', 'error'); return; }
+  const client = Store.clients().find(c => c.id === loan.clientId);
+  const payments = Store.payments().filter(p => p.loanId === loanId).sort((a, b) => new Date(b.date) - new Date(a.date));
+  const stats = calcLoanStats(loan);
+  const settings = Store.settings();
 
-    const pdfCur = (n) => 'Rs. ' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+  const pdfCur = (n) => 'Rs. ' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
-    // Business Name & Header
-    doc.setFontSize(22);
-    doc.setTextColor(41, 128, 185); // Nice blue
-    doc.text(settings.businessName || 'KaasFlow Finance', 14, 22);
-    
-    doc.setFontSize(14);
-    doc.setTextColor(50, 50, 50);
-    doc.text('Loan Statement & Payment History', 14, 32);
-    
+  // Business Name & Header
+  doc.setFontSize(22);
+  doc.setTextColor(41, 128, 185); // Nice blue
+  doc.text(settings.businessName || 'KaasFlow Finance', 14, 22);
+
+  doc.setFontSize(14);
+  doc.setTextColor(50, 50, 50);
+  doc.text('Loan Statement & Payment History', 14, 32);
+
+  doc.setFontSize(10);
+  doc.setTextColor(100, 100, 100);
+  doc.text(`Generated on: ${fmtDate(today())}`, 196, 22, { align: 'right' });
+  doc.text(`Loan ID: ${loan.id.toUpperCase()}`, 196, 28, { align: 'right' });
+
+  // Client Info
+  doc.setFontSize(11);
+  doc.setTextColor(0, 0, 0);
+  doc.text(`Client Name: ${client ? client.name : 'Unknown'}`, 14, 45);
+  doc.text(`Phone: ${client ? client.phone : 'N/A'}`, 14, 51);
+
+  // Loan Summary using AutoTable for perfect alignment
+  doc.autoTable({
+    startY: 60,
+    head: [['Loan Summary', '']],
+    body: [
+      ['Principal Amount', pdfCur(loan.principal)],
+      ['Interest Rate', `${loan.interestRate || 0}% (${loan.type})`],
+      ['Duration', loan.duration ? `${loan.duration} installments` : 'Open / No fixed duration'],
+      ['EMI Amount', pdfCur(stats.emi)],
+      ['Total Payable', pdfCur(stats.totalPayable)],
+      ['Total Paid', pdfCur(stats.totalPaid)],
+      ['Balance Remaining', pdfCur(stats.remaining)],
+      ['Loan Status', stats.isOverdue ? `OVERDUE (${stats.daysOverdue} days)` : loan.status.toUpperCase()],
+      ['Start Date', fmtDate(loan.startDate)],
+      ['Next Due Date', stats.nextDueDate ? fmtDate(stats.nextDueDate) : 'N/A']
+    ],
+    theme: 'grid',
+    headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold' },
+    columnStyles: {
+      0: { fontStyle: 'bold', cellWidth: 80, fillColor: [245, 245, 245] },
+      1: { cellWidth: 'auto' }
+    },
+    styles: { fontSize: 10, cellPadding: 3 }
+  });
+
+  let finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY : doc.autoTable.previous.finalY;
+
+  // Payment History Table
+  doc.setFontSize(14);
+  doc.setTextColor(41, 128, 185);
+  doc.text('Payment History', 14, finalY + 15);
+
+  if (payments.length === 0) {
     doc.setFontSize(10);
     doc.setTextColor(100, 100, 100);
-    doc.text(`Generated on: ${fmtDate(today())}`, 196, 22, { align: 'right' });
-    doc.text(`Loan ID: ${loan.id.toUpperCase()}`, 196, 28, { align: 'right' });
+    doc.text('No payments recorded yet.', 14, finalY + 25);
+  } else {
+    const head = [['Date', 'Amount Paid', 'Payment Mode', 'Status', 'Notes']];
+    const body = payments.map(p => [
+      fmtDate(p.date),
+      pdfCur(p.amount),
+      p.mode ? p.mode.charAt(0).toUpperCase() + p.mode.slice(1) : '-',
+      p.status ? p.status.toUpperCase() : 'PAID',
+      p.note || '-'
+    ]);
 
-    // Client Info
-    doc.setFontSize(11);
-    doc.setTextColor(0, 0, 0);
-    doc.text(`Client Name: ${client ? client.name : 'Unknown'}`, 14, 45);
-    doc.text(`Phone: ${client ? client.phone : 'N/A'}`, 14, 51);
-
-    // Loan Summary using AutoTable for perfect alignment
     doc.autoTable({
-        startY: 60,
-        head: [['Loan Summary', '']],
-        body: [
-            ['Principal Amount', pdfCur(loan.principal)],
-            ['Interest Rate', `${loan.interestRate || 0}% (${loan.type})`],
-            ['Duration', loan.duration ? `${loan.duration} installments` : 'Open / No fixed duration'],
-            ['EMI Amount', pdfCur(stats.emi)],
-            ['Total Payable', pdfCur(stats.totalPayable)],
-            ['Total Paid', pdfCur(stats.totalPaid)],
-            ['Balance Remaining', pdfCur(stats.remaining)],
-            ['Loan Status', stats.isOverdue ? `OVERDUE (${stats.daysOverdue} days)` : loan.status.toUpperCase()],
-            ['Start Date', fmtDate(loan.startDate)],
-            ['Next Due Date', stats.nextDueDate ? fmtDate(stats.nextDueDate) : 'N/A']
-        ],
-        theme: 'grid',
-        headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold' },
-        columnStyles: {
-            0: { fontStyle: 'bold', cellWidth: 80, fillColor: [245, 245, 245] },
-            1: { cellWidth: 'auto' }
-        },
-        styles: { fontSize: 10, cellPadding: 3 }
+      startY: finalY + 20,
+      head: head,
+      body: body,
+      theme: 'striped',
+      headStyles: { fillColor: [44, 62, 80], textColor: 255 },
+      styles: { fontSize: 9, cellPadding: 3 },
+      alternateRowStyles: { fillColor: [240, 248, 255] }
     });
+  }
 
-    let finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY : doc.autoTable.previous.finalY;
-
-    // Payment History Table
-    doc.setFontSize(14);
-    doc.setTextColor(41, 128, 185);
-    doc.text('Payment History', 14, finalY + 15);
-
-    if (payments.length === 0) {
-        doc.setFontSize(10);
-        doc.setTextColor(100, 100, 100);
-        doc.text('No payments recorded yet.', 14, finalY + 25);
-    } else {
-        const head = [['Date', 'Amount Paid', 'Payment Mode', 'Status', 'Notes']];
-        const body = payments.map(p => [
-            fmtDate(p.date),
-            pdfCur(p.amount),
-            p.mode ? p.mode.charAt(0).toUpperCase() + p.mode.slice(1) : '-',
-            p.status ? p.status.toUpperCase() : 'PAID',
-            p.note || '-'
-        ]);
-
-        doc.autoTable({
-            startY: finalY + 20,
-            head: head,
-            body: body,
-            theme: 'striped',
-            headStyles: { fillColor: [44, 62, 80], textColor: 255 },
-            styles: { fontSize: 9, cellPadding: 3 },
-            alternateRowStyles: { fillColor: [240, 248, 255] }
-        });
-    }
-
-    doc.save(`Loan_Statement_${client ? client.name.replace(/\s/g, '_') : 'Client'}_${loan.id.slice(-4)}.pdf`);
-    showToast('Loan Statement Downloaded!', 'success');
+  doc.save(`Loan_Statement_${client ? client.name.replace(/\s/g, '_') : 'Client'}_${loan.id.slice(-4)}.pdf`);
+  showToast('Loan Statement Downloaded!', 'success');
 }
 
 // [NEW] PDF / Word Download Requirements: Collection Details PDF
 function downloadCollectionDetailsPDF(loanId) {
-    downloadLoanDetailsPDF(loanId);
+  downloadLoanDetailsPDF(loanId);
 }
 
 // ── EXPORT / IMPORT ───────────────────────────────────────────
 function exportAllDataAsPDF() {
-    if (typeof window.jspdf === 'undefined') {
-        showToast('PDF library not loaded', 'error');
-        return;
-    }
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('p', 'pt');
-    const clients = Store.clients();
-    const loans = Store.loans();
-    const payments = Store.payments();
-    const settings = Store.settings();
+  if (typeof window.jspdf === 'undefined') {
+    showToast('PDF library not loaded', 'error');
+    return;
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('p', 'pt');
+  const clients = Store.clients();
+  const loans = Store.loans();
+  const payments = Store.payments();
+  const settings = Store.settings();
 
-    const pdfCur = (n) => 'Rs. ' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+  const pdfCur = (n) => 'Rs. ' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
-    // Title Page / Header
-    doc.setFontSize(22);
-    doc.setTextColor(41, 128, 185);
-    doc.text(settings.businessName || 'KaasFlow Data Export', doc.internal.pageSize.getWidth() / 2, 60, { align: 'center' });
-    doc.setFontSize(12);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Generated on: ${fmtDate(today())}`, doc.internal.pageSize.getWidth() / 2, 80, { align: 'center' });
+  // Title Page / Header
+  doc.setFontSize(22);
+  doc.setTextColor(41, 128, 185);
+  doc.text(settings.businessName || 'KaasFlow Data Export', doc.internal.pageSize.getWidth() / 2, 60, { align: 'center' });
+  doc.setFontSize(12);
+  doc.setTextColor(100, 100, 100);
+  doc.text(`Generated on: ${fmtDate(today())}`, doc.internal.pageSize.getWidth() / 2, 80, { align: 'center' });
 
-    // Clients Table
-    doc.setFontSize(16);
-    doc.setTextColor(50, 50, 50);
-    doc.text('Clients', 40, 120);
-    let head = [['Name', 'Phone', 'Address', 'Occupation']];
-    let body = clients.map(c => [c.name, c.phone, c.address || '-', c.occupation || '-']);
-    doc.autoTable({ startY: 130, head, body, theme: 'grid', headStyles: { fillColor: [41, 128, 185] } });
+  // Clients Table
+  doc.setFontSize(16);
+  doc.setTextColor(50, 50, 50);
+  doc.text('Clients', 40, 120);
+  let head = [['Name', 'Phone', 'Address', 'Occupation']];
+  let body = clients.map(c => [c.name, c.phone, c.address || '-', c.occupation || '-']);
+  doc.autoTable({ startY: 130, head, body, theme: 'grid', headStyles: { fillColor: [41, 128, 185] } });
 
-    // Loans Table
-    doc.addPage();
-    doc.setFontSize(16);
-    doc.text('Loans', 40, 40);
-    head = [['Client', 'Principal', 'EMI', 'Paid', 'Remaining', 'Status']];
-    body = loans.map(l => {
-        const c = clients.find(cl => cl.id === l.clientId);
-        const stats = calcLoanStats(l);
-        return [c ? c.name : 'Unknown', pdfCur(l.principal), pdfCur(stats.emi), pdfCur(stats.totalPaid), pdfCur(stats.remaining), stats.isOverdue ? 'OVERDUE' : l.status.toUpperCase()];
-    });
-    doc.autoTable({ startY: 50, head, body, theme: 'grid', headStyles: { fillColor: [41, 128, 185] } });
+  // Loans Table
+  doc.addPage();
+  doc.setFontSize(16);
+  doc.text('Loans', 40, 40);
+  head = [['Client', 'Principal', 'EMI', 'Paid', 'Remaining', 'Status']];
+  body = loans.map(l => {
+    const c = clients.find(cl => cl.id === l.clientId);
+    const stats = calcLoanStats(l);
+    return [c ? c.name : 'Unknown', pdfCur(l.principal), pdfCur(stats.emi), pdfCur(stats.totalPaid), pdfCur(stats.remaining), stats.isOverdue ? 'OVERDUE' : l.status.toUpperCase()];
+  });
+  doc.autoTable({ startY: 50, head, body, theme: 'grid', headStyles: { fillColor: [41, 128, 185] } });
 
-    // Payments Table
-    doc.addPage();
-    doc.setFontSize(16);
-    doc.text('Payments', 40, 40);
-    head = [['Date', 'Client', 'Amount', 'Mode', 'Note']];
-    body = payments.sort((a,b) => b.date.localeCompare(a.date)).map(p => {
-        const l = loans.find(ln => ln.id === p.loanId);
-        const c = l ? clients.find(cl => cl.id === l.clientId) : null;
-        return [fmtDate(p.date), c ? c.name : 'Unknown', pdfCur(p.amount), p.mode ? p.mode.charAt(0).toUpperCase() + p.mode.slice(1) : '-', p.note || '-'];
-    });
-    doc.autoTable({ startY: 50, head, body, theme: 'grid', headStyles: { fillColor: [41, 128, 185] } });
+  // Payments Table
+  doc.addPage();
+  doc.setFontSize(16);
+  doc.text('Payments', 40, 40);
+  head = [['Date', 'Client', 'Amount', 'Mode', 'Note']];
+  body = payments.sort((a, b) => b.date.localeCompare(a.date)).map(p => {
+    const l = loans.find(ln => ln.id === p.loanId);
+    const c = l ? clients.find(cl => cl.id === l.clientId) : null;
+    return [fmtDate(p.date), c ? c.name : 'Unknown', pdfCur(p.amount), p.mode ? p.mode.charAt(0).toUpperCase() + p.mode.slice(1) : '-', p.note || '-'];
+  });
+  doc.autoTable({ startY: 50, head, body, theme: 'grid', headStyles: { fillColor: [41, 128, 185] } });
 
-    doc.save(`KaasFlow-Export-${today()}.pdf`);
-    showToast('PDF Report Generated!', 'success');
+  doc.save(`KaasFlow-Export-${today()}.pdf`);
+  showToast('PDF Report Generated!', 'success');
 }
 
 function exportCSV() {
@@ -3371,7 +3465,7 @@ function scheduleNotifications() {
   } else if (Notification.permission === 'default') {
     Notification.requestPermission().then(perm => {
       if (perm === 'granted') askAndSchedule();
-    }).catch(() => {});
+    }).catch(() => { });
   }
 }
 
@@ -3389,8 +3483,8 @@ function fireTodayNotifications() {
   const lastSent = localStorage.getItem('kf_notif_sent_date');
   if (lastSent === todayStr) return;
 
-  const loans   = Store.loans().filter(l => l.status === 'active');
-  const clients  = Store.clients();
+  const loans = Store.loans().filter(l => l.status === 'active');
+  const clients = Store.clients();
 
   const items = loans
     .map(l => ({ loan: l, stats: calcLoanStats(l), client: clients.find(c => c.id === l.clientId) }))
@@ -3402,10 +3496,10 @@ function fireTodayNotifications() {
 
   items.forEach(({ loan, stats, client }, idx) => {
     setTimeout(() => {
-      const name        = client ? client.name : 'Unknown Client';
-      const amount      = fmtCur(stats.emi);
-      const dueDate     = fmtDate(stats.nextDueDate);
-      const isOverdue   = stats.isOverdue;
+      const name = client ? client.name : 'Unknown Client';
+      const amount = fmtCur(stats.emi);
+      const dueDate = fmtDate(stats.nextDueDate);
+      const isOverdue = stats.isOverdue;
 
       const title = isOverdue
         ? `⚠️ Overdue — ${name}`
@@ -3418,18 +3512,18 @@ function fireTodayNotifications() {
       ];
 
       const notifOptions = {
-        body:    bodyLines.join('\n'),
-        icon:    'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23d4a017%22/><text y=%2272%22 x=%2250%22 text-anchor=%22middle%22 font-size=%2265%22>%E2%82%B9</text></svg>',
-        badge:   'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%23d4a017%22/><text y=%2272%22 x=%2250%22 text-anchor=%22middle%22 font-size=%2265%22>%E2%82%B9</text></svg>',
-        tag:     `kf-due-${loan.id}-${todayStr}`,
+        body: bodyLines.join('\n'),
+        icon: 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23d4a017%22/><text y=%2272%22 x=%2250%22 text-anchor=%22middle%22 font-size=%2265%22>%E2%82%B9</text></svg>',
+        badge: 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%23d4a017%22/><text y=%2272%22 x=%2250%22 text-anchor=%22middle%22 font-size=%2265%22>%E2%82%B9</text></svg>',
+        tag: `kf-due-${loan.id}-${todayStr}`,
         requireInteraction: true,  // stays on screen until user acts
         actions: [
-          { action: 'paid',    title: '✅ Paid' },
+          { action: 'paid', title: '✅ Paid' },
           { action: 'pending', title: '⏳ Pending' },
         ],
         data: {
           loanId: loan.id,
-          emi:    stats.emi,
+          emi: stats.emi,
           amount: stats.emi,
         },
         vibrate: [200, 100, 200],  // buzz pattern on Android
@@ -3443,7 +3537,7 @@ function fireTodayNotifications() {
         });
       } else {
         try { new Notification(title, { body: notifOptions.body, icon: notifOptions.icon }); }
-        catch (e) {}
+        catch (e) { }
       }
     }, idx * 900);
   });
@@ -3484,7 +3578,7 @@ function typeAIOrbText() {
   let phraseIndex = 0;
   let charIndex = 0;
   let isDeleting = false;
-  
+
   function type() {
     if (!document.getElementById('ai-typing-text')) return;
     const currentPhrase = phrases[phraseIndex];
@@ -3495,9 +3589,9 @@ function typeAIOrbText() {
       textEl.innerText = currentPhrase.substring(0, charIndex + 1);
       charIndex++;
     }
-    
+
     let typeSpeed = isDeleting ? 30 : 70;
-    
+
     if (!isDeleting && charIndex === currentPhrase.length) {
       typeSpeed = 2000;
       isDeleting = true;
@@ -3506,10 +3600,10 @@ function typeAIOrbText() {
       phraseIndex = (phraseIndex + 1) % phrases.length;
       typeSpeed = 500;
     }
-    
+
     setTimeout(type, typeSpeed);
   }
-  
+
   // Start typing
   setTimeout(type, 1000);
 }
@@ -3527,10 +3621,10 @@ function renderNotifDropdown() {
     client: clients.find(c => c.id === l.clientId)
   }));
 
-  const overdue  = allItems.filter(({ stats }) => stats.isOverdue);
+  const overdue = allItems.filter(({ stats }) => stats.isOverdue);
   const dueToday = allItems.filter(({ stats }) => !stats.isOverdue && stats.nextDueDate === todayStr && stats.remaining > 0);
 
-  const listEl  = $('#notif-list');
+  const listEl = $('#notif-list');
   const emptyEl = $('#notif-empty');
 
   if (overdue.length === 0 && dueToday.length === 0) {
@@ -3758,7 +3852,7 @@ function bindGlobal() {
     const s = Store.settings();
     s.appPin = pin;
     Store.saveSettings(s);
-    
+
     // Sync to backend (or Supabase directly)
     const sessionUser = getSession()?.user;
     if (sessionUser && sessionUser.email) {
@@ -3767,7 +3861,7 @@ function bindGlobal() {
     if (window.KFSync) {
       KFSync.backup(true);
     }
-    
+
     // Show success animation
     inputs.forEach(i => i.classList.add('success'));
     showToast('🔒 Security PIN set successfully!', 'success');
@@ -3800,12 +3894,7 @@ function bindGlobal() {
 
   // Switch Account (from lock screen)
   $('#btn-switch-account')?.addEventListener('click', () => {
-    localStorage.removeItem(LS.session);
-    const s = Store.settings();
-    delete s.appPin;
-    Store.saveSettings(s);
-    state.session = null;
-    showAuth();
+    logout(); // Use full logout for proper data isolation and cleanup
   });
 
   // Forgot Security PIN Flow
@@ -3813,17 +3902,17 @@ function bindGlobal() {
 
   $('#btn-forgot-pin')?.addEventListener('click', () => {
     resetPinEmail = Store.session()?.user?.email || '';
-    if(!resetPinEmail) {
+    if (!resetPinEmail) {
       showToast('Cannot identify user email. Please switch account and login again.', 'error');
       return;
     }
     $('#forgot-pin-email').value = resetPinEmail;
-    
+
     // Reset steps
     $('#forgot-pin-step-1').style.display = 'block';
     $('#forgot-pin-step-2').style.display = 'none';
     $('#forgot-pin-step-3').style.display = 'none';
-    
+
     // Clear inputs
     $$('.reset-otp-input').forEach(i => i.value = '');
     $$('.reset-new-pin-input').forEach(i => i.value = '');
@@ -3845,7 +3934,7 @@ function bindGlobal() {
       }
       if (e.key === 'Enter') {
         const otpStr = $$('.reset-otp-input').map(i => i.value).join('');
-        if(otpStr.length === 6) $('#btn-verify-pin-otp')?.click();
+        if (otpStr.length === 6) $('#btn-verify-pin-otp')?.click();
       }
     });
   });
@@ -3864,7 +3953,7 @@ function bindGlobal() {
       }
       if (e.key === 'Enter') {
         const pinStr = $$('.reset-new-pin-input').map(i => i.value).join('');
-        if(pinStr.length === 4) $('#btn-save-new-pin')?.click();
+        if (pinStr.length === 4) $('#btn-save-new-pin')?.click();
       }
     });
   });
@@ -3930,18 +4019,18 @@ function bindGlobal() {
     const s = Store.settings();
     s.appPin = newPin;
     Store.saveSettings(s);
-    
+
     // Sync to backend
     if (resetPinEmail) {
       apiAuth('set-pin', { email: resetPinEmail, pin: newPin }).catch(e => console.error(e));
     }
-    
+
     // Close modal
     const modalEl = document.getElementById('forgotPinModal');
     bootstrap.Modal.getInstance(modalEl)?.hide();
-    
+
     showToast('🔒 PIN reset successfully!', 'success');
-    
+
     // Automatically log them in since they verified OTP
     setTimeout(() => showApp(), 500);
   });
@@ -4046,7 +4135,7 @@ function bindGlobal() {
     const interestRate = parseFloat($('#loan-interest').value) || 0;
     const type = $('#loan-type').value;
     const startDate = $('#loan-start-date').value || today();
-    
+
     if (!clientId || !principal || principal < 1) {
       showToast('Fill in required loan fields (Client & valid Principal)', 'error'); return;
     }
@@ -4134,6 +4223,36 @@ function bindGlobal() {
     showToast(`Payment of ${fmtCur(amount)} recorded!`, 'success');
     updateNotifBadge();
     if (state.page !== 'settings') navigateTo(state.page);
+  });
+
+  // Save partial payment button listener
+  $('#save-partial-payment-btn')?.addEventListener('click', () => {
+    const loanId = $('#partial-payment-loan-id').value;
+    const amount = parseFloat($('#partial-payment-amount').value);
+    const note = $('#partial-payment-note').value.trim();
+
+    if (!loanId || !amount || amount < 1) {
+      showToast('Enter a valid partial amount', 'error'); return;
+    }
+
+    const loan = Store.loans().find(l => l.id === loanId);
+    const payment = {
+      id: uid(),
+      loanId,
+      amount,
+      date: today(),
+      note: note || 'Partial payment',
+      createdAt: new Date().toISOString()
+    };
+
+    const payments = Store.payments();
+    payments.push(payment);
+    Store.savePayments(payments);
+
+    bootstrap.Modal.getInstance($('#partialPaymentModal'))?.hide();
+    showToast(`Partial payment of ${fmtCur(amount)} recorded!`, 'success');
+    if (loan) generateReceipt(payment, loan);
+    navigateTo(state.page);
   });
 
   // Confirm delete button
@@ -4241,7 +4360,7 @@ function setupPinInputBehavior(containerSel) {
 // ── SUBSCRIPTION PAYMENT SYSTEM ──────────────────────────────
 function initiatePlanPayment(planType) {
   console.log('🎯 initiatePlanPayment called for:', planType);
-  
+
   // Close upgrade modals immediately
   ['upgradeModal', 'blockingUpgradeModal'].forEach(id => {
     const el = document.getElementById(id);
@@ -4271,7 +4390,7 @@ function initiatePlanPayment(planType) {
   RazorpayPayment.payForPlanInstant(planType, {
     onSuccess: (response) => {
       const settings = Store.settings();
-      
+
       // Save new plan and payment date
       settings.plan = planType;
       settings.paymentDate = new Date().toISOString();
@@ -4312,7 +4431,7 @@ function initiatePlanPayment(planType) {
       if (typeof showToast === 'function') {
         showToast('✅ Payment confirmed! ' + PLAN_NAMES[planType] + ' activated.', 'success');
       }
-      
+
       // Explicit limit popup for the user
       setTimeout(() => {
         alert('🎉 Upgrade Successful!\n\nYou now have unlimited access. Enjoy KaasFlow Premium!');
@@ -4338,11 +4457,11 @@ function initiatePlanPayment(planType) {
 }
 
 // ── MODAL TOGGLES FOR SETTINGS INFO ───────────────────────────
-window.openTermsModal = function() { document.getElementById('termsModal').style.display = 'flex'; }
-window.openPrivacyModal = function() { document.getElementById('privacyModal').style.display = 'flex'; }
-window.openContactModal = function() { document.getElementById('contactModal').style.display = 'flex'; }
-window.closeModal = function(id) { document.getElementById(id).style.display = 'none'; }
-window.closeContactOnOverlay = function(e) {
+window.openTermsModal = function () { document.getElementById('termsModal').style.display = 'flex'; }
+window.openPrivacyModal = function () { document.getElementById('privacyModal').style.display = 'flex'; }
+window.openContactModal = function () { document.getElementById('contactModal').style.display = 'flex'; }
+window.closeModal = function (id) { document.getElementById(id).style.display = 'none'; }
+window.closeContactOnOverlay = function (e) {
   if (e.target.id === 'contactModal') {
     closeModal('contactModal');
   }
@@ -4371,20 +4490,20 @@ window.addEventListener('appinstalled', () => {
 });
 
 // Handle floating bubble install click
-window.handleBubbleInstall = async function() {
+window.handleBubbleInstall = async function () {
   console.log('🔘 Install bubble clicked on samkass.site');
-  
+
   if (!window.deferredPrompt) {
     showToast('To install SamKass: Tap browser menu (⋮) → "Add to Home screen"', 'info');
     console.log('📱 Manual install instruction shown');
     return;
   }
-  
+
   try {
     window.deferredPrompt.prompt();
     const { outcome } = await window.deferredPrompt.userChoice;
     console.log('👤 User choice:', outcome);
-    
+
     if (outcome === 'accepted') {
       showToast('SamKass app installed successfully!', 'success');
       const bubble = $('#pwa-install-bubble');
@@ -4394,7 +4513,7 @@ window.handleBubbleInstall = async function() {
     console.error('❌ Install prompt error:', err);
     showToast('To install SamKass: Tap browser menu (⋮) → "Add to Home screen"', 'info');
   }
-  
+
   window.deferredPrompt = null;
 };
 
@@ -4416,23 +4535,23 @@ setTimeout(() => {
 
 document.addEventListener('DOMContentLoaded', () => {
   console.log('🎬 BOOT: DOMContentLoaded event fired');
-  
+
   // Check if required dependencies are loaded
   console.log('🔍 BOOT: Checking dependencies...');
   console.log('Bootstrap:', typeof bootstrap !== 'undefined');
   console.log('Chart.js:', typeof Chart !== 'undefined');
   console.log('jsPDF:', typeof window.jspdf !== 'undefined');
-  
+
   if (typeof RazorpayPayment !== 'undefined') {
     console.log('💳 BOOT: Initializing Razorpay...');
     RazorpayPayment.init();
   } else {
     console.warn('⚠️ BOOT: RazorpayPayment not found');
   }
-  
+
   // Initialize chatbot
   initChatbot();
-  
+
   // Brief loading screen delay for smooth UX
   console.log('⏳ BOOT: Waiting 400ms before calling init()...');
   setTimeout(() => {
@@ -4485,23 +4604,23 @@ const chatbotTranslations = {
 
 function initChatbot() {
   console.log('🤖 Initializing chatbot...');
-  
+
   // Wait for DOM to be fully ready
   setTimeout(() => {
     const chatbotIcon = document.getElementById('chatbot-icon');
     const chatbotInterface = document.getElementById('chatbot-interface');
-    
+
     if (!chatbotIcon) {
       console.error('❌ Chatbot icon element not found!');
       return;
     }
-    
+
     console.log('✅ Chatbot icon element found, binding events...');
-    
+
     // Make icon draggable
     chatbotIcon.addEventListener('mousedown', startDrag);
     chatbotIcon.addEventListener('touchstart', startDrag, { passive: false });
-    
+
     // Click to open chat - use both click and touchend for better mobile support
     chatbotIcon.addEventListener('click', (e) => {
       e.preventDefault();
@@ -4510,7 +4629,7 @@ function initChatbot() {
         openChatbot();
       }
     });
-    
+
     chatbotIcon.addEventListener('touchend', (e) => {
       e.preventDefault();
       console.log('👆 Chatbot icon touched, isDragging:', isDragging);
@@ -4518,7 +4637,7 @@ function initChatbot() {
         openChatbot();
       }
     });
-    
+
     // Auto-resize textarea
     const textarea = document.getElementById('chatbot-input');
     if (textarea) {
@@ -4530,7 +4649,7 @@ function initChatbot() {
         }
       });
     }
-    
+
     console.log('✅ Chatbot initialization complete!');
   }, 500);
 }
@@ -4538,31 +4657,31 @@ function initChatbot() {
 function startDrag(e) {
   e.preventDefault();
   isDragging = false;
-  
+
   const chatbotIcon = document.getElementById('chatbot-icon');
   if (!chatbotIcon) return;
-  
+
   const rect = chatbotIcon.getBoundingClientRect();
-  
+
   const clientX = e.clientX || (e.touches && e.touches[0].clientX);
   const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-  
+
   dragOffset.x = clientX - rect.left;
   dragOffset.y = clientY - rect.top;
-  
+
   // Add event listeners
   document.addEventListener('mousemove', drag);
   document.addEventListener('touchmove', drag, { passive: false });
   document.addEventListener('mouseup', stopDrag);
   document.addEventListener('touchend', stopDrag);
-  
+
   // Only mark as dragging after a small delay to allow clicks
   setTimeout(() => {
     if (document.addEventListener) {
       // Check if mouse/finger moved significantly
       const currentX = e.clientX || (e.touches && e.touches[0].clientX);
       const currentY = e.clientY || (e.touches && e.touches[0].clientY);
-      
+
       if (Math.abs(currentX - clientX) > 5 || Math.abs(currentY - clientY) > 5) {
         isDragging = true;
         chatbotIcon.classList.add('dragging');
@@ -4574,22 +4693,22 @@ function startDrag(e) {
 
 function drag(e) {
   if (!isDragging) return;
-  
+
   e.preventDefault();
   const chatbotIcon = document.getElementById('chatbot-icon');
-  
+
   const clientX = e.clientX || (e.touches && e.touches[0].clientX);
   const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-  
+
   const x = clientX - dragOffset.x;
   const y = clientY - dragOffset.y;
-  
+
   const maxX = window.innerWidth - 60;
   const maxY = window.innerHeight - 60;
-  
+
   const clampedX = Math.max(0, Math.min(x, maxX));
   const clampedY = Math.max(0, Math.min(y, maxY));
-  
+
   chatbotIcon.style.left = clampedX + 'px';
   chatbotIcon.style.top = clampedY + 'px';
   chatbotIcon.style.right = 'auto';
@@ -4601,10 +4720,10 @@ function stopDrag() {
   document.removeEventListener('touchmove', drag);
   document.removeEventListener('mouseup', stopDrag);
   document.removeEventListener('touchend', stopDrag);
-  
+
   const chatbotIcon = document.getElementById('chatbot-icon');
   chatbotIcon.classList.remove('dragging');
-  
+
   setTimeout(() => {
     isDragging = false;
   }, 100);
@@ -4612,32 +4731,32 @@ function stopDrag() {
 
 function openChatbot() {
   console.log('🚀 Opening chatbot interface...');
-  
+
   const chatbotInterface = document.getElementById('chatbot-interface');
   const chatbotIcon = document.getElementById('chatbot-icon');
-  
+
   if (!chatbotInterface) {
     console.error('❌ Chatbot interface element not found!');
     return;
   }
-  
+
   if (!chatbotIcon) {
     console.error('❌ Chatbot icon element not found!');
     return;
   }
-  
+
   console.log('✅ Opening chatbot interface...');
-  
+
   // Remove closing class if present
   chatbotInterface.classList.remove('closing');
-  
+
   // Show with smooth animation
   chatbotInterface.style.display = 'flex';
   chatbotIcon.style.display = 'none';
-  
+
   // Update language
   updateChatbotLanguage();
-  
+
   // Focus input after animation
   setTimeout(() => {
     const input = document.getElementById('chatbot-input');
@@ -4653,14 +4772,14 @@ window.openChatbot = openChatbot;
 
 function closeChatbot() {
   console.log('🚪 Closing chatbot interface...');
-  
+
   const chatbotInterface = document.getElementById('chatbot-interface');
   const chatbotIcon = document.getElementById('chatbot-icon');
-  
+
   if (chatbotInterface && chatbotIcon) {
     // Add closing animation class
     chatbotInterface.classList.add('closing');
-    
+
     // Wait for animation to complete before hiding
     setTimeout(() => {
       chatbotInterface.style.display = 'none';
@@ -4678,12 +4797,12 @@ function updateChatbotLanguage() {
   const settings = Store.settings();
   currentLang = settings.lang || 'en';
   const t = chatbotTranslations[currentLang] || chatbotTranslations.en;
-  
+
   const title = document.getElementById('chatbot-title');
   const subtitle = document.getElementById('chatbot-subtitle');
   const welcome = document.getElementById('welcome-message');
   const placeholder = document.getElementById('chatbot-input');
-  
+
   if (title) title.textContent = t.title;
   if (subtitle) subtitle.textContent = t.subtitle;
   if (welcome) welcome.textContent = t.welcome;
@@ -4692,36 +4811,36 @@ function updateChatbotLanguage() {
 
 function sendMessage() {
   console.log('💬 Sending message...');
-  
+
   const input = document.getElementById('chatbot-input');
   if (!input) {
     console.error('❌ Chatbot input not found!');
     return;
   }
-  
+
   const message = input.value.trim();
-  
+
   if (!message) {
     console.log('⚠️ Empty message, skipping...');
     return;
   }
-  
+
   console.log('📤 Message:', message);
-  
+
   // Detect language from input
   const detectedLang = detectLanguage(message);
   console.log('🌐 Detected language:', detectedLang);
-  
+
   // Add user message
   addMessage(message, 'user');
-  
+
   // Clear input
   input.value = '';
   autoResizeTextarea();
-  
+
   // Show thinking indicator
   showTypingIndicator();
-  
+
   // Process message and respond
   setTimeout(() => {
     hideTypingIndicator();
@@ -4744,7 +4863,7 @@ function addMessage(message, type) {
   const messagesContainer = document.getElementById('chatbot-messages');
   const messageDiv = document.createElement('div');
   messageDiv.className = type + '-message';
-  
+
   if (type === 'user') {
     messageDiv.innerHTML = `
       <div class="message-content">${message}</div>
@@ -4759,7 +4878,7 @@ function addMessage(message, type) {
       <div class="message-content">${message}</div>
     `;
   }
-  
+
   messagesContainer.appendChild(messageDiv);
   messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
@@ -4769,7 +4888,7 @@ function showTypingIndicator() {
   const typingDiv = document.createElement('div');
   typingDiv.className = 'bot-message typing-indicator';
   typingDiv.id = 'typing-indicator';
-  
+
   typingDiv.innerHTML = `
     <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #7ed321, #4caf1a); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
@@ -4782,7 +4901,7 @@ function showTypingIndicator() {
       <div class="typing-dot"></div>
     </div>
   `;
-  
+
   messagesContainer.appendChild(typingDiv);
   messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
@@ -4796,48 +4915,48 @@ function hideTypingIndicator() {
 
 function processUserMessage(message, language) {
   const lowerMessage = message.toLowerCase();
-  
+
   // Get app data
   const clients = Store.clients();
   const loans = Store.loans();
   const payments = Store.payments();
   const settings = Store.settings();
-  
+
   // Use appropriate language for response
   const t = chatbotTranslations[language] || chatbotTranslations.en;
-  
+
   // Calculate key metrics
   const totalLent = loans.reduce((sum, loan) => sum + loan.principal, 0);
   const totalCollected = payments.reduce((sum, p) => sum + p.amount, 0);
   const outstandingBalance = totalLent - totalCollected;
   const activeLoans = loans.filter(l => l.status === 'active');
-  
+
   // Today's data
   const today = new Date().toISOString().split('T')[0];
   const todayPayments = payments.filter(p => p.date === today);
   const todayCollection = todayPayments.reduce((sum, p) => sum + p.amount, 0);
-  
+
   // Client-related queries
   if (lowerMessage.includes('client') || lowerMessage.includes('வாடிக்கையாளர்') || lowerMessage.includes('customer')) {
     if (lowerMessage.includes('how many') || lowerMessage.includes('எத்தனை') || lowerMessage.includes('count')) {
-      return language === 'ta' 
+      return language === 'ta'
         ? `உங்களிடம் மொத்தம் ${clients.length} வாடிக்கையாளர்கள் உள்ளனர். ${activeLoans.length} பேருக்கு செயலில் உள்ள கடன்கள் உள்ளன.`
         : `You have a total of ${clients.length} clients. ${activeLoans.length} have active loans.`;
     }
-    
+
     if (lowerMessage.includes('list') || lowerMessage.includes('பட்டியல்')) {
       if (clients.length === 0) {
-        return language === 'ta' 
+        return language === 'ta'
           ? 'உங்களிடம் இன்னும் வாடிக்கையாளர்கள் எவரும் இல்லை.'
           : 'You don\'t have any clients yet.';
       }
       const clientList = clients.slice(0, 5).map(c => c.name).join(', ');
       const moreText = clients.length > 5 ? (language === 'ta' ? ` மற்றும் ${clients.length - 5} மேலும்` : ` and ${clients.length - 5} more`) : '';
-      return language === 'ta' 
+      return language === 'ta'
         ? `உங்கள் வாடிக்கையாளர்கள்: ${clientList}${moreText}.`
         : `Your clients: ${clientList}${moreText}.`;
     }
-    
+
     if (lowerMessage.includes('top') || lowerMessage.includes('best') || lowerMessage.includes('சிறந்த')) {
       const clientStats = clients.map(client => {
         const clientLoans = loans.filter(l => l.clientId === client.id);
@@ -4849,41 +4968,41 @@ function processUserMessage(message, language) {
         const totalPaid = clientPayments.reduce((sum, p) => sum + p.amount, 0);
         return { ...client, totalLent, totalPaid, balance: totalLent - totalPaid };
       }).sort((a, b) => b.totalLent - a.totalLent);
-      
+
       if (clientStats.length === 0) return t.noData;
-      
+
       const topClient = clientStats[0];
-      return language === 'ta' 
+      return language === 'ta'
         ? `உங்கள் மிகப்பெரிய வாடிக்கையாளர் ${topClient.name} - ₹${topClient.totalLent.toLocaleString()} கடன்.`
         : `Your biggest client is ${topClient.name} - ₹${topClient.totalLent.toLocaleString()} lent.`;
     }
   }
-  
+
   // Loan-related queries
   if (lowerMessage.includes('loan') || lowerMessage.includes('கடன்') || lowerMessage.includes('lend')) {
     if (lowerMessage.includes('total') || lowerMessage.includes('amount') || lowerMessage.includes('மொத்தம்')) {
-      return language === 'ta' 
+      return language === 'ta'
         ? `நீங்கள் மொத்தம் ₹${totalLent.toLocaleString()} கடன் கொடுத்துள்ளீர்கள். ${loans.length} கடன்கள் இதுவரை வழங்கப்பட்டுள்ளன.`
         : `You have lent a total of ₹${totalLent.toLocaleString()} across ${loans.length} loans.`;
     }
-    
+
     if (lowerMessage.includes('active') || lowerMessage.includes('செயலில்')) {
       const activePrincipal = activeLoans.reduce((sum, l) => sum + l.principal, 0);
-      return language === 'ta' 
+      return language === 'ta'
         ? `உங்களிடம் ${activeLoans.length} செயலில் உள்ள கடன்கள் உள்ளன, மொத்தம் ₹${activePrincipal.toLocaleString()}.`
         : `You have ${activeLoans.length} active loans totaling ₹${activePrincipal.toLocaleString()}.`;
     }
-    
+
     if (lowerMessage.includes('biggest') || lowerMessage.includes('largest') || lowerMessage.includes('பெரிய')) {
       if (loans.length === 0) return t.noData;
       const biggestLoan = loans.sort((a, b) => b.principal - a.principal)[0];
       const client = clients.find(c => c.id === biggestLoan.clientId);
-      return language === 'ta' 
+      return language === 'ta'
         ? `மிகப்பெரிய கடன் ${client?.name || 'Unknown'} - ₹${biggestLoan.principal.toLocaleString()}.`
         : `Biggest loan is to ${client?.name || 'Unknown'} - ₹${biggestLoan.principal.toLocaleString()}.`;
     }
   }
-  
+
   // Payment and collection queries
   if (lowerMessage.includes('payment') || lowerMessage.includes('பணம்') || lowerMessage.includes('collect') || lowerMessage.includes('due')) {
     if (lowerMessage.includes('today') || lowerMessage.includes('இன்று')) {
@@ -4894,63 +5013,63 @@ function processUserMessage(message, language) {
           return stats.nextDue && stats.nextDue <= today && stats.nextDue >= today;
         });
         const dueAmount = dueToday.reduce((sum, loan) => sum + calcLoanStats(loan).emi, 0);
-        
-        return language === 'ta' 
+
+        return language === 'ta'
           ? `இன்று ₹${dueAmount.toLocaleString()} சேகரிக்க வேண்டும் (${dueToday.length} கடன்கள்).`
           : `Today you need to collect ₹${dueAmount.toLocaleString()} from ${dueToday.length} loans.`;
       } else {
-        return language === 'ta' 
+        return language === 'ta'
           ? `இன்று நீங்கள் ₹${todayCollection.toLocaleString()} பெற்றுள்ளீர்கள் (${todayPayments.length} பணம் செலுத்துதல்கள்).`
           : `Today you collected ₹${todayCollection.toLocaleString()} from ${todayPayments.length} payments.`;
       }
     }
-    
+
     if (lowerMessage.includes('total') || lowerMessage.includes('மொத்தம்')) {
-      return language === 'ta' 
+      return language === 'ta'
         ? `நீங்கள் மொத்தம் ₹${totalCollected.toLocaleString()} சேகரித்துள்ளீர்கள் ${payments.length} பணம் செலுத்துதல்களில்.`
         : `You have collected a total of ₹${totalCollected.toLocaleString()} from ${payments.length} payments.`;
     }
-    
+
     if (lowerMessage.includes('overdue') || lowerMessage.includes('late') || lowerMessage.includes('தாமதம்')) {
       const overdueLoans = activeLoans.filter(loan => {
         const stats = calcLoanStats(loan);
         return stats.nextDue && new Date(stats.nextDue) < new Date(today);
       });
-      
+
       if (overdueLoans.length === 0) {
-        return language === 'ta' 
+        return language === 'ta'
           ? 'தாமதமான கடன்கள் எதுவும் இல்லை. நன்று!'
           : 'No overdue loans. Great!';
       }
-      
+
       const overdueAmount = overdueLoans.reduce((sum, loan) => sum + calcLoanStats(loan).emi, 0);
-      return language === 'ta' 
+      return language === 'ta'
         ? `${overdueLoans.length} கடன்கள் தாமதமாகியுள்ளன, மொத்தம் ₹${overdueAmount.toLocaleString()}.`
         : `${overdueLoans.length} loans are overdue, totaling ₹${overdueAmount.toLocaleString()}.`;
     }
   }
-  
+
   // Financial summary and dashboard queries
   if (lowerMessage.includes('summary') || lowerMessage.includes('overview') || lowerMessage.includes('dashboard') || lowerMessage.includes('சுருக்கம்')) {
-    return language === 'ta' 
+    return language === 'ta'
       ? `📊 உங்கள் நிதி சுருக்கம்:\n💰 மொத்த கடன்: ₹${totalLent.toLocaleString()}\n💳 சேகரிக்கப்பட்டது: ₹${totalCollected.toLocaleString()}\n📈 இருப்பு: ₹${outstandingBalance.toLocaleString()}\n👥 வாடிக்கையாளர்கள்: ${clients.length}\n📋 செயலில் உள்ள கடன்கள்: ${activeLoans.length}`
       : `📊 Your Financial Summary:\n💰 Total Lent: ₹${totalLent.toLocaleString()}\n💳 Collected: ₹${totalCollected.toLocaleString()}\n📈 Outstanding: ₹${outstandingBalance.toLocaleString()}\n👥 Clients: ${clients.length}\n📋 Active Loans: ${activeLoans.length}`;
   }
-  
+
   // Balance and outstanding queries
   if (lowerMessage.includes('balance') || lowerMessage.includes('outstanding') || lowerMessage.includes('இருப்பு') || lowerMessage.includes('நிலுவை')) {
-    const balanceText = language === 'ta' 
+    const balanceText = language === 'ta'
       ? `உங்கள் நிலுவை தொகை ₹${outstandingBalance.toLocaleString()}.`
       : `Your outstanding balance is ₹${outstandingBalance.toLocaleString()}.`;
-      
+
     if (outstandingBalance > totalLent * 0.8) {
-      return balanceText + (language === 'ta' 
+      return balanceText + (language === 'ta'
         ? ' பெரும்பாலான தொகை இன்னும் நிலுவையில் உள்ளது.'
         : ' Most of your money is still outstanding.');
     }
     return balanceText;
   }
-  
+
   // Interest and profit queries  
   if (lowerMessage.includes('interest') || lowerMessage.includes('profit') || lowerMessage.includes('வட்டி') || lowerMessage.includes('லாபம்')) {
     const totalInterest = payments.reduce((sum, p) => {
@@ -4958,83 +5077,83 @@ function processUserMessage(message, language) {
       if (!loan) return sum;
       return sum + Math.max(0, p.amount - (loan.principal / (loan.duration || 12)));
     }, 0);
-    
-    return language === 'ta' 
+
+    return language === 'ta'
       ? `தோராயமாக ₹${totalInterest.toLocaleString()} வட்டி வருமானம் கிடைத்துள்ளது.`
       : `Approximately ₹${totalInterest.toLocaleString()} in interest income earned.`;
   }
-  
+
   // Help and feature queries
   if (lowerMessage.includes('help') || lowerMessage.includes('உதவி') || lowerMessage.includes('how to') || lowerMessage.includes('எப்படி')) {
-    return language === 'ta' 
+    return language === 'ta'
       ? 'நான் உங்கள் வாடிக்கையாளர்கள், கடன்கள், பணம் செலுத்துதல் மற்றும் அறிக்கைகள் குறித்து உதவ முடியும். "சுருக்கம்", "இன்று வரவேண்டிய தொகை", "மிகப்பெரிய கடன்" போன்ற கேள்விகள் கேளுங்கள்!'
       : 'I can help with your clients, loans, payments, and reports. Try asking "summary", "due today", "biggest loan", or specific client names!';
   }
-  
+
   // Search for specific client names in the message
-  const clientMatch = clients.find(c => 
-    c.name.toLowerCase().includes(lowerMessage.replace(/[^\w\s]/g, '')) || 
+  const clientMatch = clients.find(c =>
+    c.name.toLowerCase().includes(lowerMessage.replace(/[^\w\s]/g, '')) ||
     lowerMessage.includes(c.name.toLowerCase())
   );
-  
+
   if (clientMatch) {
     const clientLoans = loans.filter(l => l.clientId === clientMatch.id);
     const clientPayments = payments.filter(p => {
       const loan = loans.find(l => l.id === p.loanId);
       return loan && loan.clientId === clientMatch.id;
     });
-    
+
     const totalLent = clientLoans.reduce((sum, l) => sum + l.principal, 0);
     const totalPaid = clientPayments.reduce((sum, p) => sum + p.amount, 0);
     const activeCount = clientLoans.filter(l => l.status === 'active').length;
-    
-    return language === 'ta' 
+
+    return language === 'ta'
       ? `${clientMatch.name}:\n💰 மொத்த கடன்: ₹${totalLent.toLocaleString()}\n💳 செலுத்தப்பட்டது: ₹${totalPaid.toLocaleString()}\n📈 இருப்பு: ₹${(totalLent - totalPaid).toLocaleString()}\n📱 தொலைபேசி: ${clientMatch.phone || 'N/A'}\n📋 செயலில் உள்ள கடன்கள்: ${activeCount}`
       : `${clientMatch.name}:\n💰 Total Lent: ₹${totalLent.toLocaleString()}\n💳 Paid: ₹${totalPaid.toLocaleString()}\n📈 Balance: ₹${(totalLent - totalPaid).toLocaleString()}\n📱 Phone: ${clientMatch.phone || 'N/A'}\n📋 Active Loans: ${activeCount}`;
   }
-  
+
   // Number queries (amounts, percentages, etc.)
   const numberMatch = lowerMessage.match(/\d+/);
   if (numberMatch && (lowerMessage.includes('amount') || lowerMessage.includes('rupees') || lowerMessage.includes('₹'))) {
     const amount = parseInt(numberMatch[0]);
     const matchingLoans = loans.filter(l => l.principal >= amount * 0.9 && l.principal <= amount * 1.1);
-    
+
     if (matchingLoans.length > 0) {
-      return language === 'ta' 
+      return language === 'ta'
         ? `₹${amount.toLocaleString()} அருகே ${matchingLoans.length} கடன்கள் கண்டுபிடிக்கப்பட்டன.`
         : `Found ${matchingLoans.length} loans around ₹${amount.toLocaleString()}.`;
     }
   }
-  
+
   // Default fallback with helpful suggestions
-  const suggestions = language === 'ta' 
+  const suggestions = language === 'ta'
     ? ['சுருக்கம்', 'இன்று வரவேண்டிய தொகை', 'மொத்த கடன்', 'வாடிக்கையாளர்கள் பட்டியல்']
     : ['summary', 'due today', 'total loans', 'client list'];
-    
-  return (language === 'ta' ? 'மன்னிக்கவும், அதைப் புரிந்துகொள்ள முடியவில்லை. ' : 'Sorry, I didn\'t understand that. ') + 
-         (language === 'ta' ? 'இவற்றை முயற்சி செய்யுங்கள்: ' : 'Try asking: ') + 
-         suggestions.join(', ') + 
-         (language === 'ta' ? ' அல்லது வாடிக்கையாளர் பெயர்கள்.' : ' or client names.');
+
+  return (language === 'ta' ? 'மன்னிக்கவும், அதைப் புரிந்துகொள்ள முடியவில்லை. ' : 'Sorry, I didn\'t understand that. ') +
+    (language === 'ta' ? 'இவற்றை முயற்சி செய்யுங்கள்: ' : 'Try asking: ') +
+    suggestions.join(', ') +
+    (language === 'ta' ? ' அல்லது வாடிக்கையாளர் பெயர்கள்.' : ' or client names.');
 }
 
 function autoResizeTextarea() {
   const textarea = document.getElementById('chatbot-input');
   if (!textarea) return;
-  
+
   textarea.style.height = 'auto';
   textarea.style.height = Math.min(textarea.scrollHeight, 100) + 'px';
 }
 
 function toggleVoiceInput() {
   console.log('🎤 Toggling voice input...');
-  
+
   if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
     const t = chatbotTranslations[currentLang] || chatbotTranslations.en;
     addMessage(t.voiceError, 'bot');
     console.log('❌ Speech recognition not supported');
     return;
   }
-  
+
   if (isRecording) {
     stopVoiceRecording();
   } else {
@@ -5048,36 +5167,36 @@ window.toggleVoiceInput = toggleVoiceInput;
 function startVoiceRecording() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   recognition = new SpeechRecognition();
-  
+
   recognition.continuous = false;
   recognition.interimResults = false;
   recognition.lang = currentLang === 'ta' ? 'ta-IN' : 'en-US';
-  
+
   const voiceButton = document.getElementById('chatbot-voice');
   const t = chatbotTranslations[currentLang] || chatbotTranslations.en;
-  
+
   recognition.onstart = () => {
     isRecording = true;
     voiceButton.classList.add('recording');
     addMessage(t.voiceStart, 'bot');
   };
-  
+
   recognition.onresult = (event) => {
     const transcript = event.results[0][0].transcript;
     document.getElementById('chatbot-input').value = transcript;
     autoResizeTextarea();
   };
-  
+
   recognition.onerror = () => {
     isRecording = false;
     voiceButton.classList.remove('recording');
   };
-  
+
   recognition.onend = () => {
     isRecording = false;
     voiceButton.classList.remove('recording');
   };
-  
+
   recognition.start();
 }
 
@@ -5109,4 +5228,3 @@ document.addEventListener('visibilitychange', () => {
     });
   }
 });
-
