@@ -2349,29 +2349,48 @@ function renderSettings(container) {
 
   $('#btn-load-dummy-clients')?.addEventListener('click', () => {
     const todayStr = today();
-    const d = new Date();
-    d.setMonth(d.getMonth() - 1); // Set start date to 1 month ago for monthly loan
-    const startStr = d.toISOString().split('T')[0];
-
     const dummyClients = [];
     const dummyLoans = [];
 
-    for (let i = 1; i <= 5; i++) {
-      const cid = 'c_dummy_' + uid();
+    // Create 3 weekly loan clients
+    for (let i = 1; i <= 3; i++) {
+      const cid = 'c_dummy_weekly_' + uid();
+      const weeklyStartDate = new Date();
+      weeklyStartDate.setDate(weeklyStartDate.getDate() - 7); // Set start date to 1 week ago
+      const weeklyStartStr = weeklyStartDate.toISOString().split('T')[0];
+      
       dummyClients.push({
-        id: cid, name: 'Demo Client ' + i, phone: '+919344208525',
+        id: cid, name: 'Weekly Client ' + i, phone: '+919344208525',
         address: 'Sample Address', occupation: 'Demo', createdAt: todayStr
       });
       dummyLoans.push({
-        id: 'l_dummy_' + uid(), clientId: cid, principal: 10000,
+        id: 'l_dummy_weekly_' + uid(), clientId: cid, principal: 5000,
         interestRate: 2, interestType: 'percentage', duration: 12,
-        type: 'monthly', startDate: startStr, status: 'active', createdAt: startStr
+        type: 'weekly', startDate: weeklyStartStr, status: 'active', createdAt: weeklyStartStr
+      });
+    }
+
+    // Create 2 monthly loan clients
+    for (let i = 1; i <= 2; i++) {
+      const cid = 'c_dummy_monthly_' + uid();
+      const monthlyStartDate = new Date();
+      monthlyStartDate.setMonth(monthlyStartDate.getMonth() - 1); // Set start date to 1 month ago
+      const monthlyStartStr = monthlyStartDate.toISOString().split('T')[0];
+      
+      dummyClients.push({
+        id: cid, name: 'Monthly Client ' + i, phone: '+919344208525',
+        address: 'Sample Address', occupation: 'Demo', createdAt: todayStr
+      });
+      dummyLoans.push({
+        id: 'l_dummy_monthly_' + uid(), clientId: cid, principal: 10000,
+        interestRate: 2, interestType: 'percentage', duration: 12,
+        type: 'monthly', startDate: monthlyStartStr, status: 'active', createdAt: monthlyStartStr
       });
     }
 
     Store.set('clients', [...Store.clients(), ...dummyClients]);
     Store.set('loans', [...Store.loans(), ...dummyLoans]);
-    showToast('5 dummy clients with dues today loaded!', 'success');
+    showToast('5 dummy clients loaded (3 weekly, 2 monthly)!', 'success');
     navigateTo('settings');
   });
 
@@ -4593,35 +4612,21 @@ function initChatbot() {
 
   // Wait for DOM to be fully ready
   setTimeout(() => {
+    const chatbotIconContainer = document.getElementById('chatbot-icon-container');
     const chatbotIcon = document.getElementById('chatbot-icon');
     const chatbotInterface = document.getElementById('chatbot-interface');
 
-    if (!chatbotIcon) {
-      console.error('❌ Chatbot icon element not found!');
+    if (!chatbotIconContainer || !chatbotIcon) {
+      console.error('❌ Chatbot elements not found!');
       return;
     }
 
-    console.log('✅ Chatbot icon element found, binding events...');
+    console.log('✅ Chatbot elements found, binding events...');
 
-    // Make icon draggable
-    chatbotIcon.addEventListener('mousedown', startDrag);
-    chatbotIcon.addEventListener('touchstart', startDrag, { passive: false });
-
-    // Click to open chat - use both click and touchend for better mobile support
-    chatbotIcon.addEventListener('click', (e) => {
-      e.preventDefault();
-      console.log('🔘 Chatbot icon clicked, isDragging:', isDragging);
-      if (!isDragging) {
-        openChatbot();
-      }
-    });
-
-    chatbotIcon.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      console.log('👆 Chatbot icon touched, isDragging:', isDragging);
-      if (!isDragging) {
-        openChatbot();
-      }
+    // Make the entire container draggable using the same function as bubbles
+    makeChatbotDraggable(chatbotIconContainer, function() {
+      // Click callback - open chatbot when not dragging
+      openChatbot();
     });
 
     // Auto-resize textarea
@@ -4638,6 +4643,98 @@ function initChatbot() {
 
     console.log('✅ Chatbot initialization complete!');
   }, 500);
+}
+
+// Make chatbot draggable with crazy animations
+function makeChatbotDraggable(element, onClickCallback) {
+  let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+  let isDraggingChatbot = false;
+  let dragThreshold = 5;
+  let startX = 0, startY = 0;
+
+  element.addEventListener('mousedown', dragMouseDown);
+  element.addEventListener('touchstart', dragTouchStart, { passive: false });
+
+  function dragMouseDown(e) {
+    e.preventDefault();
+    startX = e.clientX;
+    startY = e.clientY;
+    pos3 = e.clientX;
+    pos4 = e.clientY;
+    document.addEventListener('mouseup', closeDragElement);
+    document.addEventListener('mousemove', elementDrag);
+  }
+
+  function dragTouchStart(e) {
+    const touch = e.touches[0];
+    startX = touch.clientX;
+    startY = touch.clientY;
+    pos3 = touch.clientX;
+    pos4 = touch.clientY;
+    document.addEventListener('touchend', closeDragElement);
+    document.addEventListener('touchmove', elementTouchDrag, { passive: false });
+  }
+
+  function elementDrag(e) {
+    e.preventDefault();
+    const moved = Math.abs(e.clientX - startX) + Math.abs(e.clientY - startY);
+    if (moved > dragThreshold && !isDraggingChatbot) {
+      isDraggingChatbot = true;
+      element.classList.add('dragging');
+      const icon = element.querySelector('.chatbot-icon');
+      if (icon) icon.classList.add('dragging');
+    }
+    if (isDraggingChatbot) {
+      pos1 = pos3 - e.clientX;
+      pos2 = pos4 - e.clientY;
+      pos3 = e.clientX;
+      pos4 = e.clientY;
+      element.style.top = (element.offsetTop - pos2) + 'px';
+      element.style.left = (element.offsetLeft - pos1) + 'px';
+      element.style.right = 'auto';
+      element.style.bottom = 'auto';
+    }
+  }
+
+  function elementTouchDrag(e) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const moved = Math.abs(touch.clientX - startX) + Math.abs(touch.clientY - startY);
+    if (moved > dragThreshold && !isDraggingChatbot) {
+      isDraggingChatbot = true;
+      element.classList.add('dragging');
+      const icon = element.querySelector('.chatbot-icon');
+      if (icon) icon.classList.add('dragging');
+    }
+    if (isDraggingChatbot) {
+      pos1 = pos3 - touch.clientX;
+      pos2 = pos4 - touch.clientY;
+      pos3 = touch.clientX;
+      pos4 = touch.clientY;
+      element.style.top = (element.offsetTop - pos2) + 'px';
+      element.style.left = (element.offsetLeft - pos1) + 'px';
+      element.style.right = 'auto';
+      element.style.bottom = 'auto';
+    }
+  }
+
+  function closeDragElement(e) {
+    document.removeEventListener('mouseup', closeDragElement);
+    document.removeEventListener('mousemove', elementDrag);
+    document.removeEventListener('touchend', closeDragElement);
+    document.removeEventListener('touchmove', elementTouchDrag);
+
+    setTimeout(() => {
+      if (isDraggingChatbot) {
+        element.classList.remove('dragging');
+        const icon = element.querySelector('.chatbot-icon');
+        if (icon) icon.classList.remove('dragging');
+      } else if (onClickCallback) {
+        onClickCallback(e);
+      }
+      isDraggingChatbot = false;
+    }, 100);
+  }
 }
 
 function startDrag(e) {

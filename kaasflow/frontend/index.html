@@ -12,7 +12,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="../../../samkaslogo.jpeg" type="image/jpeg" />
   <link rel="apple-touch-icon" href="../../../samkaslogo.jpeg" />
-  <meta name="mobile-web-app-capable" content="yes" />
+  <meta n ame="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="SamKass" />
@@ -563,8 +563,9 @@
     }
 
     .header-logo-icon,
-    .auth-logo-icon {
+    .auth-logo-icon { 
       background: var(--gradient-green);
+      background-clip: text;
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       filter: drop-shadow(0 0 12px var(--green-glow));
@@ -905,6 +906,72 @@
     }
 
     /* ── CHATBOT STYLES ─────────────────────────────────────────── */
+    /* CRAZY CHATBOT ANIMATIONS */
+    @keyframes crazy-chatbot-float {
+      0% {
+        transform: translateY(0) translateX(0) rotate(0deg) scale(1);
+      }
+      10% {
+        transform: translateY(-35px) translateX(20px) rotate(8deg) scale(1.1);
+      }
+      20% {
+        transform: translateY(-50px) translateX(-15px) rotate(-5deg) scale(0.95);
+      }
+      30% {
+        transform: translateY(-30px) translateX(25px) rotate(10deg) scale(1.12);
+      }
+      40% {
+        transform: translateY(-55px) translateX(-8px) rotate(-7deg) scale(1.05);
+      }
+      50% {
+        transform: translateY(-40px) translateX(18px) rotate(6deg) scale(1.08);
+      }
+      60% {
+        transform: translateY(-48px) translateX(-12px) rotate(-4deg) scale(0.98);
+      }
+      70% {
+        transform: translateY(-25px) translateX(22px) rotate(9deg) scale(1.1);
+      }
+      80% {
+        transform: translateY(-42px) translateX(-6px) rotate(-6deg) scale(1.03);
+      }
+      90% {
+        transform: translateY(-20px) translateX(10px) rotate(3deg) scale(1.06);
+      }
+      100% {
+        transform: translateY(0) translateX(0) rotate(0deg) scale(1);
+      }
+    }
+
+    @keyframes antenna-pulse {
+      0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 0.6;
+        transform: scale(1.3);
+      }
+    }
+
+    @keyframes eye-blink {
+      0%, 90%, 100% {
+        transform: scaleY(1);
+      }
+      95% {
+        transform: scaleY(0.1);
+      }
+    }
+
+    @keyframes chatbot-pulse-glow {
+      0%, 100% {
+        box-shadow: 0 20px 60px rgba(126, 211, 33, 0.7), 0 0 40px rgba(126, 211, 33, 0.4);
+      }
+      50% {
+        box-shadow: 0 25px 80px rgba(126, 211, 33, 1), 0 0 60px rgba(126, 211, 33, 0.7);
+      }
+    }
+
     @keyframes float {
 
       0%,
@@ -952,18 +1019,29 @@
     }
 
     .chatbot-icon:hover {
-      transform: scale(1.05);
-      box-shadow: 0 6px 25px rgba(126, 211, 33, 0.6);
+      transform: scale(1.25) rotate(15deg) !important;
+      filter: brightness(1.3);
+      animation: chatbot-pulse-glow 1.2s ease-in-out infinite !important;
     }
 
     .chatbot-icon:active {
-      transform: scale(0.95);
+      transform: scale(0.9);
     }
 
     .chatbot-icon.dragging {
-      cursor: grabbing;
-      animation: none;
-      box-shadow: 0 8px 30px rgba(126, 211, 33, 0.6);
+      cursor: grabbing !important;
+      animation: none !important;
+      box-shadow: 0 30px 80px rgba(126, 211, 33, 0.9) !important;
+      transform: scale(1.15) rotate(8deg) !important;
+    }
+
+    #chatbot-icon-container.dragging {
+      animation: none !important;
+      opacity: 0.9;
+    }
+
+    #chatbot-icon-container.dragging * {
+      animation: none !important;
     }
 
     .chatbot-interface {
@@ -2259,45 +2337,51 @@
 
     <!-- Floating Chatbot Widget -->
     <div id="chatbot-widget" style="display: none;">
-      <!-- Floating Bot Icon with Cute Robot -->
-      <div id="chatbot-icon" class="chatbot-icon" onclick="window.openChatbot && window.openChatbot()"
-        style="position: fixed; bottom: 250px; right: 20px; width: 60px; height: 60px; background: linear-gradient(135deg, #7ed321, #4caf1a); border-radius: 50%; box-shadow: 0 4px 20px rgba(126, 211, 33, 0.4); cursor: grab; z-index: 9998; display: flex; align-items: center; justify-content: center; animation: float 3s ease-in-out infinite; transition: transform 0.2s ease;">
-        <!-- Cute Robot SVG -->
-        <svg width="36" height="36" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <!-- Antenna -->
-          <rect x="47" y="8" width="6" height="8" rx="1" fill="white" />
-          <circle cx="50" cy="6" r="4" fill="#00cfff" />
+      <!-- Floating Bot Icon with Crazy Animations -->
+      <div id="chatbot-icon-container" class="draggable-bubble"
+        style="position: fixed; bottom: 250px; right: 20px; z-index: 9998; cursor: pointer; touch-action: none; display: flex; align-items: center; justify-content: center;">
+        <div id="chatbot-icon" class="chatbot-icon custom-floating-bubble"
+          style="width: 90px; height: 90px; border-radius: 50%; background: linear-gradient(135deg, #7ed321 0%, #4caf1a 50%, #3d9b15 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 20px 60px rgba(126, 211, 33, 0.7), 0 0 40px rgba(126, 211, 33, 0.4); animation: crazy-chatbot-float 4.5s ease-in-out infinite; border: 4px solid rgba(255, 255, 255, 0.4); cursor: grab; transition: all 0.3s ease; position: relative;">
+          <!-- Rotating Glow Ring -->
+          <div style="position: absolute; inset: -8px; border-radius: 50%; background: linear-gradient(45deg, transparent, rgba(126, 211, 33, 0.3), transparent); animation: bubble-rotate 3s linear infinite;"></div>
+          
+          <!-- Cute Robot SVG -->
+          <svg width="50" height="50" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="pointer-events: none; position: relative; z-index: 2; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
+            <!-- Antenna -->
+            <rect x="47" y="8" width="6" height="8" rx="1" fill="white" />
+            <circle cx="50" cy="6" r="4" fill="#00cfff" style="animation: antenna-pulse 1.5s ease-in-out infinite;" />
 
-          <!-- Head -->
-          <rect x="30" y="20" width="40" height="30" rx="8" fill="white" />
+            <!-- Head -->
+            <rect x="30" y="20" width="40" height="30" rx="8" fill="white" />
 
-          <!-- Screen face -->
-          <rect x="34" y="24" width="32" height="22" rx="4" fill="#1a2332" />
+            <!-- Screen face -->
+            <rect x="34" y="24" width="32" height="22" rx="4" fill="#1a2332" />
 
-          <!-- Eyes -->
-          <ellipse cx="42" cy="32" rx="4" ry="5" fill="#00cfff" />
-          <ellipse cx="58" cy="32" rx="4" ry="5" fill="#00cfff" />
+            <!-- Eyes -->
+            <ellipse cx="42" cy="32" rx="4" ry="5" fill="#00cfff" style="animation: eye-blink 3s ease-in-out infinite;" />
+            <ellipse cx="58" cy="32" rx="4" ry="5" fill="#00cfff" style="animation: eye-blink 3s ease-in-out infinite;" />
 
-          <!-- Smile -->
-          <path d="M 44 40 Q 50 44 56 40" stroke="#00cfff" stroke-width="2.5" stroke-linecap="round" fill="none" />
+            <!-- Smile -->
+            <path d="M 44 40 Q 50 44 56 40" stroke="#00cfff" stroke-width="2.5" stroke-linecap="round" fill="none" />
 
-          <!-- Ears/Side panels -->
-          <circle cx="26" cy="35" r="6" fill="#e0e0e0" />
-          <circle cx="74" cy="35" r="6" fill="#e0e0e0" />
+            <!-- Ears/Side panels -->
+            <circle cx="26" cy="35" r="6" fill="#e0e0e0" />
+            <circle cx="74" cy="35" r="6" fill="#e0e0e0" />
 
-          <!-- Neck -->
-          <rect x="45" y="50" width="10" height="6" rx="2" fill="#d0d0d0" />
+            <!-- Neck -->
+            <rect x="45" y="50" width="10" height="6" rx="2" fill="#d0d0d0" />
 
-          <!-- Body -->
-          <ellipse cx="50" cy="70" rx="18" ry="20" fill="white" />
+            <!-- Body -->
+            <ellipse cx="50" cy="70" rx="18" ry="20" fill="white" />
 
-          <!-- Body panel -->
-          <path d="M 38 65 Q 50 68 62 65" stroke="#c0c0c0" stroke-width="1.5" fill="none" />
+            <!-- Body panel -->
+            <path d="M 38 65 Q 50 68 62 65" stroke="#c0c0c0" stroke-width="1.5" fill="none" />
 
-          <!-- Arms -->
-          <ellipse cx="30" cy="68" rx="6" ry="12" fill="#e0e0e0" />
-          <ellipse cx="70" cy="68" rx="6" ry="12" fill="#e0e0e0" />
-        </svg>
+            <!-- Arms -->
+            <ellipse cx="30" cy="68" rx="6" ry="12" fill="#e0e0e0" />
+            <ellipse cx="70" cy="68" rx="6" ry="12" fill="#e0e0e0" />
+          </svg>
+        </div>
       </div>
 
       <!-- Chat Interface - Centered Modal -->
