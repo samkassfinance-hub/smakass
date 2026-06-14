@@ -1170,24 +1170,24 @@ window.KF.upgradePro = function (planType) {
 function generateSampleData() {
   if (Store.clients().length > 0) return;
   const clients = [
-    { id: 'c1', name: 'Rajesh Kumar', phone: '+919344208525', address: 'Connaught Place, Delhi', idNum: 'ABCDE1234F', occupation: 'Trader', createdAt: '2024-01-15' },
-    { id: 'c2', name: 'Priya Singh', phone: '+919344208525', address: 'Andheri, Mumbai', idNum: '', occupation: 'Shop Owner', createdAt: '2024-02-01' },
-    { id: 'c3', name: 'Mohammed Ali', phone: '+919344208525', address: 'Kothrud, Pune', idNum: 'QWERT5678G', occupation: 'Teacher', createdAt: '2024-02-20' },
-    { id: 'c4', name: 'Sneha Patel', phone: '+919344208525', address: 'Navrangpura, Ahmedabad', idNum: '', occupation: 'Tailor', createdAt: '2024-03-05' },
-    { id: 'c5', name: 'Amit Sharma', phone: '+919344208525', address: 'Bandra, Mumbai', idNum: 'ZXCVB9012H', occupation: 'Driver', createdAt: '2024-03-18' },
-    { id: 'c6', name: 'Lakshmi Narayanan', phone: '+919344208525', address: 'T Nagar, Chennai', idNum: '', occupation: 'IT Professional', createdAt: '2024-03-20' },
-    { id: 'c7', name: 'Vikram Reddy', phone: '+919344208525', address: 'Banjara Hills, Hyderabad', idNum: 'DFGHI2345J', occupation: 'Carpenter', createdAt: '2024-03-21' },
-    { id: 'c8', name: 'Pooja Desai', phone: '+919344208525', address: 'Salt Lake, Kolkata', idNum: '', occupation: 'Nurse', createdAt: '2024-03-22' },
-    { id: 'c9', name: 'Sanjay Gupta', phone: '+919344208525', address: 'MG Road, Bangalore', idNum: 'JKLMN3456K', occupation: 'Mechanic', createdAt: '2024-03-23' },
-    { id: 'c10', name: 'Anita Bose', phone: '+919344208525', address: 'Fort, Mumbai', idNum: '', occupation: 'Chef', createdAt: '2024-03-24' },
-    { id: 'c11', name: 'Rahul Verma', phone: '+919344208525', address: 'Indiranagar, Bangalore', idNum: 'PQRST4567L', occupation: 'Plumber', createdAt: '2024-03-25' },
-    { id: 'c12', name: 'Kavita Iyer', phone: '+919344208525', address: 'Mylapore, Chennai', idNum: '', occupation: 'Electrician', createdAt: '2024-03-26' },
-    { id: 'c13', name: 'John Fernandez', phone: '+919344208525', address: 'Panjim, Goa', idNum: 'UVWXY5678M', occupation: 'Manager', createdAt: '2024-03-27' },
-    { id: 'c14', name: 'Meera Chopra', phone: '+919344208525', address: 'Karol Bagh, Delhi', idNum: '', occupation: 'Artist', createdAt: '2024-03-28' },
-    { id: 'c15', name: 'Deepak Saxena', phone: '+919344208525', address: 'Gomti Nagar, Lucknow', idNum: 'ZABCD6789N', occupation: 'Receptionist', createdAt: '2024-03-29' },
-    { id: 'c16', name: 'Swati Kapoor', phone: '+919344208525', address: 'Vasant Kunj, Delhi', idNum: '', occupation: 'Security Guard', createdAt: '2024-03-30' },
-    { id: 'c17', name: 'Anil Thakur', phone: '+919344208525', address: 'Colaba, Mumbai', idNum: 'EFGHI7890O', occupation: 'Sales Executive', createdAt: '2024-03-31' },
-    { id: 'c18', name: 'Divya Bhatia', phone: '+919344208525', address: 'Saket, Delhi', idNum: '', occupation: 'Photographer', createdAt: '2024-04-01' },
+    { id: 'c1', name: 'Rajesh Kumar', phone: '9876543210', address: 'Connaught Place, Delhi', idNum: 'ABCDE1234F', occupation: 'Trader', createdAt: '2024-01-15' },
+    { id: 'c2', name: 'Priya Singh', phone: '9845012345', address: 'Andheri, Mumbai', idNum: '', occupation: 'Shop Owner', createdAt: '2024-02-01' },
+    { id: 'c3', name: 'Mohammed Ali', phone: '9787654321', address: 'Kothrud, Pune', idNum: 'QWERT5678G', occupation: 'Teacher', createdAt: '2024-02-20' },
+    { id: 'c4', name: 'Sneha Patel', phone: '9765432109', address: 'Navrangpura, Ahmedabad', idNum: '', occupation: 'Tailor', createdAt: '2024-03-05' },
+    { id: 'c5', name: 'Amit Sharma', phone: '9843210987', address: 'Bandra, Mumbai', idNum: 'ZXCVB9012H', occupation: 'Driver', createdAt: '2024-03-18' },
+    { id: 'c6', name: 'Lakshmi Narayanan', phone: '9812345670', address: 'T Nagar, Chennai', idNum: '', occupation: 'IT Professional', createdAt: '2024-03-20' },
+    { id: 'c7', name: 'Vikram Reddy', phone: '9823456701', address: 'Banjara Hills, Hyderabad', idNum: 'DFGHI2345J', occupation: 'Carpenter', createdAt: '2024-03-21' },
+    { id: 'c8', name: 'Pooja Desai', phone: '9834567012', address: 'Salt Lake, Kolkata', idNum: '', occupation: 'Nurse', createdAt: '2024-03-22' },
+    { id: 'c9', name: 'Sanjay Gupta', phone: '9845670123', address: 'MG Road, Bangalore', idNum: 'JKLMN3456K', occupation: 'Mechanic', createdAt: '2024-03-23' },
+    { id: 'c10', name: 'Anita Bose', phone: '9856701234', address: 'Fort, Mumbai', idNum: '', occupation: 'Chef', createdAt: '2024-03-24' },
+    { id: 'c11', name: 'Rahul Verma', phone: '9867012345', address: 'Indiranagar, Bangalore', idNum: 'PQRST4567L', occupation: 'Plumber', createdAt: '2024-03-25' },
+    { id: 'c12', name: 'Kavita Iyer', phone: '9870123456', address: 'Mylapore, Chennai', idNum: '', occupation: 'Electrician', createdAt: '2024-03-26' },
+    { id: 'c13', name: 'John Fernandez', phone: '9801234567', address: 'Panjim, Goa', idNum: 'UVWXY5678M', occupation: 'Manager', createdAt: '2024-03-27' },
+    { id: 'c14', name: 'Meera Chopra', phone: '9812345098', address: 'Karol Bagh, Delhi', idNum: '', occupation: 'Artist', createdAt: '2024-03-28' },
+    { id: 'c15', name: 'Deepak Saxena', phone: '9823456109', address: 'Gomti Nagar, Lucknow', idNum: 'ZABCD6789N', occupation: 'Receptionist', createdAt: '2024-03-29' },
+    { id: 'c16', name: 'Swati Kapoor', phone: '9834567210', address: 'Vasant Kunj, Delhi', idNum: '', occupation: 'Security Guard', createdAt: '2024-03-30' },
+    { id: 'c17', name: 'Anil Thakur', phone: '9845678321', address: 'Colaba, Mumbai', idNum: 'EFGHI7890O', occupation: 'Sales Executive', createdAt: '2024-03-31' },
+    { id: 'c18', name: 'Divya Bhatia', phone: '9856789432', address: 'Saket, Delhi', idNum: '', occupation: 'Photographer', createdAt: '2024-04-01' },
   ];
 
   const td = today();
@@ -1253,6 +1253,10 @@ function calcMonthlyInterest(principal, rate, interestType) {
   if (!principal || !rate) return 0;
   if (interestType === 'fixed') {
     return (principal / 1000) * (rate * 100);
+  } else if (interestType === 'own') {
+    // For 'own' interest type, rate is the fixed monthly payment
+    // Return the payment amount (not interest, will be calculated from this)
+    return rate;
   } else {
     return principal * (rate / 100);
   }
@@ -1260,14 +1264,32 @@ function calcMonthlyInterest(principal, rate, interestType) {
 
 function calcLoanStats(loan) {
   const duration = loan.duration || 0;
-  const monthlyInterest = calcMonthlyInterest(loan.principal, loan.interestRate, loan.interestType || 'percentage');
-  const totalInterest = monthlyInterest * duration;
-  const totalPayable = duration > 0 ? loan.principal + totalInterest : loan.principal;
-
+  const interestType = loan.interestType || 'percentage';
+  
+  let monthlyPayment = 0;
+  let totalInterest = 0;
+  let totalPayable = loan.principal;
   let emi = 0;
-  if (duration > 0) {
-    const installments = loan.type === 'weekly' ? duration * 4 : duration;
-    emi = +(totalPayable / installments).toFixed(2);
+
+  if (interestType === 'own') {
+    // For 'own' interest type: interestRate is the fixed monthly payment
+    monthlyPayment = loan.interestRate || 0;
+    if (duration > 0) {
+      const totalCollected = monthlyPayment * duration;
+      totalInterest = Math.max(0, totalCollected - loan.principal);
+      totalPayable = loan.principal + totalInterest;
+      const installments = loan.type === 'weekly' ? duration * 4 : duration;
+      emi = +(monthlyPayment).toFixed(2);
+    }
+  } else {
+    const monthlyInterest = calcMonthlyInterest(loan.principal, loan.interestRate, interestType);
+    totalInterest = monthlyInterest * duration;
+    totalPayable = duration > 0 ? loan.principal + totalInterest : loan.principal;
+
+    if (duration > 0) {
+      const installments = loan.type === 'weekly' ? duration * 4 : duration;
+      emi = +(totalPayable / installments).toFixed(2);
+    }
   }
 
   const payments = Store.payments().filter(p => p.loanId === loan.id);
@@ -1285,11 +1307,24 @@ function calcNextDue(loan, payments = null) {
   if (!payments) payments = Store.payments().filter(p => p.loanId === loan.id);
 
   const duration = loan.duration || 0;
-  const monthlyInterest = calcMonthlyInterest(loan.principal, loan.interestRate, loan.interestType || 'percentage');
-  const totalPayable = duration > 0 ? loan.principal + (monthlyInterest * duration) : loan.principal;
+  const interestType = loan.interestType || 'percentage';
+  
+  let emi = 0;
+  let totalPayable = 0;
+  
+  if (interestType === 'own') {
+    // For 'own' interest type: interestRate is the fixed monthly payment
+    emi = loan.interestRate || 0;
+    const totalCollected = emi * duration;
+    totalPayable = loan.principal + Math.max(0, totalCollected - loan.principal);
+  } else {
+    const monthlyInterest = calcMonthlyInterest(loan.principal, loan.interestRate, interestType);
+    totalPayable = duration > 0 ? loan.principal + (monthlyInterest * duration) : loan.principal;
+    const totalInstallments = loan.type === 'weekly' ? duration * 4 : duration;
+    emi = totalInstallments > 0 ? +(totalPayable / totalInstallments).toFixed(2) : 0;
+  }
+  
   const totalInstallments = loan.type === 'weekly' ? duration * 4 : duration;
-  const emi = totalInstallments > 0 ? +(totalPayable / totalInstallments).toFixed(2) : 0;
-
   const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
 
   // How many full installments are covered by the total paid amount?
@@ -1758,7 +1793,11 @@ function openLoanInfo(loanId) {
     </div>
 
     <div class="kf-card" style="padding:1rem; margin-bottom:1rem; background:rgba(0,0,0,0.02); box-shadow:none;">
-      <div class="emi-preview-row"><span>Interest Rate</span><strong>${loan.interestRate}% (${loan.interestType === 'fixed' ? 'Fixed' : 'Percentage'})</strong></div>
+      <div class="emi-preview-row"><span>Interest Rate</span><strong>${
+        loan.interestType === 'own' ? `₹${loan.interestRate} (Fixed Monthly Payment)` :
+        loan.interestType === 'fixed' ? `₹${loan.interestRate} (Fixed)` :
+        `${loan.interestRate}% (Percentage)`
+      }</strong></div>
       <div class="emi-preview-row"><span>Duration</span><strong>${loan.duration ? loan.duration + ' installments' : 'Open'}</strong></div>
       <div class="emi-preview-row"><span>Collection Type</span><strong style="text-transform:capitalize;">${loan.type}</strong></div>
       <div class="emi-preview-row" style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--color-border-muted);">
@@ -1807,7 +1846,24 @@ function openLoanModal(clientId = null, loanId = null) {
       select.value = l.clientId;
       $('#loan-interest-type').value = l.interestType || 'percentage';
       const label = $('#label-loan-interest');
-      if (label) label.innerHTML = (l.interestType === 'fixed' ? 'Fixed Interest Value <span class="text-danger">*</span>' : 'Interest Percentage <span class="text-danger">*</span>');
+      const helpText = $('#interest-help-text');
+      const input = $('#loan-interest');
+      
+      if (label) {
+        if (l.interestType === 'fixed') {
+          label.innerHTML = 'Fixed Interest Value <span class="text-danger">*</span>';
+          if (helpText) helpText.textContent = 'Fixed interest amount per month';
+          if (input) input.placeholder = '500';
+        } else if (l.interestType === 'own') {
+          label.innerHTML = 'Monthly Payment Amount <span class="text-danger">*</span>';
+          if (helpText) helpText.textContent = 'Fixed monthly payment amount (interest calculated from this)';
+          if (input) input.placeholder = '1500';
+        } else {
+          label.innerHTML = 'Interest Percentage <span class="text-danger">*</span>';
+          if (helpText) helpText.textContent = 'Percentage of principal per month';
+          if (input) input.placeholder = '2';
+        }
+      }
       $('#loan-principal').value = l.principal;
       $('#loan-interest').value = l.interestRate;
       $('#loan-duration').value = l.duration || '';
@@ -1819,7 +1875,11 @@ function openLoanModal(clientId = null, loanId = null) {
     $('#loan-form').reset();
     $('#loan-interest-type').value = 'percentage';
     const label = $('#label-loan-interest');
+    const helpText = $('#interest-help-text');
+    const input = $('#loan-interest');
     if (label) label.innerHTML = 'Interest Percentage <span class="text-danger">*</span>';
+    if (helpText) helpText.textContent = 'Percentage of principal per month';
+    if (input) input.placeholder = '2';
     $('#loan-start-date').value = today();
     if (clientId) select.value = clientId;
   }
@@ -1839,23 +1899,52 @@ function updateEMIPreview() {
     return;
   }
 
-  const monthlyInterest = calcMonthlyInterest(p, r, intType);
-  const weeklyInterest = monthlyInterest / 4;
+  let monthlyInterest = 0;
+  let weeklyInterest = 0;
+  let totalInterest = 0;
+  let totalPayable = p;
+  let emi = 0;
+  let collectionLabel = type === 'weekly' ? 'Weekly EMI' : 'Monthly EMI';
 
-  if (!d || d <= 0) {
-    $('#emi-preview-monthly-interest').textContent = fmtCur(monthlyInterest);
-    $('#emi-preview-weekly-interest').textContent = fmtCur(weeklyInterest);
-    $('#emi-preview-amount').textContent = '—';
-    $('#emi-preview-total').textContent = fmtCur(p);
-    $('#emi-preview-remaining').textContent = fmtCur(p);
-    $('#emi-preview').classList.remove('d-none');
-    return;
+  if (intType === 'own') {
+    // For 'own' interest type: r is the fixed monthly payment
+    monthlyInterest = r; // This is the monthly payment amount, not interest
+    weeklyInterest = r / 4;
+    
+    if (!d || d <= 0) {
+      $('#emi-preview-monthly-interest').textContent = fmtCur(monthlyInterest);
+      $('#emi-preview-weekly-interest').textContent = fmtCur(weeklyInterest);
+      $('#emi-preview-amount').textContent = '—';
+      $('#emi-preview-total').textContent = fmtCur(p);
+      $('#emi-preview-remaining').textContent = fmtCur(p);
+      $('#emi-preview').classList.remove('d-none');
+      return;
+    }
+    
+    const totalCollected = monthlyInterest * d;
+    totalInterest = Math.max(0, totalCollected - p);
+    totalPayable = p + totalInterest;
+    emi = +(monthlyInterest).toFixed(2);
+    collectionLabel = 'Fixed Monthly Payment';
+  } else {
+    monthlyInterest = calcMonthlyInterest(p, r, intType);
+    weeklyInterest = monthlyInterest / 4;
+
+    if (!d || d <= 0) {
+      $('#emi-preview-monthly-interest').textContent = fmtCur(monthlyInterest);
+      $('#emi-preview-weekly-interest').textContent = fmtCur(weeklyInterest);
+      $('#emi-preview-amount').textContent = '—';
+      $('#emi-preview-total').textContent = fmtCur(p);
+      $('#emi-preview-remaining').textContent = fmtCur(p);
+      $('#emi-preview').classList.remove('d-none');
+      return;
+    }
+
+    totalInterest = monthlyInterest * d;
+    totalPayable = p + totalInterest;
+    const installments = type === 'weekly' ? d * 4 : d;
+    emi = +(totalPayable / installments).toFixed(2);
   }
-
-  const totalInterest = monthlyInterest * d;
-  const totalPayable = p + totalInterest;
-  const installments = type === 'weekly' ? d * 4 : d;
-  const emi = +(totalPayable / installments).toFixed(2);
 
   $('#emi-preview-monthly-interest').textContent = fmtCur(monthlyInterest);
   $('#emi-preview-weekly-interest').textContent = fmtCur(weeklyInterest);
@@ -1863,7 +1952,7 @@ function updateEMIPreview() {
   $('#emi-preview-total').textContent = fmtCur(totalPayable);
   $('#emi-preview-remaining').textContent = fmtCur(totalPayable);
   const labelEl = $('#emi-preview-collection-label');
-  if (labelEl) labelEl.textContent = type === 'weekly' ? 'Weekly EMI' : 'Monthly EMI';
+  if (labelEl) labelEl.textContent = intType === 'own' ? 'Fixed Monthly Payment' : (type === 'weekly' ? 'Weekly EMI' : 'Monthly EMI');
 
   $('#emi-preview').classList.remove('d-none');
 }
@@ -2349,48 +2438,29 @@ function renderSettings(container) {
 
   $('#btn-load-dummy-clients')?.addEventListener('click', () => {
     const todayStr = today();
+    const d = new Date();
+    d.setMonth(d.getMonth() - 1); // Set start date to 1 month ago for monthly loan
+    const startStr = d.toISOString().split('T')[0];
+
     const dummyClients = [];
     const dummyLoans = [];
 
-    // Create 3 weekly loan clients
-    for (let i = 1; i <= 3; i++) {
-      const cid = 'c_dummy_weekly_' + uid();
-      const weeklyStartDate = new Date();
-      weeklyStartDate.setDate(weeklyStartDate.getDate() - 7); // Set start date to 1 week ago
-      const weeklyStartStr = weeklyStartDate.toISOString().split('T')[0];
-      
+    for (let i = 1; i <= 5; i++) {
+      const cid = 'c_dummy_' + uid();
       dummyClients.push({
-        id: cid, name: 'Weekly Client ' + i, phone: '+919344208525',
+        id: cid, name: 'Demo Client ' + i, phone: '987654321' + i,
         address: 'Sample Address', occupation: 'Demo', createdAt: todayStr
       });
       dummyLoans.push({
-        id: 'l_dummy_weekly_' + uid(), clientId: cid, principal: 5000,
+        id: 'l_dummy_' + uid(), clientId: cid, principal: 10000,
         interestRate: 2, interestType: 'percentage', duration: 12,
-        type: 'weekly', startDate: weeklyStartStr, status: 'active', createdAt: weeklyStartStr
-      });
-    }
-
-    // Create 2 monthly loan clients
-    for (let i = 1; i <= 2; i++) {
-      const cid = 'c_dummy_monthly_' + uid();
-      const monthlyStartDate = new Date();
-      monthlyStartDate.setMonth(monthlyStartDate.getMonth() - 1); // Set start date to 1 month ago
-      const monthlyStartStr = monthlyStartDate.toISOString().split('T')[0];
-      
-      dummyClients.push({
-        id: cid, name: 'Monthly Client ' + i, phone: '+919344208525',
-        address: 'Sample Address', occupation: 'Demo', createdAt: todayStr
-      });
-      dummyLoans.push({
-        id: 'l_dummy_monthly_' + uid(), clientId: cid, principal: 10000,
-        interestRate: 2, interestType: 'percentage', duration: 12,
-        type: 'monthly', startDate: monthlyStartStr, status: 'active', createdAt: monthlyStartStr
+        type: 'monthly', startDate: startStr, status: 'active', createdAt: startStr
       });
     }
 
     Store.set('clients', [...Store.clients(), ...dummyClients]);
     Store.set('loans', [...Store.loans(), ...dummyLoans]);
-    showToast('5 dummy clients loaded (3 weekly, 2 monthly)!', 'success');
+    showToast('5 dummy clients with dues today loaded!', 'success');
     navigateTo('settings');
   });
 
@@ -2440,8 +2510,6 @@ function renderSettings(container) {
   container.querySelector('#btn-goto-profile')?.addEventListener('click', () => {
     navigateTo('profile');
   });
-
-
 
   // Upgrade button - preload orders when modal opens
   $('#btn-upgrade')?.addEventListener('click', () => {
@@ -4186,8 +4254,23 @@ function bindGlobal() {
 
   $('#loan-interest-type')?.addEventListener('change', (e) => {
     const label = $('#label-loan-interest');
+    const helpText = $('#interest-help-text');
+    const input = $('#loan-interest');
+    
     if (label) {
-      label.innerHTML = e.target.value === 'fixed' ? 'Fixed Interest Value <span class="text-danger">*</span>' : 'Interest Percentage <span class="text-danger">*</span>';
+      if (e.target.value === 'fixed') {
+        label.innerHTML = 'Fixed Interest Value <span class="text-danger">*</span>';
+        if (helpText) helpText.textContent = 'Fixed interest amount per month';
+        if (input) input.placeholder = '500';
+      } else if (e.target.value === 'own') {
+        label.innerHTML = 'Monthly Payment Amount <span class="text-danger">*</span>';
+        if (helpText) helpText.textContent = 'Fixed monthly payment amount (interest calculated from this)';
+        if (input) input.placeholder = '1500';
+      } else {
+        label.innerHTML = 'Interest Percentage <span class="text-danger">*</span>';
+        if (helpText) helpText.textContent = 'Percentage of principal per month';
+        if (input) input.placeholder = '2';
+      }
     }
     updateEMIPreview();
   });
@@ -4612,21 +4695,35 @@ function initChatbot() {
 
   // Wait for DOM to be fully ready
   setTimeout(() => {
-    const chatbotIconContainer = document.getElementById('chatbot-icon-container');
     const chatbotIcon = document.getElementById('chatbot-icon');
     const chatbotInterface = document.getElementById('chatbot-interface');
 
-    if (!chatbotIconContainer || !chatbotIcon) {
-      console.error('❌ Chatbot elements not found!');
+    if (!chatbotIcon) {
+      console.error('❌ Chatbot icon element not found!');
       return;
     }
 
-    console.log('✅ Chatbot elements found, binding events...');
+    console.log('✅ Chatbot icon element found, binding events...');
 
-    // Make the entire container draggable using the same function as bubbles
-    makeChatbotDraggable(chatbotIconContainer, function() {
-      // Click callback - open chatbot when not dragging
-      openChatbot();
+    // Make icon draggable
+    chatbotIcon.addEventListener('mousedown', startDrag);
+    chatbotIcon.addEventListener('touchstart', startDrag, { passive: false });
+
+    // Click to open chat - use both click and touchend for better mobile support
+    chatbotIcon.addEventListener('click', (e) => {
+      e.preventDefault();
+      console.log('🔘 Chatbot icon clicked, isDragging:', isDragging);
+      if (!isDragging) {
+        openChatbot();
+      }
+    });
+
+    chatbotIcon.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      console.log('👆 Chatbot icon touched, isDragging:', isDragging);
+      if (!isDragging) {
+        openChatbot();
+      }
     });
 
     // Auto-resize textarea
@@ -4645,98 +4742,6 @@ function initChatbot() {
   }, 500);
 }
 
-// Make chatbot draggable with crazy animations
-function makeChatbotDraggable(element, onClickCallback) {
-  let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-  let isDraggingChatbot = false;
-  let dragThreshold = 5;
-  let startX = 0, startY = 0;
-
-  element.addEventListener('mousedown', dragMouseDown);
-  element.addEventListener('touchstart', dragTouchStart, { passive: false });
-
-  function dragMouseDown(e) {
-    e.preventDefault();
-    startX = e.clientX;
-    startY = e.clientY;
-    pos3 = e.clientX;
-    pos4 = e.clientY;
-    document.addEventListener('mouseup', closeDragElement);
-    document.addEventListener('mousemove', elementDrag);
-  }
-
-  function dragTouchStart(e) {
-    const touch = e.touches[0];
-    startX = touch.clientX;
-    startY = touch.clientY;
-    pos3 = touch.clientX;
-    pos4 = touch.clientY;
-    document.addEventListener('touchend', closeDragElement);
-    document.addEventListener('touchmove', elementTouchDrag, { passive: false });
-  }
-
-  function elementDrag(e) {
-    e.preventDefault();
-    const moved = Math.abs(e.clientX - startX) + Math.abs(e.clientY - startY);
-    if (moved > dragThreshold && !isDraggingChatbot) {
-      isDraggingChatbot = true;
-      element.classList.add('dragging');
-      const icon = element.querySelector('.chatbot-icon');
-      if (icon) icon.classList.add('dragging');
-    }
-    if (isDraggingChatbot) {
-      pos1 = pos3 - e.clientX;
-      pos2 = pos4 - e.clientY;
-      pos3 = e.clientX;
-      pos4 = e.clientY;
-      element.style.top = (element.offsetTop - pos2) + 'px';
-      element.style.left = (element.offsetLeft - pos1) + 'px';
-      element.style.right = 'auto';
-      element.style.bottom = 'auto';
-    }
-  }
-
-  function elementTouchDrag(e) {
-    e.preventDefault();
-    const touch = e.touches[0];
-    const moved = Math.abs(touch.clientX - startX) + Math.abs(touch.clientY - startY);
-    if (moved > dragThreshold && !isDraggingChatbot) {
-      isDraggingChatbot = true;
-      element.classList.add('dragging');
-      const icon = element.querySelector('.chatbot-icon');
-      if (icon) icon.classList.add('dragging');
-    }
-    if (isDraggingChatbot) {
-      pos1 = pos3 - touch.clientX;
-      pos2 = pos4 - touch.clientY;
-      pos3 = touch.clientX;
-      pos4 = touch.clientY;
-      element.style.top = (element.offsetTop - pos2) + 'px';
-      element.style.left = (element.offsetLeft - pos1) + 'px';
-      element.style.right = 'auto';
-      element.style.bottom = 'auto';
-    }
-  }
-
-  function closeDragElement(e) {
-    document.removeEventListener('mouseup', closeDragElement);
-    document.removeEventListener('mousemove', elementDrag);
-    document.removeEventListener('touchend', closeDragElement);
-    document.removeEventListener('touchmove', elementTouchDrag);
-
-    setTimeout(() => {
-      if (isDraggingChatbot) {
-        element.classList.remove('dragging');
-        const icon = element.querySelector('.chatbot-icon');
-        if (icon) icon.classList.remove('dragging');
-      } else if (onClickCallback) {
-        onClickCallback(e);
-      }
-      isDraggingChatbot = false;
-    }, 100);
-  }
-}
-
 function startDrag(e) {
   e.preventDefault();
   isDragging = false;
@@ -4752,26 +4757,20 @@ function startDrag(e) {
   dragOffset.x = clientX - rect.left;
   dragOffset.y = clientY - rect.top;
 
+  // Add dragging class immediately for visual feedback
+  chatbotIcon.classList.add('dragging');
+
   // Add event listeners
   document.addEventListener('mousemove', drag);
   document.addEventListener('touchmove', drag, { passive: false });
   document.addEventListener('mouseup', stopDrag);
   document.addEventListener('touchend', stopDrag);
 
-  // Only mark as dragging after a small delay to allow clicks
+  // Mark as dragging after a small delay to allow clicks
   setTimeout(() => {
-    if (document.addEventListener) {
-      // Check if mouse/finger moved significantly
-      const currentX = e.clientX || (e.touches && e.touches[0].clientX);
-      const currentY = e.clientY || (e.touches && e.touches[0].clientY);
-
-      if (Math.abs(currentX - clientX) > 5 || Math.abs(currentY - clientY) > 5) {
-        isDragging = true;
-        chatbotIcon.classList.add('dragging');
-        console.log('🖱️ Started dragging chatbot');
-      }
-    }
-  }, 150);
+    isDragging = true;
+    console.log('🖱️ Started dragging chatbot');
+  }, 100);
 }
 
 function drag(e) {
@@ -4779,6 +4778,7 @@ function drag(e) {
 
   e.preventDefault();
   const chatbotIcon = document.getElementById('chatbot-icon');
+  if (!chatbotIcon) return;
 
   const clientX = e.clientX || (e.touches && e.touches[0].clientX);
   const clientY = e.clientY || (e.touches && e.touches[0].clientY);
@@ -4805,7 +4805,15 @@ function stopDrag() {
   document.removeEventListener('touchend', stopDrag);
 
   const chatbotIcon = document.getElementById('chatbot-icon');
-  chatbotIcon.classList.remove('dragging');
+  if (chatbotIcon) {
+    // Snap animation when dragging stops
+    chatbotIcon.style.transition = 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
+    chatbotIcon.classList.remove('dragging');
+    
+    setTimeout(() => {
+      chatbotIcon.style.transition = '';
+    }, 300);
+  }
 
   setTimeout(() => {
     isDragging = false;
@@ -4830,12 +4838,17 @@ function openChatbot() {
 
   console.log('✅ Opening chatbot interface...');
 
+  // Add pulse animation to icon before closing
+  chatbotIcon.classList.add('pulse');
+
   // Remove closing class if present
   chatbotInterface.classList.remove('closing');
 
   // Show with smooth animation
   chatbotInterface.style.display = 'flex';
-  chatbotIcon.style.display = 'none';
+  setTimeout(() => {
+    chatbotIcon.style.display = 'none';
+  }, 100);
 
   // Update language
   updateChatbotLanguage();
@@ -4847,6 +4860,7 @@ function openChatbot() {
       input.focus();
       console.log('✅ Chatbot input focused');
     }
+    chatbotIcon.classList.remove('pulse');
   }, 400);
 }
 
@@ -4863,13 +4877,21 @@ function closeChatbot() {
     // Add closing animation class
     chatbotInterface.classList.add('closing');
 
+    // Add pulse animation to icon
+    chatbotIcon.classList.add('pulse');
+
     // Wait for animation to complete before hiding
     setTimeout(() => {
       chatbotInterface.style.display = 'none';
       chatbotInterface.classList.remove('closing');
       chatbotIcon.style.display = 'flex';
+      
+      setTimeout(() => {
+        chatbotIcon.classList.remove('pulse');
+      }, 600);
+      
       console.log('✅ Chatbot interface closed');
-    }, 300);
+    }, 400);
   }
 }
 

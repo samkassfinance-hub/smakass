@@ -12,7 +12,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="../../../samkaslogo.jpeg" type="image/jpeg" />
   <link rel="apple-touch-icon" href="../../../samkaslogo.jpeg" />
-  <meta n ame="mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="SamKass" />
@@ -563,9 +563,8 @@
     }
 
     .header-logo-icon,
-    .auth-logo-icon { 
+    .auth-logo-icon {
       background: var(--gradient-green);
-      background-clip: text;
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       filter: drop-shadow(0 0 12px var(--green-glow));
@@ -906,150 +905,150 @@
     }
 
     /* ── CHATBOT STYLES ─────────────────────────────────────────── */
-    /* CRAZY CHATBOT ANIMATIONS */
-    @keyframes crazy-chatbot-float {
-      0% {
-        transform: translateY(0) translateX(0) rotate(0deg) scale(1);
-      }
-      10% {
-        transform: translateY(-35px) translateX(20px) rotate(8deg) scale(1.1);
-      }
-      20% {
-        transform: translateY(-50px) translateX(-15px) rotate(-5deg) scale(0.95);
-      }
-      30% {
-        transform: translateY(-30px) translateX(25px) rotate(10deg) scale(1.12);
-      }
-      40% {
-        transform: translateY(-55px) translateX(-8px) rotate(-7deg) scale(1.05);
-      }
-      50% {
-        transform: translateY(-40px) translateX(18px) rotate(6deg) scale(1.08);
-      }
-      60% {
-        transform: translateY(-48px) translateX(-12px) rotate(-4deg) scale(0.98);
-      }
-      70% {
-        transform: translateY(-25px) translateX(22px) rotate(9deg) scale(1.1);
-      }
-      80% {
-        transform: translateY(-42px) translateX(-6px) rotate(-6deg) scale(1.03);
-      }
-      90% {
-        transform: translateY(-20px) translateX(10px) rotate(3deg) scale(1.06);
-      }
-      100% {
-        transform: translateY(0) translateX(0) rotate(0deg) scale(1);
-      }
-    }
-
-    @keyframes antenna-pulse {
-      0%, 100% {
-        opacity: 1;
-        transform: scale(1);
-      }
-      50% {
-        opacity: 0.6;
-        transform: scale(1.3);
-      }
-    }
-
-    @keyframes eye-blink {
-      0%, 90%, 100% {
-        transform: scaleY(1);
-      }
-      95% {
-        transform: scaleY(0.1);
-      }
-    }
-
-    @keyframes chatbot-pulse-glow {
-      0%, 100% {
-        box-shadow: 0 20px 60px rgba(126, 211, 33, 0.7), 0 0 40px rgba(126, 211, 33, 0.4);
-      }
-      50% {
-        box-shadow: 0 25px 80px rgba(126, 211, 33, 1), 0 0 60px rgba(126, 211, 33, 0.7);
-      }
-    }
-
     @keyframes float {
-
-      0%,
-      100% {
+      0%, 100% {
         transform: translateY(0px);
       }
-
       50% {
-        transform: translateY(-10px);
+        transform: translateY(-12px);
+      }
+    }
+
+    @keyframes pulse-glow {
+      0% {
+        box-shadow: 0 4px 20px rgba(126, 211, 33, 0.4), 0 0 0 0 rgba(126, 211, 33, 0.7);
+      }
+      50% {
+        box-shadow: 0 4px 20px rgba(126, 211, 33, 0.6), 0 0 0 12px rgba(126, 211, 33, 0);
+      }
+      100% {
+        box-shadow: 0 4px 20px rgba(126, 211, 33, 0.4), 0 0 0 0 rgba(126, 211, 33, 0.7);
       }
     }
 
     @keyframes slideInUp {
       from {
-        transform: translate(-50%, 100%);
+        transform: translate(-50%, 100%) scale(0.9);
         opacity: 0;
       }
-
       to {
-        transform: translate(-50%, -50%);
+        transform: translate(-50%, -50%) scale(1);
         opacity: 1;
       }
     }
 
     @keyframes slideOutDown {
       from {
-        transform: translate(-50%, -50%);
+        transform: translate(-50%, -50%) scale(1);
         opacity: 1;
       }
-
       to {
-        transform: translate(-50%, 100%);
+        transform: translate(-50%, 100%) scale(0.9);
         opacity: 0;
       }
+    }
+
+    @keyframes bounceIn {
+      0% {
+        transform: scale(0.3);
+        opacity: 0;
+      }
+      50% {
+        opacity: 1;
+      }
+      70% {
+        transform: scale(1.05);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+      20%, 40%, 60%, 80% { transform: translateX(2px); }
     }
 
     @keyframes fadeIn {
       from {
         opacity: 0;
       }
-
       to {
         opacity: 1;
       }
     }
 
+    #chatbot-widget {
+      --chatbot-x: 0;
+      --chatbot-y: 0;
+    }
+
+    .chatbot-icon {
+      position: fixed !important;
+      bottom: 250px !important;
+      right: 20px !important;
+      width: 60px !important;
+      height: 60px !important;
+      background: linear-gradient(135deg, #7ed321, #4caf1a) !important;
+      border-radius: 50% !important;
+      cursor: grab !important;
+      z-index: 9998 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      animation: float 3s ease-in-out infinite !important;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+      box-shadow: 0 6px 24px rgba(126, 211, 33, 0.5) !important;
+      border: 2px solid rgba(255, 255, 255, 0.1) !important;
+      user-select: none !important;
+    }
+
     .chatbot-icon:hover {
-      transform: scale(1.25) rotate(15deg) !important;
-      filter: brightness(1.3);
-      animation: chatbot-pulse-glow 1.2s ease-in-out infinite !important;
+      transform: scale(1.12) translateY(-4px);
+      box-shadow: 0 10px 35px rgba(126, 211, 33, 0.7);
+      border-color: rgba(255, 255, 255, 0.2);
+      animation: pulse-glow 2s ease-in-out infinite;
     }
 
     .chatbot-icon:active {
-      transform: scale(0.9);
+      transform: scale(0.95);
     }
 
     .chatbot-icon.dragging {
-      cursor: grabbing !important;
+      cursor: grabbing;
       animation: none !important;
-      box-shadow: 0 30px 80px rgba(126, 211, 33, 0.9) !important;
-      transform: scale(1.15) rotate(8deg) !important;
+      box-shadow: 0 12px 40px rgba(126, 211, 33, 0.8);
+      transform: scale(1.15);
     }
 
-    #chatbot-icon-container.dragging {
-      animation: none !important;
-      opacity: 0.9;
-    }
-
-    #chatbot-icon-container.dragging * {
-      animation: none !important;
+    .chatbot-icon.pulse {
+      animation: bounceIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
     .chatbot-interface {
-      animation: slideInUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      animation: slideInUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+      transform: translate(-50%, -50%) !important;
     }
 
     .chatbot-interface.closing {
-      animation: slideOutDown 0.3s ease-out forwards;
+      animation: slideOutDown 0.4s ease-out forwards !important;
+    }
+
+    .chatbot-header {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .chatbot-header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(45deg, rgba(255, 255, 255, 0.1), transparent);
+      pointer-events: none;
     }
 
     .chatbot-messages {
@@ -1070,13 +1069,17 @@
       border-radius: 3px;
     }
 
+    .chatbot-messages::-webkit-scrollbar-thumb:hover {
+      background: var(--green-mid);
+    }
+
     .bot-message,
     .user-message {
-      animation: fadeIn 0.3s ease-out;
+      animation: fadeIn 0.4s ease-out;
+      display: flex;
     }
 
     .user-message {
-      display: flex;
       justify-content: flex-end;
     }
 
@@ -1084,22 +1087,48 @@
       background: linear-gradient(135deg, #7ed321, #4caf1a);
       color: white;
       padding: 12px 16px;
-      border-radius: 16px 16px 4px 16px;
+      border-radius: 18px 18px 4px 18px;
       font-size: 14px;
       line-height: 1.4;
       max-width: 240px;
       word-wrap: break-word;
+      box-shadow: 0 4px 12px rgba(126, 211, 33, 0.3);
+      animation: slideInRight 0.3s ease-out;
     }
 
     .bot-message .message-content {
       background: var(--bg-input);
       padding: 12px 16px;
-      border-radius: 16px 16px 16px 4px;
+      border-radius: 18px 18px 18px 4px;
       color: var(--text-primary);
       font-size: 14px;
       line-height: 1.4;
       max-width: 240px;
       word-wrap: break-word;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      animation: slideInLeft 0.3s ease-out;
+    }
+
+    @keyframes slideInRight {
+      from {
+        transform: translateX(20px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideInLeft {
+      from {
+        transform: translateX(-20px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
     }
 
     .typing-indicator {
@@ -1145,41 +1174,45 @@
     }
 
     #chatbot-input:focus {
-      border-color: var(--green-mid);
-      box-shadow: 0 0 0 3px rgba(126, 211, 33, 0.15);
+      border-color: var(--green-mid) !important;
+      box-shadow: 0 0 0 3px rgba(126, 211, 33, 0.2) !important;
+      background: rgba(126, 211, 33, 0.05) !important;
+    }
+
+    #chatbot-send {
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
     }
 
     #chatbot-send:hover {
-      transform: scale(1.05);
+      transform: scale(1.08) rotate(5deg);
+      box-shadow: 0 6px 20px rgba(126, 211, 33, 0.4);
     }
 
     #chatbot-send:active {
-      transform: scale(0.95);
+      transform: scale(0.92);
+    }
+
+    #chatbot-voice {
+      transition: all 0.3s ease !important;
     }
 
     #chatbot-voice:hover {
       background: var(--green-glow);
       border-color: var(--green-mid);
       color: var(--green-mid);
+      transform: scale(1.05);
     }
 
     #chatbot-voice.recording {
       background: #ef4444;
       border-color: #ef4444;
       color: white;
-      animation: pulse 1s infinite;
+      animation: pulse 1s infinite, shake 0.5s ease-in-out infinite;
     }
 
     @keyframes pulse {
-
-      0%,
-      100% {
-        opacity: 1;
-      }
-
-      50% {
-        opacity: 0.7;
-      }
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
     }
 
     /* Toast Pro */
@@ -2337,51 +2370,45 @@
 
     <!-- Floating Chatbot Widget -->
     <div id="chatbot-widget" style="display: none;">
-      <!-- Floating Bot Icon with Crazy Animations -->
-      <div id="chatbot-icon-container" class="draggable-bubble"
-        style="position: fixed; bottom: 250px; right: 20px; z-index: 9998; cursor: pointer; touch-action: none; display: flex; align-items: center; justify-content: center;">
-        <div id="chatbot-icon" class="chatbot-icon custom-floating-bubble"
-          style="width: 90px; height: 90px; border-radius: 50%; background: linear-gradient(135deg, #7ed321 0%, #4caf1a 50%, #3d9b15 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 20px 60px rgba(126, 211, 33, 0.7), 0 0 40px rgba(126, 211, 33, 0.4); animation: crazy-chatbot-float 4.5s ease-in-out infinite; border: 4px solid rgba(255, 255, 255, 0.4); cursor: grab; transition: all 0.3s ease; position: relative;">
-          <!-- Rotating Glow Ring -->
-          <div style="position: absolute; inset: -8px; border-radius: 50%; background: linear-gradient(45deg, transparent, rgba(126, 211, 33, 0.3), transparent); animation: bubble-rotate 3s linear infinite;"></div>
-          
-          <!-- Cute Robot SVG -->
-          <svg width="50" height="50" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="pointer-events: none; position: relative; z-index: 2; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
-            <!-- Antenna -->
-            <rect x="47" y="8" width="6" height="8" rx="1" fill="white" />
-            <circle cx="50" cy="6" r="4" fill="#00cfff" style="animation: antenna-pulse 1.5s ease-in-out infinite;" />
+      <!-- Floating Bot Icon with Cute Robot -->
+      <div id="chatbot-icon" class="chatbot-icon" onclick="window.openChatbot && window.openChatbot()"
+        style="position: fixed; bottom: 250px; right: 20px; width: 60px; height: 60px; background: linear-gradient(135deg, #7ed321, #4caf1a); border-radius: 50%; box-shadow: 0 4px 20px rgba(126, 211, 33, 0.4); cursor: grab; z-index: 9998; display: flex; align-items: center; justify-content: center; animation: float 3s ease-in-out infinite; transition: transform 0.2s ease;">
+        <!-- Cute Robot SVG -->
+        <svg width="36" height="36" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Antenna -->
+          <rect x="47" y="8" width="6" height="8" rx="1" fill="white" />
+          <circle cx="50" cy="6" r="4" fill="#00cfff" />
 
-            <!-- Head -->
-            <rect x="30" y="20" width="40" height="30" rx="8" fill="white" />
+          <!-- Head -->
+          <rect x="30" y="20" width="40" height="30" rx="8" fill="white" />
 
-            <!-- Screen face -->
-            <rect x="34" y="24" width="32" height="22" rx="4" fill="#1a2332" />
+          <!-- Screen face -->
+          <rect x="34" y="24" width="32" height="22" rx="4" fill="#1a2332" />
 
-            <!-- Eyes -->
-            <ellipse cx="42" cy="32" rx="4" ry="5" fill="#00cfff" style="animation: eye-blink 3s ease-in-out infinite;" />
-            <ellipse cx="58" cy="32" rx="4" ry="5" fill="#00cfff" style="animation: eye-blink 3s ease-in-out infinite;" />
+          <!-- Eyes -->
+          <ellipse cx="42" cy="32" rx="4" ry="5" fill="#00cfff" />
+          <ellipse cx="58" cy="32" rx="4" ry="5" fill="#00cfff" />
 
-            <!-- Smile -->
-            <path d="M 44 40 Q 50 44 56 40" stroke="#00cfff" stroke-width="2.5" stroke-linecap="round" fill="none" />
+          <!-- Smile -->
+          <path d="M 44 40 Q 50 44 56 40" stroke="#00cfff" stroke-width="2.5" stroke-linecap="round" fill="none" />
 
-            <!-- Ears/Side panels -->
-            <circle cx="26" cy="35" r="6" fill="#e0e0e0" />
-            <circle cx="74" cy="35" r="6" fill="#e0e0e0" />
+          <!-- Ears/Side panels -->
+          <circle cx="26" cy="35" r="6" fill="#e0e0e0" />
+          <circle cx="74" cy="35" r="6" fill="#e0e0e0" />
 
-            <!-- Neck -->
-            <rect x="45" y="50" width="10" height="6" rx="2" fill="#d0d0d0" />
+          <!-- Neck -->
+          <rect x="45" y="50" width="10" height="6" rx="2" fill="#d0d0d0" />
 
-            <!-- Body -->
-            <ellipse cx="50" cy="70" rx="18" ry="20" fill="white" />
+          <!-- Body -->
+          <ellipse cx="50" cy="70" rx="18" ry="20" fill="white" />
 
-            <!-- Body panel -->
-            <path d="M 38 65 Q 50 68 62 65" stroke="#c0c0c0" stroke-width="1.5" fill="none" />
+          <!-- Body panel -->
+          <path d="M 38 65 Q 50 68 62 65" stroke="#c0c0c0" stroke-width="1.5" fill="none" />
 
-            <!-- Arms -->
-            <ellipse cx="30" cy="68" rx="6" ry="12" fill="#e0e0e0" />
-            <ellipse cx="70" cy="68" rx="6" ry="12" fill="#e0e0e0" />
-          </svg>
-        </div>
+          <!-- Arms -->
+          <ellipse cx="30" cy="68" rx="6" ry="12" fill="#e0e0e0" />
+          <ellipse cx="70" cy="68" rx="6" ry="12" fill="#e0e0e0" />
+        </svg>
       </div>
 
       <!-- Chat Interface - Centered Modal -->
@@ -2644,6 +2671,7 @@
                 <select id="loan-interest-type" class="form-select kf-input">
                   <option value="percentage">Percentage Interest</option>
                   <option value="fixed">Fixed Interest</option>
+                  <option value="own">Own Interest (Fixed Monthly Payment)</option>
                 </select>
               </div>
               <div class="col-6">
@@ -2666,6 +2694,7 @@
                     class="text-danger">*</span></label>
                 <input type="number" id="loan-interest" class="form-control kf-input" placeholder="2" min="0" step="0.1"
                   data-ocid="loan.interest_input" />
+                <small class="form-text text-muted" style="font-size: 0.75rem; display: block; margin-top: 2px;" id="interest-help-text"></small>
               </div>
             </div>
 
