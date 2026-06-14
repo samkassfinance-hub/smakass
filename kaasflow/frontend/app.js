@@ -21,10 +21,10 @@ if (window.location.hostname.includes('samkass.site')) {
   console.log('🔧 API_BASE:', API_BASE);
 }
 const LS = {
-  session:  'kf_session',
+  session: 'kf_session',
   settings: 'kf_settings',
-  clients:  'kf_clients',
-  loans:    'kf_loans',
+  clients: 'kf_clients',
+  loans: 'kf_loans',
   payments: 'kf_payments',
   recycleBin: 'kf_recycle_bin',
 };
@@ -119,20 +119,7 @@ const T = {
     delete: 'Delete',
     upgradePlan: 'Upgrade Plan',
     buyClientSlots: 'Buy Client Slots',
-    extraClients: 'Extra Clients',
-    client: 'Client',
-    interestRate: 'Interest Rate',
-    collectionType: 'Collection Type',
-    collectionAmount: 'Collection Amount',
-    totalPaid: 'Total Paid',
-    remaining: 'Remaining',
-    progress: 'Progress',
-    fixed: 'Fixed',
-    percentage: 'Percentage',
-    installments: 'installments',
-    open: 'Open',
-    day: 'day',
-    days: 'days'
+    extraClients: 'Extra Clients'
   },
   ta: {
     home: 'முகப்பு', clients: 'வாடிக்கையாளர்கள்',
@@ -353,7 +340,7 @@ const state = {
   lang: 'en',
   theme: 'light',
   session: null,
-  collectionFilter: 'all',
+  collectionFilter: 'today',
   loanFilter: 'all',
   clientSearch: '',
   charts: {},
@@ -437,9 +424,6 @@ const Store = {
   saveSettings: v => Store.set('settings', v),
   saveSession: v => Store.set('session', v),
 };
-
-// Expose Store and calcLoanStats globally for simple-notifications.js
-window.Store = Store;
 
 // ── TOAST ──────────────────────────────────────────────────────
 function showToast(msg, type = 'success') {
@@ -644,21 +628,12 @@ function saveSessionIsolated(token, user) {
     clearAllUserData();
   }
   localStorage.setItem('kf_session', JSON.stringify({ token, user }));
-  
-  // Initialize push notifications after successful login
-  if (window.PushNotifications) {
-    setTimeout(() => {
-      window.PushNotifications.initAfterLogin().catch(error => {
-        console.warn('⚠️ Could not initialize push notifications:', error);
-      });
-    }, 1000); // Small delay to ensure everything is loaded
-  }
 }
 
 // Google Sign-In is initialized via HTML (g_id_onload) and handled by handleGoogleLogin below
 
 // Google Login Callback
-window.handleGoogleLogin = async function(response) {
+window.handleGoogleLogin = async function (response) {
   // Remove loading state from buttons
   const btns = document.querySelectorAll('.btn-google-signin');
   btns.forEach(b => b.classList.remove('loading'));
@@ -687,7 +662,7 @@ window.handleGoogleLogin = async function(response) {
     if (res.user?.name && !s.financierName) { s.financierName = res.user.name; Store.saveSettings(s); }
     if (res.user?.appPin) { s.appPin = res.user.appPin; Store.saveSettings(s); }
     state.session = getSession();
-    
+
     // Crucial: Restore from cloud BEFORE checking PIN
     // so we don't overwrite data for an existing user logging into a new device
     if (window.KFSync) await KFSync.restore();
@@ -718,10 +693,10 @@ window.handleGoogleLogin = async function(response) {
     const s = Store.settings();
     if (!s.financierName) { s.financierName = googleUser.name; Store.saveSettings(s); }
     state.session = getSession();
-    
+
     // Crucial: Restore from cloud BEFORE checking PIN
     if (window.KFSync) await KFSync.restore();
-    
+
     if (hasPin()) { showPinLock(); } else { showPinSetup(); }
   } else {
     const errEl = $('#login-error');
@@ -757,7 +732,7 @@ async function logout() {
     const token = session?.token;
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
-    
+
     await fetch(`${API_BASE}/logout`, {
       method: 'POST',
       headers
@@ -774,13 +749,20 @@ async function logout() {
   localStorage.removeItem(LS.recycleBin);
   clearAllUserData();
   state.session = null;
+
+  // Clear background sync interval
+  if (window._kfRealtimeSync) {
+    clearInterval(window._kfRealtimeSync);
+    window._kfRealtimeSync = null;
+  }
+
   showAuth();
 }
 
 // ── INIT ──────────────────────────────────────────────────────
 function init() {
   console.log('🚀 INIT: Starting app initialization...');
-  
+
   try {
     // Hide mobile loading indicator
     const mobileLoader = document.getElementById('app-loading');
@@ -805,27 +787,26 @@ function init() {
 
     const settings = Store.settings();
     console.log('⚙️ INIT: Settings loaded:', settings);
-    
+
     // Default to light mode for better mobile compatibility
     applyTheme(settings.theme || 'light');
     applyLang(settings.lang || 'en');
-    
+
     console.log('🎨 INIT: Theme and language applied');
 
     // ── Register Service Worker for notification action buttons ──
     if ('serviceWorker' in navigator) {
       console.log('📡 INIT: Registering service worker...');
-      // Use absolute path for service worker registration
-      const swPath = '/sw.js';
-      console.log(`📡 INIT: Registering service worker at: ${swPath}`);
-      navigator.serviceWorker.register(swPath, { scope: '/' })
-        .then(registration => {
-          console.log('✅ INIT: Service worker registered successfully');
-          console.log('📡 INIT: SW Scope:', registration.scope);
-          console.log('📡 INIT: SW State:', registration.active ? 'Active' : 'Waiting');
-          
-          // Service Worker message handling is done by the global listener at the bottom of this file
-          // This prevents duplicate message handlers
+      navigator.serviceWorker.register('./sw.js', { scope: './' })
+        .then(() => {
+          console.log('✅ INIT: Service worker registered');
+          // Listen for messages from SW (Paid / Pending button taps)
+          navigator.serviceWorker.addEventListener('message', e => {
+            const msg = e.data || {};
+            if (msg.type === 'NOTIF_MARK_PAID') handleNotifMarkPaid(msg.loanId, msg.emi);
+            else if (msg.type === 'NOTIF_MARK_PENDING') handleNotifMarkPending(msg.loanId);
+            else if (msg.type === 'NOTIF_OPEN_COLLECTION') navigateTo('collection');
+          });
         })
         .catch((err) => {
           console.warn('⚠️ INIT: Service worker registration failed:', err);
@@ -837,7 +818,7 @@ function init() {
       console.log('✅ INIT: User is logged in');
       state.session = getSession();
       console.log('👤 INIT: Session:', state.session);
-      
+
       if (hasPin()) {
         console.log('🔒 INIT: PIN exists, showing PIN lock');
         showPinLock();
@@ -852,25 +833,25 @@ function init() {
 
     console.log('🔗 INIT: Binding global events');
     bindGlobal();
-    
+
     console.log('⏰ INIT: Scheduling notifications');
     scheduleNotifications();
-    
+
     console.log('✅ INIT: Initialization complete!');
   } catch (error) {
     console.error('❌ INIT: Fatal error during initialization:', error);
     console.error('Stack trace:', error.stack);
-    
+
     // Emergency fallback: Show auth screen
     const mobileLoader = document.getElementById('app-loading');
     if (mobileLoader) mobileLoader.style.display = 'none';
-    
+
     const authScreen = document.getElementById('auth-screen');
     if (authScreen) {
       authScreen.style.display = 'block';
       console.log('✅ INIT: Emergency fallback - showing auth screen');
     }
-    
+
     // Don't re-throw the error to avoid breaking the app completely
   }
 }
@@ -880,8 +861,8 @@ function handleNotifMarkPaid(loanId, emiAmount) {
   if (!loanId) return;
   const loan = Store.loans().find(l => l.id === loanId);
   if (!loan) { showToast('Loan not found', 'error'); return; }
-  const stats   = calcLoanStats(loan);
-  const amount  = emiAmount || stats.emi;
+  const stats = calcLoanStats(loan);
+  const amount = emiAmount || stats.emi;
   const payment = {
     id: uid(), loanId, amount, date: today(),
     note: 'Paid via notification', createdAt: new Date().toISOString()
@@ -892,7 +873,7 @@ function handleNotifMarkPaid(loanId, emiAmount) {
   // Auto-complete if fully paid
   if (stats.remaining - amount <= 0) {
     const loans = Store.loans();
-    const idx   = loans.findIndex(l => l.id === loanId);
+    const idx = loans.findIndex(l => l.id === loanId);
     if (idx !== -1) { loans[idx].status = 'completed'; Store.saveLoans(loans); }
   }
   updateNotifBadge();
@@ -904,66 +885,6 @@ function handleNotifMarkPaid(loanId, emiAmount) {
 function handleNotifMarkPending(loanId) {
   showToast('⏳ Marked as Pending. Reminder will stay active.', 'info');
   navigateTo('collection');
-}
-
-// ── Notification action: 💰 Partial Payment ──────────────────
-function handlePartialPayment(loanId, partialAmount) {
-  if (!loanId || !partialAmount) return;
-  
-  const loan = Store.loans().find(l => l.id === loanId);
-  if (!loan) { 
-    showToast('Loan not found', 'error'); 
-    return; 
-  }
-  
-  const stats = calcLoanStats(loan);
-  const amount = parseFloat(partialAmount);
-  
-  if (amount <= 0 || amount > stats.emi) {
-    showToast('Invalid partial payment amount', 'error');
-    return;
-  }
-  
-  // Record partial payment
-  const payment = {
-    id: uid(), 
-    loanId, 
-    amount, 
-    date: today(),
-    note: `Partial payment via notification (₹${amount} of ₹${stats.emi})`, 
-    createdAt: new Date().toISOString()
-  };
-  
-  const payments = Store.payments();
-  payments.push(payment);
-  Store.savePayments(payments);
-  
-  // Check if loan is now fully paid with this partial payment
-  const newStats = calcLoanStats(loan);
-  if (newStats.remaining - amount <= 0) {
-    const loans = Store.loans();
-    const idx = loans.findIndex(l => l.id === loanId);
-    if (idx !== -1) { 
-      loans[idx].status = 'completed'; 
-      Store.saveLoans(loans); 
-      showToast(`✅ Loan completed with partial payment of ₹${amount}!`, 'success');
-    }
-  } else {
-    showToast(`✅ Partial payment of ₹${amount} recorded (₹${(stats.emi - amount).toFixed(2)} remaining for this EMI)`, 'success');
-  }
-  
-  updateNotifBadge();
-  navigateTo('collection');
-}
-
-// ── Refresh current page after payment updates ───────────────
-function refreshCurrentPage() {
-  if (typeof navigateTo === 'function' && state.currentPage) {
-    // Re-render current page to show updated data
-    setTimeout(() => {
-      navigateTo(state.currentPage);
-    }, 100);
-  }
 }
 
 
@@ -992,24 +913,24 @@ function showAuth() {
   $('#auth-screen').style.display = '';
   $('#pin-lock-screen').style.display = 'none';
   $('#main-app').style.display = 'none';
-  
+
   // Show PWA install bubble on auth screen - enhanced for samkass.site
   const bubble = $('#pwa-install-bubble');
   if (bubble) {
     bubble.style.display = 'block';
     console.log('🔘 PWA install bubble shown on samkass.site');
   }
-  
+
   const aiText = document.getElementById('ai-typing-text');
   if (aiText && !aiText.dataset.typingStarted) {
     aiText.dataset.typingStarted = 'true';
     typeAIOrbText();
   }
-  
+
   // Slide back to Step 1 (Welcome Screen)
   const slider = $('#auth-slider-container');
   if (slider) slider.classList.remove('slide-to-step-2');
-  
+
   // Show default email login section in Step 2
   showFormSection('#login-form-wrapper');
   updateAuthHeader('Log in or sign up', 'Manage loans, collections and customer payments smarter with SamKass.');
@@ -1020,15 +941,15 @@ function showPinSetup() {
   $('#auth-screen').style.display = '';
   $('#pin-lock-screen').style.display = 'none';
   $('#main-app').style.display = 'none';
-  
+
   // Slide to Step 2
   const slider = $('#auth-slider-container');
   if (slider) slider.classList.add('slide-to-step-2');
-  
+
   // Show PIN Setup form section
   showFormSection('#pin-setup-wrapper');
   updateAuthHeader('Set Security PIN', 'Create a 4-digit PIN to protect your app');
-  
+
   // Clear & focus first digit
   const inputs = $$('#pin-setup-inputs .pin-digit-input');
   inputs.forEach(i => { i.value = ''; i.classList.remove('shake', 'success'); });
@@ -1042,7 +963,7 @@ function showPinLock() {
   $('#auth-screen').style.display = 'none';
   $('#pin-lock-screen').style.display = '';
   $('#main-app').style.display = 'none';
-  
+
   // Hide PWA install bubble
   const bubble = $('#pwa-install-bubble');
   if (bubble) bubble.style.display = 'none';
@@ -1072,16 +993,16 @@ async function showApp() {
   $('#auth-screen').style.display = 'none';
   $('#pin-lock-screen').style.display = 'none';
   $('#main-app').style.display = '';
-  
+
   // Show chatbot for logged-in users
   showChatbotForLoggedInUser();
-  
+
   updatePlanBanner();
   checkAccessControl();
-  
+
   // Render immediately with local data for zero-delay UX
   navigateTo(state.page || 'dashboard');
-  
+
   // Asynchronously query the backend subscription status
   if (window.RazorpayPayment) {
     window.RazorpayPayment.checkSubscriptionStatus().then(status => {
@@ -1091,12 +1012,12 @@ async function showApp() {
         settings.plan = status.plan_type;
         settings.paymentDate = status.end_date ? new Date(new Date(status.end_date).getTime() - (status.plan_type === 'yearly' ? 365 : status.plan_type === 'quarterly' ? 90 : 30) * 24 * 60 * 60 * 1000).toISOString() : new Date().toISOString();
         Store.saveSettings(settings);
-        
+
         // Update subscription manager local state
         if (window.KFSubscription) {
           window.KFSubscription.syncFromSettings();
         }
-        
+
         if (oldPlan !== status.plan_type) {
           updatePlanBanner();
           if (state.page === 'settings') {
@@ -1106,14 +1027,25 @@ async function showApp() {
       }
     }).catch(e => console.warn("Failed to check subscription status:", e));
   }
-  
+
   // Seamlessly sync with cloud in the background and soft-refresh if needed
   if (window.KFSync) {
     KFSync.restore().then(() => {
       navigateTo(state.page || 'dashboard');
     });
+
+    // BACKGROUND REAL-TIME SYNC: Poll for cloud updates every 30 seconds
+    if (window._kfRealtimeSync) clearInterval(window._kfRealtimeSync);
+    window._kfRealtimeSync = setInterval(async () => {
+      // Sync only if app is visible and no modal is open to prevent UI flickering during input
+      const isModalOpen = document.body.classList.contains('modal-open');
+      if (isLoggedIn() && document.visibilityState === 'visible' && !isModalOpen) {
+        const res = await KFSync.restore();
+        if (res) navigateTo(state.page); // Refresh current view with fresh cloud data
+      }
+    }, 30000);
   }
-  
+
   // Fire today's payment notifications when app becomes visible
   fireTodayNotifications();
 }
@@ -1131,18 +1063,18 @@ function navigateTo(page) {
 
   const pages = {
     home: renderHome,
-    clients:   renderClients,
-    loans:     renderLoans,
+    clients: renderClients,
+    loans: renderLoans,
     collection: renderCollection,
-    reports:   renderReports,
-    profile:   renderProfile,
-    settings:  renderSettings,
+    reports: renderReports,
+    profile: renderProfile,
+    settings: renderSettings,
   };
   if (pages[page]) pages[page](content);
 }
 
 function destroyCharts() {
-  Object.values(state.charts).forEach(c => { try { c.destroy(); } catch {} });
+  Object.values(state.charts).forEach(c => { try { c.destroy(); } catch { } });
   state.charts = {};
 }
 
@@ -1155,7 +1087,7 @@ function getPlan() {
 function getPlanExpiryTime() {
   const s = Store.settings();
   if (!s.paymentDate || !s.plan || s.plan === 'free') return 0;
-  
+
   const paymentTime = new Date(s.paymentDate).getTime();
   let durationMs = 0;
   if (s.plan === 'monthly') {
@@ -1230,7 +1162,7 @@ function updatePlanBanner() {
 }
 
 window.KF = window.KF || {};
-window.KF.upgradePro = function(planType) {
+window.KF.upgradePro = function (planType) {
   initiatePlanPayment(planType);
 };
 
@@ -1266,7 +1198,7 @@ function generateSampleData() {
     const duration = [6, 10, 12, 24][i % 4];
     const type = i % 2 === 0 ? 'weekly' : 'monthly';
     const interestType = 'percentage';
-    
+
     // Spread start dates over the last few months
     const start = new Date();
     start.setMonth(start.getMonth() - (i % 5));
@@ -1294,11 +1226,11 @@ function generateSampleData() {
     const totalPayable = loan.principal + (monthlyInterest * loan.duration);
     const installments = loan.type === 'weekly' ? loan.duration * 4 : loan.duration;
     const emi = +(totalPayable / installments).toFixed(2);
-    
+
     const d = new Date(loan.startDate);
     if (loan.type === 'monthly') d.setMonth(d.getMonth() + 1);
     else if (loan.type === 'weekly') d.setDate(d.getDate() + 7);
-    
+
     // Ensure the payment date is not in the future
     const paymentDate = d <= new Date() ? d.toISOString().split('T')[0] : td;
 
@@ -1321,6 +1253,10 @@ function calcMonthlyInterest(principal, rate, interestType) {
   if (!principal || !rate) return 0;
   if (interestType === 'fixed') {
     return (principal / 1000) * (rate * 100);
+  } else if (interestType === 'own') {
+    // For 'own' interest type, rate is the fixed monthly payment
+    // Return the payment amount (not interest, will be calculated from this)
+    return rate;
   } else {
     return principal * (rate / 100);
   }
@@ -1328,16 +1264,34 @@ function calcMonthlyInterest(principal, rate, interestType) {
 
 function calcLoanStats(loan) {
   const duration = loan.duration || 0;
-  const monthlyInterest = calcMonthlyInterest(loan.principal, loan.interestRate, loan.interestType || 'percentage');
-  const totalInterest = monthlyInterest * duration;
-  const totalPayable = duration > 0 ? loan.principal + totalInterest : loan.principal;
+  const interestType = loan.interestType || 'percentage';
   
+  let monthlyPayment = 0;
+  let totalInterest = 0;
+  let totalPayable = loan.principal;
   let emi = 0;
-  if (duration > 0) {
-    const installments = loan.type === 'weekly' ? duration * 4 : duration;
-    emi = +(totalPayable / installments).toFixed(2);
+
+  if (interestType === 'own') {
+    // For 'own' interest type: interestRate is the fixed monthly payment
+    monthlyPayment = loan.interestRate || 0;
+    if (duration > 0) {
+      const totalCollected = monthlyPayment * duration;
+      totalInterest = Math.max(0, totalCollected - loan.principal);
+      totalPayable = loan.principal + totalInterest;
+      const installments = loan.type === 'weekly' ? duration * 4 : duration;
+      emi = +(monthlyPayment).toFixed(2);
+    }
+  } else {
+    const monthlyInterest = calcMonthlyInterest(loan.principal, loan.interestRate, interestType);
+    totalInterest = monthlyInterest * duration;
+    totalPayable = duration > 0 ? loan.principal + totalInterest : loan.principal;
+
+    if (duration > 0) {
+      const installments = loan.type === 'weekly' ? duration * 4 : duration;
+      emi = +(totalPayable / installments).toFixed(2);
+    }
   }
-  
+
   const payments = Store.payments().filter(p => p.loanId === loan.id);
   const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
   const remaining = Math.max(0, totalPayable - totalPaid);
@@ -1347,30 +1301,44 @@ function calcLoanStats(loan) {
   const daysOverdue = isOverdue ? daysDiff(today(), nextDueDate) : 0;
   return { emi, totalPayable, totalInterest, totalPaid, remaining, progress, nextDueDate, isOverdue, daysOverdue };
 }
-window.calcLoanStats = calcLoanStats;
 
 function calcNextDue(loan, payments = null) {
   if (!loan.duration || loan.duration <= 0) return null;
   if (!payments) payments = Store.payments().filter(p => p.loanId === loan.id);
-  const d = new Date(loan.startDate);
-  const typeMap = { monthly: 'month', weekly: 'week' };
-  const step = typeMap[loan.type] || 'month';
-  const totalInstallments = loan.type === 'weekly' ? loan.duration * 4 : loan.duration;
-  let installments = 0;
+
+  const duration = loan.duration || 0;
+  const interestType = loan.interestType || 'percentage';
   
-  const monthlyInterest = calcMonthlyInterest(loan.principal, loan.interestRate, loan.interestType || 'percentage');
-  const totalPayable = loan.principal + (monthlyInterest * loan.duration);
-  const emi = +(totalPayable / totalInstallments).toFixed(2);
+  let emi = 0;
+  let totalPayable = 0;
   
-  while (installments < totalInstallments) {
-    if (step === 'month') d.setMonth(d.getMonth() + 1);
-    else if (step === 'week') d.setDate(d.getDate() + 7);
-    installments++;
-    const due = d.toISOString().split('T')[0];
-    const paid = payments.filter(p => p.date === due).reduce((s, p) => s + p.amount, 0);
-    if (paid < emi * 0.9) return due;
+  if (interestType === 'own') {
+    // For 'own' interest type: interestRate is the fixed monthly payment
+    emi = loan.interestRate || 0;
+    const totalCollected = emi * duration;
+    totalPayable = loan.principal + Math.max(0, totalCollected - loan.principal);
+  } else {
+    const monthlyInterest = calcMonthlyInterest(loan.principal, loan.interestRate, interestType);
+    totalPayable = duration > 0 ? loan.principal + (monthlyInterest * duration) : loan.principal;
+    const totalInstallments = loan.type === 'weekly' ? duration * 4 : duration;
+    emi = totalInstallments > 0 ? +(totalPayable / totalInstallments).toFixed(2) : 0;
   }
-  return null;
+  
+  const totalInstallments = loan.type === 'weekly' ? duration * 4 : duration;
+  const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
+
+  // How many full installments are covered by the total paid amount?
+  // Using a very small epsilon (0.0001) for strict matching
+  const installmentsCovered = emi > 0 ? Math.floor((totalPaid + 0.0001) / emi) : 0;
+
+  if (installmentsCovered >= totalInstallments) return null;
+
+  const d = new Date(loan.startDate);
+  for (let i = 0; i < installmentsCovered + 1; i++) {
+    if (loan.type === 'weekly') d.setDate(d.getDate() + 7);
+    else d.setMonth(d.getMonth() + 1);
+  }
+  return d.toISOString().split('T')[0];
 }
 
 // ── HOME ─────────────────────────────────────────────────
@@ -1421,8 +1389,8 @@ function renderHome(container) {
       <div class="kf-card" data-ocid="home.due_today_card">
         <div class="section-title"><i class="fa-solid fa-calendar-day"></i>${t('dueToday')} (${dueToday.length})</div>
         <div class="stagger-children">${dueToday.length === 0
-          ? `<p class="text-muted-kf" style="font-size:.875rem;margin:0">${t('noDueToday')}</p>`
-          : dueToday.slice(0, 6).map(({ loan, stats, client }, i) => `
+      ? `<p class="text-muted-kf" style="font-size:.875rem;margin:0">${t('noDueToday')}</p>`
+      : dueToday.slice(0, 6).map(({ loan, stats, client }, i) => `
             <div class="due-today-item" data-ocid="home.due_today.item.${i + 1}">
               <div>
                 <div class="due-today-name">${client ? client.name : 'Unknown'}</div>
@@ -1430,7 +1398,7 @@ function renderHome(container) {
               </div>
               <div class="due-today-amount">${fmtCur(stats.emi)}</div>
             </div>`).join('')
-        }
+    }
         </div></div>
 
       <div class="kf-card" data-ocid="home.monthly_chart_card">
@@ -1443,19 +1411,19 @@ function renderHome(container) {
       <div class="kf-card" data-ocid="home.recent_payments_card">
         <div class="section-title"><i class="fa-solid fa-receipt"></i>${t('recentPayments')}</div>
         <div class="stagger-children">${recentPayments.length === 0
-          ? `<p class="text-muted-kf" style="font-size:.875rem;margin:0">${t('noPayments')}</p>`
-          : recentPayments.map((p, i) => {
-              const loan = loans.find(l => l.id === p.loanId);
-              const client = loan ? clients.find(c => c.id === loan.clientId) : null;
-              return `<div class="payment-row" data-ocid="home.payment.item.${i + 1}">
+      ? `<p class="text-muted-kf" style="font-size:.875rem;margin:0">${t('noPayments')}</p>`
+      : recentPayments.map((p, i) => {
+        const loan = loans.find(l => l.id === p.loanId);
+        const client = loan ? clients.find(c => c.id === loan.clientId) : null;
+        return `<div class="payment-row" data-ocid="home.payment.item.${i + 1}">
                 <div>
                   <div style="font-weight:700">${client ? client.name : 'Unknown'}</div>
                   <div class="payment-row-date">${fmtDate(p.date)}${p.note ? ' · ' + p.note : ''}</div>
                 </div>
                 <div class="payment-row-amount">${fmtCur(p.amount)}</div>
               </div>`;
-            }).join('')
-        }
+      }).join('')
+    }
         </div></div>
     </div>`;
 
@@ -1478,10 +1446,10 @@ function renderMonthlyChart(canvasId, payments) {
   }
   const isDark = state.theme === 'dark';
   const chartColor = '#f59e0b';
-  if (state.charts[canvasId]) { try { state.charts[canvasId].destroy(); } catch {} }
+  if (state.charts[canvasId]) { try { state.charts[canvasId].destroy(); } catch { } }
   const ctx = canvas.getContext('2d');
   let gradient = chartColor + 'cc';
-  if(ctx) {
+  if (ctx) {
     gradient = ctx.createLinearGradient(0, 0, 0, 400);
     gradient.addColorStop(0, 'rgba(245, 158, 11, 0.9)');
     gradient.addColorStop(1, 'rgba(245, 158, 11, 0.1)');
@@ -1495,7 +1463,7 @@ function renderMonthlyChart(canvasId, payments) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { 
+      plugins: {
         legend: { display: false },
         tooltip: {
           backgroundColor: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
@@ -1532,7 +1500,7 @@ function renderClients(container) {
   const clientsCount = clients.length;
   const s = Store.settings();
   const limit = FREE_CLIENT_LIMIT + (s.extraClients || 0);
-  
+
   const usageIndicator = isFree ? `<div style="font-size: 0.85rem; color: ${clientsCount >= limit ? 'var(--kf-danger)' : 'var(--kf-text-muted)'}; font-weight: 600; margin-top: 4px;"><i class="fa-solid fa-chart-pie me-1"></i>${clientsCount} / ${limit} Trial Clients Used</div>` : '';
 
   container.innerHTML = `
@@ -1587,20 +1555,6 @@ function renderClientsList(clients, loans) {
     const clientLoans = loans.filter(l => l.clientId === c.id);
     const activeLoans = clientLoans.filter(l => l.status === 'active').length;
     const initials = c.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-    
-    // Find the earliest next due date among active loans
-    let earliestDue = null;
-    let nextPaymentAmount = 0;
-    clientLoans.filter(l => l.status === 'active').forEach(loan => {
-      const stats = calcLoanStats(loan);
-      if (stats.nextDueDate) {
-        if (!earliestDue || new Date(stats.nextDueDate) < new Date(earliestDue)) {
-          earliestDue = stats.nextDueDate;
-          nextPaymentAmount = stats.emi;
-        }
-      }
-    });
-    
     return `<div class="client-card" data-ocid="clients.item.${i + 1}" data-id="${c.id}">
       <div class="client-avatar">${initials}</div>
       <div class="client-info min-w-0">
@@ -1609,15 +1563,6 @@ function renderClientsList(clients, loans) {
           <span><i class="fa-solid fa-phone" style="font-size:.7rem"></i> ${c.phone}</span>
           <span>${activeLoans} active loan${activeLoans !== 1 ? 's' : ''}</span>
         </div>
-        ${earliestDue ? `
-        <div style="margin-top:8px; padding:8px 12px; background:rgba(126, 211, 33, 0.15); border-radius:10px; border:2px solid rgba(126, 211, 33, 0.4); display:flex; align-items:center; gap:10px;">
-          <i class="fa-solid fa-calendar-day" style="color:var(--color-primary); font-size:1.1rem;"></i>
-          <div style="flex:1; min-width:0;">
-            <div style="font-size:0.65rem; color:var(--color-text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px;">${t('nextDue')}</div>
-            <div style="font-size:0.9rem; font-weight:800; color:var(--color-primary); font-family:'JetBrains Mono', monospace; line-height:1.2;">${fmtDate(earliestDue)}</div>
-            <div style="font-size:0.85rem; font-weight:700; color:var(--color-primary); font-family:'JetBrains Mono', monospace; margin-top:2px;">${fmtCur(nextPaymentAmount)}</div>
-          </div>
-        </div>` : ''}
       </div>
       <div class="client-actions">
         <button class="btn-icon primary" data-action="view" data-id="${c.id}" aria-label="View profile" data-ocid="clients.view_button.${i + 1}"><i class="fa-solid fa-eye"></i></button>
@@ -1687,8 +1632,8 @@ function openClientProfile(clientId) {
     </div>
     <div class="section-title"><i class="fa-solid fa-money-bill-wave"></i>Loans (${clientLoans.length})</div>
     ${clientLoans.length === 0 ? '<p class="text-muted-kf fs-sm">No loans yet.</p>' : clientLoans.map(l => {
-      const stats = calcLoanStats(l);
-      return `<div class="loan-card ${stats.isOverdue ? 'overdue' : l.status === 'completed' ? 'completed' : ''}" style="margin-bottom:.625rem">
+    const stats = calcLoanStats(l);
+    return `<div class="loan-card ${stats.isOverdue ? 'overdue' : l.status === 'completed' ? 'completed' : ''}" style="margin-bottom:.625rem">
         <div class="loan-card-header">
           <div>${fmtCur(l.principal)}${l.duration ? ` · ${l.duration}mo` : ''}</div>
           <span class="badge-kf ${stats.isOverdue ? 'badge-overdue' : l.status === 'completed' ? 'badge-completed' : 'badge-active'}">${stats.isOverdue ? 'OVERDUE' : l.status.toUpperCase()}</span>
@@ -1711,7 +1656,7 @@ function openClientProfile(clientId) {
           </button>
         </div>
       </div>`;
-    }).join('')}
+  }).join('')}
     ${clientLoans.length > 0 ? `<div class="section-title mt-2"><i class="fa-solid fa-receipt"></i>Recent Payments</div>
       ${payments.filter(p => clientLoans.some(l => l.id === p.loanId)).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5).map(p => `
         <div class="payment-row">
@@ -1829,7 +1774,7 @@ function openLoanInfo(loanId) {
   if (!loan) return;
   const client = Store.clients().find(c => c.id === loan.clientId);
   const stats = calcLoanStats(loan);
-  
+
   let html = `
     <div style="text-align:center; margin-bottom:1.5rem;">
       <div style="width:56px;height:56px;background:var(--gradient-green);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:1.5rem;color:#ffffff;margin-bottom:0.5rem;box-shadow:0 4px 15px var(--green-glow);">
@@ -1841,56 +1786,45 @@ function openLoanInfo(loanId) {
       </span>
     </div>
 
-    ${stats.nextDueDate && loan.status === 'active' ? `
-    <div class="kf-card" style="padding:1.25rem; margin-bottom:1rem; background:${stats.isOverdue ? 'rgba(239, 68, 68, 0.12)' : 'rgba(126, 211, 33, 0.12)'}; border: 2px solid ${stats.isOverdue ? 'var(--color-danger)' : 'var(--color-primary)'}; box-shadow:0 6px 20px ${stats.isOverdue ? 'rgba(239, 68, 68, 0.25)' : 'rgba(126, 211, 33, 0.25)'};">
-      <div style="display:flex; align-items:center; gap:14px; margin-bottom:12px;">
-        <i class="fa-solid fa-calendar-day" style="font-size:2rem; color:${stats.isOverdue ? 'var(--color-danger)' : 'var(--color-primary)'};"></i>
-        <div style="flex:1;">
-          <div style="font-size:0.7rem; color:var(--color-text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:4px;">${t('nextDue')}</div>
-          <div style="font-size:1.25rem; font-weight:800; color:${stats.isOverdue ? 'var(--color-danger)' : 'var(--color-primary)'}; font-family:'JetBrains Mono', monospace; line-height:1.2;">${fmtDate(stats.nextDueDate)}</div>
-        </div>
-      </div>
-      <div class="emi-preview-row" style="margin:0; padding-top:12px; border-top:2px solid ${stats.isOverdue ? 'rgba(239, 68, 68, 0.3)' : 'rgba(126, 211, 33, 0.3)'};">
-        <span style="font-weight:700; font-size:0.9rem;">${t('emi')}</span>
-        <strong style="font-size:1.3rem; color:${stats.isOverdue ? 'var(--color-danger)' : 'var(--color-primary)'}; font-family:'JetBrains Mono', monospace; font-weight:800;">${fmtCur(stats.emi)}</strong>
-      </div>
-      ${stats.isOverdue ? `
-      <div style="margin-top:12px; padding:10px 14px; background:rgba(239, 68, 68, 0.2); border-radius:10px; text-align:center; border:1px solid rgba(239, 68, 68, 0.4);">
-        <i class="fa-solid fa-exclamation-triangle" style="color:var(--color-danger); margin-right:8px; font-size:1.1rem;"></i>
-        <span style="color:var(--color-danger); font-weight:800; font-size:0.95rem;">${stats.daysOverdue} ${stats.daysOverdue !== 1 ? t('days') : t('day')} ${t('overdue').toLowerCase()}</span>
-      </div>` : ''}
-    </div>` : ''}
-
     <div class="kf-card" style="padding:1rem; margin-bottom:1rem; background:rgba(0,0,0,0.02); box-shadow:none;">
-      <div class="emi-preview-row"><span>${t('client')}</span><strong style="color:var(--color-primary);">${client ? client.name : 'Unknown'}</strong></div>
-      <div class="emi-preview-row"><span>${t('phone')}</span><strong>${client ? client.phone : 'N/A'}</strong></div>
-      <div class="emi-preview-row"><span>${t('startDate')}</span><strong>${fmtDate(loan.startDate)}</strong></div>
+      <div class="emi-preview-row"><span>Client</span><strong style="color:var(--color-primary);">${client ? client.name : 'Unknown'}</strong></div>
+      <div class="emi-preview-row"><span>Phone</span><strong>${client ? client.phone : 'N/A'}</strong></div>
+      <div class="emi-preview-row"><span>Start Date</span><strong>${fmtDate(loan.startDate)}</strong></div>
     </div>
 
     <div class="kf-card" style="padding:1rem; margin-bottom:1rem; background:rgba(0,0,0,0.02); box-shadow:none;">
-      <div class="emi-preview-row"><span>${t('interestRate')}</span><strong>${loan.interestRate}% (${loan.interestType === 'fixed' ? t('fixed') : t('percentage')})</strong></div>
-      <div class="emi-preview-row"><span>${t('duration')}</span><strong>${loan.duration ? loan.duration + ' ' + t('installments') : t('open')}</strong></div>
-      <div class="emi-preview-row"><span>${t('collectionType')}</span><strong style="text-transform:capitalize;">${t(loan.type)}</strong></div>
+      <div class="emi-preview-row"><span>Interest Rate</span><strong>${
+        loan.interestType === 'own' ? `₹${loan.interestRate} (Fixed Monthly Payment)` :
+        loan.interestType === 'fixed' ? `₹${loan.interestRate} (Fixed)` :
+        `${loan.interestRate}% (Percentage)`
+      }</strong></div>
+      <div class="emi-preview-row"><span>Duration</span><strong>${loan.duration ? loan.duration + ' installments' : 'Open'}</strong></div>
+      <div class="emi-preview-row"><span>Collection Type</span><strong style="text-transform:capitalize;">${loan.type}</strong></div>
       <div class="emi-preview-row" style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--color-border-muted);">
-        <span style="color:var(--color-text-muted); font-weight:600;">${t('collectionAmount')}</span>
+        <span style="color:var(--color-text-muted); font-weight:600;">Collection Amount</span>
         <strong style="color:var(--color-primary); font-size:1.1rem;">${fmtCur(stats.emi)}</strong>
       </div>
     </div>
 
     <div class="kf-card" style="padding:1rem; background:rgba(0,0,0,0.02); box-shadow:none;">
-      <div class="emi-preview-row"><span>${t('totalPayable')}</span><strong>${fmtCur(stats.totalPayable)}</strong></div>
-      <div class="emi-preview-row"><span>${t('totalPaid')}</span><strong style="color:var(--color-success);">${fmtCur(stats.totalPaid)}</strong></div>
-      <div class="emi-preview-row"><span>${t('remaining')}</span><strong style="color:var(--color-danger);">${fmtCur(stats.remaining)}</strong></div>
+      <div class="emi-preview-row"><span>Total Payable</span><strong>${fmtCur(stats.totalPayable)}</strong></div>
+      <div class="emi-preview-row"><span>Total Paid</span><strong style="color:var(--color-success);">${fmtCur(stats.totalPaid)}</strong></div>
+      <div class="emi-preview-row"><span>Remaining</span><strong style="color:var(--color-danger);">${fmtCur(stats.remaining)}</strong></div>
       
       <div style="margin-top:12px;">
         <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--color-text-muted); margin-bottom:4px; font-weight:600;">
-          <span>${t('progress')}</span><span>${stats.progress}%</span>
+          <span>Progress</span><span>${stats.progress}%</span>
         </div>
         <div class="kf-progress"><div class="kf-progress-fill ${stats.isOverdue ? 'danger' : stats.progress === 100 ? 'success' : ''}" style="width:${stats.progress}%"></div></div>
       </div>
+      
+      ${stats.nextDueDate && loan.status === 'active' ? `
+        <div class="emi-preview-row" style="margin-top:12px; padding-top:12px; border-top:1px dashed var(--color-border-muted);">
+          <span>Next Due</span><strong style="${stats.isOverdue ? 'color:var(--color-danger);' : ''}">${fmtDate(stats.nextDueDate)} ${stats.isOverdue ? '(' + stats.daysOverdue + 'd late)' : ''}</strong>
+        </div>` : ''}
     </div>
   `;
-  
+
   $('#loan-info-body').innerHTML = html;
   new bootstrap.Modal($('#loanInfoModal')).show();
 }
@@ -1912,7 +1846,24 @@ function openLoanModal(clientId = null, loanId = null) {
       select.value = l.clientId;
       $('#loan-interest-type').value = l.interestType || 'percentage';
       const label = $('#label-loan-interest');
-      if (label) label.innerHTML = (l.interestType === 'fixed' ? 'Fixed Interest Value <span class="text-danger">*</span>' : 'Interest Percentage <span class="text-danger">*</span>');
+      const helpText = $('#interest-help-text');
+      const input = $('#loan-interest');
+      
+      if (label) {
+        if (l.interestType === 'fixed') {
+          label.innerHTML = 'Fixed Interest Value <span class="text-danger">*</span>';
+          if (helpText) helpText.textContent = 'Fixed interest amount per month';
+          if (input) input.placeholder = '500';
+        } else if (l.interestType === 'own') {
+          label.innerHTML = 'Monthly Payment Amount <span class="text-danger">*</span>';
+          if (helpText) helpText.textContent = 'Fixed monthly payment amount (interest calculated from this)';
+          if (input) input.placeholder = '1500';
+        } else {
+          label.innerHTML = 'Interest Percentage <span class="text-danger">*</span>';
+          if (helpText) helpText.textContent = 'Percentage of principal per month';
+          if (input) input.placeholder = '2';
+        }
+      }
       $('#loan-principal').value = l.principal;
       $('#loan-interest').value = l.interestRate;
       $('#loan-duration').value = l.duration || '';
@@ -1924,7 +1875,11 @@ function openLoanModal(clientId = null, loanId = null) {
     $('#loan-form').reset();
     $('#loan-interest-type').value = 'percentage';
     const label = $('#label-loan-interest');
+    const helpText = $('#interest-help-text');
+    const input = $('#loan-interest');
     if (label) label.innerHTML = 'Interest Percentage <span class="text-danger">*</span>';
+    if (helpText) helpText.textContent = 'Percentage of principal per month';
+    if (input) input.placeholder = '2';
     $('#loan-start-date').value = today();
     if (clientId) select.value = clientId;
   }
@@ -1939,28 +1894,57 @@ function updateEMIPreview() {
   const type = $('#loan-type').value;
   const intType = $('#loan-interest-type').value || 'percentage';
 
-  if (!p || p <= 0) { 
-    $('#emi-preview').classList.add('d-none'); 
-    return; 
-  }
-
-  const monthlyInterest = calcMonthlyInterest(p, r, intType);
-  const weeklyInterest = monthlyInterest / 4;
-
-  if (!d || d <= 0) {
-    $('#emi-preview-monthly-interest').textContent = fmtCur(monthlyInterest);
-    $('#emi-preview-weekly-interest').textContent = fmtCur(weeklyInterest);
-    $('#emi-preview-amount').textContent = '—';
-    $('#emi-preview-total').textContent = fmtCur(p);
-    $('#emi-preview-remaining').textContent = fmtCur(p);
-    $('#emi-preview').classList.remove('d-none');
+  if (!p || p <= 0) {
+    $('#emi-preview').classList.add('d-none');
     return;
   }
-  
-  const totalInterest = monthlyInterest * d;
-  const totalPayable = p + totalInterest;
-  const installments = type === 'weekly' ? d * 4 : d;
-  const emi = +(totalPayable / installments).toFixed(2);
+
+  let monthlyInterest = 0;
+  let weeklyInterest = 0;
+  let totalInterest = 0;
+  let totalPayable = p;
+  let emi = 0;
+  let collectionLabel = type === 'weekly' ? 'Weekly EMI' : 'Monthly EMI';
+
+  if (intType === 'own') {
+    // For 'own' interest type: r is the fixed monthly payment
+    monthlyInterest = r; // This is the monthly payment amount, not interest
+    weeklyInterest = r / 4;
+    
+    if (!d || d <= 0) {
+      $('#emi-preview-monthly-interest').textContent = fmtCur(monthlyInterest);
+      $('#emi-preview-weekly-interest').textContent = fmtCur(weeklyInterest);
+      $('#emi-preview-amount').textContent = '—';
+      $('#emi-preview-total').textContent = fmtCur(p);
+      $('#emi-preview-remaining').textContent = fmtCur(p);
+      $('#emi-preview').classList.remove('d-none');
+      return;
+    }
+    
+    const totalCollected = monthlyInterest * d;
+    totalInterest = Math.max(0, totalCollected - p);
+    totalPayable = p + totalInterest;
+    emi = +(monthlyInterest).toFixed(2);
+    collectionLabel = 'Fixed Monthly Payment';
+  } else {
+    monthlyInterest = calcMonthlyInterest(p, r, intType);
+    weeklyInterest = monthlyInterest / 4;
+
+    if (!d || d <= 0) {
+      $('#emi-preview-monthly-interest').textContent = fmtCur(monthlyInterest);
+      $('#emi-preview-weekly-interest').textContent = fmtCur(weeklyInterest);
+      $('#emi-preview-amount').textContent = '—';
+      $('#emi-preview-total').textContent = fmtCur(p);
+      $('#emi-preview-remaining').textContent = fmtCur(p);
+      $('#emi-preview').classList.remove('d-none');
+      return;
+    }
+
+    totalInterest = monthlyInterest * d;
+    totalPayable = p + totalInterest;
+    const installments = type === 'weekly' ? d * 4 : d;
+    emi = +(totalPayable / installments).toFixed(2);
+  }
 
   $('#emi-preview-monthly-interest').textContent = fmtCur(monthlyInterest);
   $('#emi-preview-weekly-interest').textContent = fmtCur(weeklyInterest);
@@ -1968,7 +1952,7 @@ function updateEMIPreview() {
   $('#emi-preview-total').textContent = fmtCur(totalPayable);
   $('#emi-preview-remaining').textContent = fmtCur(totalPayable);
   const labelEl = $('#emi-preview-collection-label');
-  if (labelEl) labelEl.textContent = type === 'weekly' ? 'Weekly EMI' : 'Monthly EMI';
+  if (labelEl) labelEl.textContent = intType === 'own' ? 'Fixed Monthly Payment' : (type === 'weekly' ? 'Weekly EMI' : 'Monthly EMI');
 
   $('#emi-preview').classList.remove('d-none');
 }
@@ -1983,9 +1967,9 @@ function renderCollection(container) {
     <div class="page-section" data-ocid="collection.page">
       <div class="page-title"><i class="fa-solid fa-calendar-check"></i>Daily Collection</div>
       <div class="filter-tabs">
-        <button class="filter-tab ${state.collectionFilter === 'all' ? 'active' : ''}" data-filter="all" data-ocid="collection.filter.all_tab">${t('all')}</button>
-        <button class="filter-tab ${state.collectionFilter === 'overdue' ? 'active' : ''}" data-filter="overdue" data-ocid="collection.filter.overdue_tab">${t('overdue')}</button>
         <button class="filter-tab ${state.collectionFilter === 'today' ? 'active' : ''}" data-filter="today" data-ocid="collection.filter.today_tab">${t('dueToday')}</button>
+        <button class="filter-tab ${state.collectionFilter === 'overdue' ? 'active' : ''}" data-filter="overdue" data-ocid="collection.filter.overdue_tab">${t('overdue')}</button>
+        <button class="filter-tab ${state.collectionFilter === 'all' ? 'active' : ''}" data-filter="all" data-ocid="collection.filter.all_tab">${t('all')}</button>
       </div>
       <div id="collection-list" class="stagger-children"></div>
     </div>`;
@@ -1999,19 +1983,6 @@ function renderCollection(container) {
       renderCollectionList(Store.loans().filter(l => l.status === 'active'), Store.clients(), today());
     });
   });
-  
-  // Listen for payment updates from notifications
-  const paymentUpdateHandler = (event) => {
-    console.log('🔔 Collection page: Payment update event received', event.detail);
-    const freshLoans = Store.loans().filter(l => l.status === 'active');
-    const freshClients = Store.clients();
-    renderCollectionList(freshLoans, freshClients, today());
-  };
-  
-  // Remove old listener if exists
-  window.removeEventListener('payment-updated', paymentUpdateHandler);
-  // Add new listener
-  window.addEventListener('payment-updated', paymentUpdateHandler);
 }
 
 function renderCollectionList(loans, clients, todayStr) {
@@ -2038,19 +2009,29 @@ function renderCollectionList(loans, clients, todayStr) {
 
   listEl.innerHTML = items.map(({ loan, stats, client }, i) => {
     const isOverdue = stats.isOverdue;
+    const currentInstCount = stats.emi > 0 ? Math.floor((stats.totalPaid + 0.0001) / stats.emi) : 0;
+    const paidForThisInst = Math.max(0, stats.totalPaid - (currentInstCount * stats.emi));
+    const isPartiallyPaid = paidForThisInst > 0.0001;
+    const amountToCollect = isPartiallyPaid ? (stats.emi - paidForThisInst) : stats.emi;
     return `
     <div class="collection-item ${isOverdue ? 'overdue' : ''}" data-ocid="collection.item.${i + 1}">
       <div class="collection-item-header">
         <div class="collection-item-name">${client ? client.name : 'Unknown'}</div>
         <span class="badge-kf ${isOverdue ? 'badge-overdue' : 'badge-pending'}">${isOverdue ? `${stats.daysOverdue}d OVERDUE` : 'DUE'}</span>
       </div>
-      <div class="collection-item-meta">${client ? client.phone : ''} · ${t(loan.type)} EMI · Next: ${fmtDate(stats.nextDueDate)}</div>
+      <div class="collection-item-meta">
+        ${client ? client.phone : ''} · ${t(loan.type)} EMI · Next: ${fmtDate(stats.nextDueDate)}
+        ${isPartiallyPaid ? `<div style="color:var(--kf-danger); font-weight:700; margin-top:4px;">Remaining to close this due: ${fmtCur(amountToCollect)}</div>` : ''}
+      </div>
       <div class="collection-item-actions">
         <button class="btn-kf-primary" style="min-height:40px;padding:.375rem 1rem;font-size:.875rem" data-action="collect" data-id="${loan.id}" data-ocid="collection.collect_button.${i + 1}">
-          <i class="fa-solid fa-check me-1"></i>${t('collect')} ${fmtCur(stats.emi)}
+          <i class="fa-solid fa-check me-1"></i>${t('collect')} ${fmtCur(amountToCollect)}
         </button>
         <button class="btn-kf-ghost" style="min-height:40px;padding:.375rem .875rem;font-size:.875rem" data-action="missed" data-id="${loan.id}" data-ocid="collection.missed_button.${i + 1}">
           <i class="fa-solid fa-xmark me-1"></i>${t('missed')}
+        </button>
+        <button class="btn-kf-ghost" style="min-height:40px;padding:.375rem .875rem;font-size:.875rem" data-action="partial" data-id="${loan.id}">
+          <i class="fa-solid fa-calculator me-1"></i>Partly Paid
         </button>
         <button class="btn-icon" data-action="download" data-id="${loan.id}" data-ocid="collection.download_button.${i + 1}"><i class="fa-solid fa-download"></i></button>
         <button class="btn-kf-ghost" style="min-height:40px;padding:.375rem .875rem;font-size:.875rem" data-action="remind" data-id="${loan.id}" title="Send WhatsApp Message" aria-label="WhatsApp Message" data-ocid="collection.remind_button.${i + 1}">
@@ -2066,18 +2047,34 @@ function renderCollectionList(loans, clients, todayStr) {
     const id = btn.dataset.id;
     if (btn.dataset.action === 'collect') quickCollect(id);
     if (btn.dataset.action === 'missed') markMissed(id);
+    if (btn.dataset.action === 'partial') openPartialPaymentModal(id);
     if (btn.dataset.action === 'download') downloadCollectionDetailsPDF(id);
     if (btn.dataset.action === 'remind') sendReminder(id);
   });
+}
+
+function openPartialPaymentModal(loanId) {
+  const loan = Store.loans().find(l => l.id === loanId);
+  if (!loan) return;
+  const modalEl = document.getElementById('partialPaymentModal');
+  if (!modalEl) return;
+  document.getElementById('partial-payment-loan-id').value = loanId;
+  document.getElementById('partial-payment-amount').value = '';
+  document.getElementById('partial-payment-note').value = 'Partial payment';
+
+  bootstrap.Modal.getOrCreateInstance(modalEl).show();
 }
 
 function quickCollect(loanId) {
   const loan = Store.loans().find(l => l.id === loanId);
   if (!loan) return;
   const stats = calcLoanStats(loan);
+  const instCount = stats.emi > 0 ? Math.floor((stats.totalPaid + 0.0001) / stats.emi) : 0;
+  const paidForThisInst = Math.max(0, stats.totalPaid - (instCount * stats.emi));
+  const amountToCollect = paidForThisInst > 0.0001 ? (stats.emi - paidForThisInst) : stats.emi;
   const payment = {
     id: uid(), loanId,
-    amount: stats.emi,
+    amount: amountToCollect,
     date: today(),
     note: 'Quick collect',
     createdAt: new Date().toISOString(),
@@ -2086,7 +2083,7 @@ function quickCollect(loanId) {
   payments.push(payment);
   Store.savePayments(payments);
   generateReceipt(payment, loan);
-  showToast(`Payment of ${fmtCur(stats.emi)} recorded!`, 'success');
+  showToast(`Payment of ${fmtCur(amountToCollect)} recorded!`, 'success');
   renderCollectionList(Store.loans().filter(l => l.status === 'active'), Store.clients(), today());
 }
 
@@ -2148,13 +2145,13 @@ function renderReports(container) {
       <div class="kf-card" data-ocid="reports.defaulters_card">
         <div class="section-title"><i class="fa-solid fa-triangle-exclamation"></i>${t('topDefaulters')}</div>
         ${defaulters.length === 0
-          ? '<p class="text-muted-kf fs-sm">No defaulters. Great recovery rate!</p>'
-          : defaulters.map((d, i) => `
+      ? '<p class="text-muted-kf fs-sm">No defaulters. Great recovery rate!</p>'
+      : defaulters.map((d, i) => `
             <div class="payment-row" data-ocid="reports.defaulter.item.${i + 1}">
               <div><div style="font-weight:700">${d.client.name}</div><div class="text-muted-kf fs-xs">${d.client.phone}</div></div>
               <div style="color:var(--color-danger);font-weight:700">${fmtCur(d.overdueAmount)}</div>
             </div>`).join('')
-        }
+    }
       </div>
 
       <div class="kf-card" data-ocid="reports.client_summary_card">
@@ -2171,17 +2168,17 @@ function renderReports(container) {
             </thead>
             <tbody>
               ${clients.map((c, i) => {
-                const cloans = loans.filter(l => l.clientId === c.id);
-                const given = cloans.reduce((s, l) => s + l.principal, 0);
-                const paid = payments.filter(p => cloans.some(l => l.id === p.loanId)).reduce((s, p) => s + p.amount, 0);
-                const pending = Math.max(0, cloans.reduce((s, l) => s + calcLoanStats(l).totalPayable, 0) - paid);
-                return `<tr style="border-bottom:1px solid var(--color-border-muted)" data-ocid="reports.client.item.${i + 1}">
+      const cloans = loans.filter(l => l.clientId === c.id);
+      const given = cloans.reduce((s, l) => s + l.principal, 0);
+      const paid = payments.filter(p => cloans.some(l => l.id === p.loanId)).reduce((s, p) => s + p.amount, 0);
+      const pending = Math.max(0, cloans.reduce((s, l) => s + calcLoanStats(l).totalPayable, 0) - paid);
+      return `<tr style="border-bottom:1px solid var(--color-border-muted)" data-ocid="reports.client.item.${i + 1}">
                   <td style="padding:.5rem .375rem;font-weight:600">${c.name}</td>
                   <td style="text-align:right;padding:.5rem .375rem">${fmtCur(given)}</td>
                   <td style="text-align:right;padding:.5rem .375rem;color:var(--color-success)">${fmtCur(paid)}</td>
                   <td style="text-align:right;padding:.5rem .375rem;color:var(--color-danger)">${fmtCur(pending)}</td>
                 </tr>`;
-              }).join('')}
+    }).join('')}
             </tbody>
           </table>
         </div>
@@ -2244,20 +2241,20 @@ function renderProfile(container) {
       s.financierName = n;
       s.businessName = b;
       Store.saveSettings(s);
-      
+
       const sess = getSession();
       if (sess?.user) {
         sess.user.financierName = n;
         sess.user.businessName = b;
         Store.saveSession(sess);
       }
-      
+
       showToast('Profile saved successfully', 'success');
-      
+
       // Update header instantly
       const headerName = document.querySelector('.header-profile .profile-name');
       if (headerName) headerName.textContent = n || 'Profile';
-      
+
       // Re-render profile view to reflect new avatar
       renderProfile(container);
     });
@@ -2274,7 +2271,7 @@ function renderSettings(container) {
 
   const plan = getPlan();
   const planExpiry = getPlanExpiryTime();
-  
+
   const settings = Store.settings();
   const session = getSession();
   const financierName = settings.financierName || session?.user?.financierName || 'Your Name';
@@ -2382,9 +2379,10 @@ function renderSettings(container) {
 
       <div class="kf-card pro-card" data-ocid="settings.data_card">
         <div class="section-title"><i class="fa-solid fa-database"></i>Data Management</div>
+        <button class="btn-kf-primary w-100 mb-3" id="btn-load-dummy-clients">
+          <i class="fa-solid fa-vial me-2"></i>Load 5 Dummy Clients
+        </button>
         <button class="btn-kf-outline pro-btn-outline w-100 mb-3" id="btn-settings-export-pdf" data-ocid="settings.export_pdf_button"><i class="fa-solid fa-file-pdf me-1"></i>Export Data (PDF)</button>
-        <button class="btn-kf-outline pro-btn-outline w-100 mb-3" id="btn-load-dummy-clients" style="background: rgba(255, 165, 0, 0.1); border-color: orange; color: orange;"><i class="fa-solid fa-flask me-1"></i>Load Dummy Clients (2)</button>
-
         <button class="btn-kf-danger pro-btn-danger w-100" id="btn-clear-data" data-ocid="settings.clear_data_button"><i class="fa-solid fa-trash me-1"></i><span data-i18n="clearData">${t('clearData')}</span></button>
       </div>
 
@@ -2392,66 +2390,6 @@ function renderSettings(container) {
         <div class="section-title"><i class="fa-solid fa-cloud"></i>Private Cloud Storage</div>
         <p class="text-muted-kf fs-sm mb-3">Connect your own Supabase cloud database for secure synced backup storage.</p>
         <button class="btn-kf-outline pro-btn-outline w-100" id="btn-connect-supabase-storage"><i class="fa-solid fa-link me-1"></i>Connect Storage</button>
-      </div>
-
-      <!-- WhatsApp Automation Card -->
-      <div class="kf-card pro-card" data-ocid="settings.whatsapp_card">
-        <div class="section-title">
-          <i class="fa-brands fa-whatsapp"></i> WhatsApp Automation
-        </div>
-        <p class="text-muted-kf fs-sm mb-3">
-          Connect your WhatsApp number to send payment reminders directly to customers via WhatsApp.
-        </p>
-        
-        <!-- WhatsApp Number Input -->
-        <div class="settings-row pro-row mb-3">
-          <div style="width:100%">
-            <div class="settings-row-label mb-2">WhatsApp Number</div>
-            <input type="tel" id="wa-phone-input" class="form-control kf-input" 
-                   placeholder="+91 XXXXXXXXXX"
-                   value="${(() => { try { const c = JSON.parse(localStorage.getItem('wa_automation_config') || '{}'); return c.phoneNumber || ''; } catch(e) { return ''; } })()" />
-          </div>
-        </div>
-        
-        <!-- Connection Status Badge -->
-        <div id="wa-status-badge" class="mb-3">
-          ${(() => {
-            try {
-              const c = JSON.parse(localStorage.getItem('wa_automation_config') || '{}');
-              if (c.connected) {
-                return '<span class="badge" style="background: rgba(37,211,102,0.15); color: #25D366; border: 1px solid rgba(37,211,102,0.3); padding: 8px 16px; border-radius: 20px; font-weight: 600;"><i class=\'fa-solid fa-circle-check me-1\'></i> Connected</span>';
-              }
-            } catch(e) {}
-            return '<span class="badge" style="background: rgba(153,153,153,0.15); color: #999; border: 1px solid rgba(153,153,153,0.3); padding: 8px 16px; border-radius: 20px; font-weight: 600;"><i class=\'fa-solid fa-circle me-1\'></i> Not Connected</span>';
-          })()}
-        </div>
-        
-        <!-- Action Buttons -->
-        <button class="btn-kf-primary w-100 mb-2 ${(() => { try { const c = JSON.parse(localStorage.getItem('wa_automation_config') || '{}'); return c.connected ? 'd-none' : ''; } catch(e) { return ''; } })()" id="btn-wa-connect">
-          <i class="fa-brands fa-whatsapp me-2"></i>Connect WhatsApp
-        </button>
-        <button class="btn-kf-outline w-100 mb-2 ${(() => { try { const c = JSON.parse(localStorage.getItem('wa_automation_config') || '{}'); return c.connected ? '' : 'd-none'; } catch(e) { return 'd-none'; } })()" id="btn-wa-disconnect" style="color:#ff4444; border-color:#ff4444;">
-          <i class="fa-solid fa-link-slash me-2"></i>Disconnect
-        </button>
-        <button class="btn-kf-outline w-100 mb-2 ${(() => { try { const c = JSON.parse(localStorage.getItem('wa_automation_config') || '{}'); return c.connected ? '' : 'd-none'; } catch(e) { return 'd-none'; } })()" id="btn-wa-test" style="color:#25D366; border-color:#25D366;">
-          <i class="fa-solid fa-paper-plane me-2"></i>Send Test Message
-        </button>
-        
-        <!-- Reminder Settings (shown when connected) -->
-        <div id="wa-reminder-settings" class="${(() => { try { const c = JSON.parse(localStorage.getItem('wa_automation_config') || '{}'); return c.connected ? 'mt-3' : 'd-none mt-3'; } catch(e) { return 'd-none mt-3'; } })()}">
-          <div class="settings-row pro-row">
-            <div><div class="settings-row-label">Due Today Reminders</div></div>
-            <label class="kf-toggle"><input type="checkbox" id="wa-due-today" ${(() => { try { const c = JSON.parse(localStorage.getItem('wa_automation_config') || '{}'); return c.dueTodayEnabled !== false ? 'checked' : ''; } catch(e) { return 'checked'; } })()} /><span class="kf-toggle-slider"></span></label>
-          </div>
-          <div class="settings-row pro-row">
-            <div><div class="settings-row-label">Due Tomorrow Reminders</div></div>
-            <label class="kf-toggle"><input type="checkbox" id="wa-due-tomorrow" ${(() => { try { const c = JSON.parse(localStorage.getItem('wa_automation_config') || '{}'); return c.dueTomorrowEnabled !== false ? 'checked' : ''; } catch(e) { return 'checked'; } })()} /><span class="kf-toggle-slider"></span></label>
-          </div>
-          <div class="settings-row pro-row">
-            <div><div class="settings-row-label">Overdue Reminders</div></div>
-            <label class="kf-toggle"><input type="checkbox" id="wa-overdue" ${(() => { try { const c = JSON.parse(localStorage.getItem('wa_automation_config') || '{}'); return c.overdueEnabled !== false ? 'checked' : ''; } catch(e) { return 'checked'; } })()} /><span class="kf-toggle-slider"></span></label>
-          </div>
-        </div>
       </div>
 
       <!-- Legal & Contact Options -->
@@ -2498,10 +2436,33 @@ function renderSettings(container) {
 
   translateDOM();
 
-  // Initialize WhatsApp Automation if available
-  if (window.WhatsAppAutomation) {
-    WhatsAppAutomation.loadConfig();
-  }
+  $('#btn-load-dummy-clients')?.addEventListener('click', () => {
+    const todayStr = today();
+    const d = new Date();
+    d.setMonth(d.getMonth() - 1); // Set start date to 1 month ago for monthly loan
+    const startStr = d.toISOString().split('T')[0];
+
+    const dummyClients = [];
+    const dummyLoans = [];
+
+    for (let i = 1; i <= 5; i++) {
+      const cid = 'c_dummy_' + uid();
+      dummyClients.push({
+        id: cid, name: 'Demo Client ' + i, phone: '987654321' + i,
+        address: 'Sample Address', occupation: 'Demo', createdAt: todayStr
+      });
+      dummyLoans.push({
+        id: 'l_dummy_' + uid(), clientId: cid, principal: 10000,
+        interestRate: 2, interestType: 'percentage', duration: 12,
+        type: 'monthly', startDate: startStr, status: 'active', createdAt: startStr
+      });
+    }
+
+    Store.set('clients', [...Store.clients(), ...dummyClients]);
+    Store.set('loans', [...Store.loans(), ...dummyLoans]);
+    showToast('5 dummy clients with dues today loaded!', 'success');
+    navigateTo('settings');
+  });
 
   // Toggle Recycle Bin visibility
   $('#btn-open-recycle-bin').addEventListener('click', (e) => {
@@ -2615,7 +2576,7 @@ function renderSettings(container) {
         statusEl.textContent = getStatusText(status);
         statusEl.style.color = getStatusColor(status);
         dotEl.style.backgroundColor = getStatusColor(status);
-        
+
         // Remove old animations
         dotEl.className = 'status-dot';
         if (status === 'syncing') dotEl.classList.add('pulse-syncing');
@@ -2633,7 +2594,7 @@ function renderSettings(container) {
             </div>
             
             <p class="text-muted-kf fs-sm mb-4" style="line-height: 1.6; background: rgba(255,255,255,0.03); border: 1px solid var(--kf-card-border); border-radius: 12px; padding: 12px;">
-              If you would like to use your own private storage for your financier data, you can connect your personal data securely. Once connected, all future data will automatically sync to your private storage. If you need this service CONTACT whatsapp number: <strong>7904987242</strong> or mail <strong>{ samkassfinance@gmail.com }</strong>
+              If you would like to use your own private storage for your financier data, you can connect your personal data securely. Once connected, all future data will automatically sync to your private storage. If you need this service CONTACT whatsapp number: <strong>7904987242</strong> or mail <strong>{ mohansampath098@gmail.com }</strong>
             </p>
 
             <div class="d-flex align-items-center gap-2 mb-4 p-2" style="background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px dashed var(--kf-card-border)">
@@ -2836,28 +2797,6 @@ create table if not exists payments (
   });
 
   $('#btn-settings-export-pdf')?.addEventListener('click', () => exportAllDataAsPDF());
-  
-  // Use document.getElementById for more reliable element selection
-  const btnLoadDummy = document.getElementById('btn-load-dummy-clients');
-
-  if (btnLoadDummy) {
-    btnLoadDummy.addEventListener('click', () => {
-      if (confirm('This will create 2 dummy clients with loans due on JUNE 9, 2026. Old dummy data will be removed. Continue?')) {
-        loadDummyClientsWithOverdueLoans();
-        showToast('✅ 2 dummy clients with loans due JUNE 9, 2026 created!', 'success');
-        setTimeout(() => {
-          navigateTo('clients');
-        }, 1000);
-      }
-    });
-  }
-
-
-
-
-  
-
-  
   $('#btn-clear-data').addEventListener('click', () => {
     state.deleteCallback = () => {
       requirePinToProceed('Clear Data', () => {
@@ -2865,9 +2804,10 @@ create table if not exists payments (
         localStorage.removeItem(LS.loans);
         localStorage.removeItem(LS.payments);
         localStorage.removeItem(LS.recycleBin);
-        triggerAutoSync();
+        if (window.KFSync) KFSync.backup(true);
+        clearAllUserData();
         showToast('All data cleared!', 'info');
-        navigateTo('dashboard');
+        navigateTo('home');
       });
     };
     $('#confirm-delete-msg').textContent = 'Are you sure you want to delete ALL clients, loans and payment data? This cannot be undone.';
@@ -2906,9 +2846,9 @@ create table if not exists payments (
   // PWA Install App Button - Attach after DOM is ready
   setTimeout(() => {
     const installBtn = $('#btn-install-app');
-    
+
     if (!installBtn) return;
-    
+
     // Check if already installed (standalone mode)
     if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
       console.log('✅ App already running in standalone mode');
@@ -2917,22 +2857,22 @@ create table if not exists payments (
       installBtn.style.opacity = '0.6';
       return;
     }
-    
+
     installBtn.addEventListener('click', async () => {
       console.log('🔘 Install button clicked');
       console.log('📦 deferredPrompt:', window.deferredPrompt);
-      
+
       if (!window.deferredPrompt) {
         // If beforeinstallprompt not available, show manual install instructions
         showToast('To install: Tap browser menu (⋮) → "Add to Home screen" or "Install app"', 'info');
         return;
       }
-      
+
       try {
         window.deferredPrompt.prompt();
         const { outcome } = await window.deferredPrompt.userChoice;
         console.log('👤 User choice:', outcome);
-        
+
         if (outcome === 'accepted') {
           showToast('App installed successfully! Check your home screen.', 'success');
           installBtn.innerHTML = '<i class="fa-solid fa-check me-2"></i>App Installed';
@@ -2945,7 +2885,7 @@ create table if not exists payments (
         console.error('❌ Install prompt error:', err);
         showToast('To install: Tap browser menu (⋮) → "Add to Home screen"', 'info');
       }
-      
+
       window.deferredPrompt = null;
     });
   }, 100);
@@ -3022,46 +2962,46 @@ function generateReceipt(payment, loan) {
 
 function downloadSingleReceiptPDF(payment, loan) {
   if (typeof window.jspdf === 'undefined') {
-      showToast('PDF library not loaded', 'error');
-      return;
+    showToast('PDF library not loaded', 'error');
+    return;
   }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF('p', 'pt', 'a5');
   const client = Store.clients().find(c => c.id === loan.clientId);
   const settings = Store.settings();
-  
+
   const pdfCur = (n) => 'Rs. ' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
   doc.setFontSize(18);
   doc.setTextColor(41, 128, 185);
   doc.text(settings.businessName || 'KaasFlow Finance', doc.internal.pageSize.getWidth() / 2, 40, { align: 'center' });
-  
+
   doc.setFontSize(14);
   doc.setTextColor(50, 50, 50);
   doc.text('Payment Receipt', doc.internal.pageSize.getWidth() / 2, 65, { align: 'center' });
-  
+
   doc.setFontSize(10);
   doc.setTextColor(100, 100, 100);
   doc.text(`Receipt ID: ${payment.id.toUpperCase()}`, 20, 100);
   doc.text(`Date: ${fmtDate(payment.date)}`, 20, 115);
-  
+
   doc.setLineWidth(1);
   doc.setDrawColor(220, 220, 220);
   doc.line(20, 125, doc.internal.pageSize.getWidth() - 20, 125);
-  
+
   doc.setFontSize(12);
   doc.setTextColor(0, 0, 0);
   doc.text(`Received From: ${client ? client.name : 'Unknown'}`, 20, 150);
   doc.text(`Amount Paid: ${pdfCur(payment.amount)}`, 20, 175);
   doc.text(`Loan ID: ${loan.id.toUpperCase()}`, 20, 200);
   if (payment.note) doc.text(`Notes: ${payment.note}`, 20, 225);
-  
+
   doc.line(20, 245, doc.internal.pageSize.getWidth() - 20, 245);
-  
+
   doc.setFontSize(10);
   doc.setTextColor(100, 100, 100);
   doc.text('Thank you for your payment!', doc.internal.pageSize.getWidth() / 2, 275, { align: 'center' });
-  
+
   doc.save(`Receipt_${payment.id}.pdf`);
   showToast('Receipt Downloaded!', 'success');
 }
@@ -3071,17 +3011,17 @@ function shareReceiptWhatsApp(payment, loan) {
   if (!client) return;
   const settings = Store.settings();
   const businessName = settings.businessName || 'KaasFlow Finance';
-  
+
   const msg = `🧾 *Payment Receipt*\n\n` +
-              `*${businessName}*\n` +
-              `------------------------\n` +
-              `*Date:* ${fmtDate(payment.date)}\n` +
-              `*Amount Paid:* ₹${payment.amount.toLocaleString('en-IN')}\n` +
-              `*Loan ID:* ${loan.id.toUpperCase()}\n` +
-              (payment.note ? `*Note:* ${payment.note}\n` : '') +
-              `------------------------\n` +
-              `Thank you for your payment!`;
-              
+    `*${businessName}*\n` +
+    `------------------------\n` +
+    `*Date:* ${fmtDate(payment.date)}\n` +
+    `*Amount Paid:* ₹${payment.amount.toLocaleString('en-IN')}\n` +
+    `*Loan ID:* ${loan.id.toUpperCase()}\n` +
+    (payment.note ? `*Note:* ${payment.note}\n` : '') +
+    `------------------------\n` +
+    `Thank you for your payment!`;
+
   const phone = client.phone.replace(/\D/g, '');
   const url = `https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`;
   window.open(url, '_blank');
@@ -3098,348 +3038,253 @@ function sendReminder(loanId) {
     ? t('reminderMsgOverdue', client.name, fmtCur(stats.emi), stats.daysOverdue)
     : t('reminderMsg', client.name, fmtCur(stats.emi));
   const phone = client.phone.replace(/\D/g, '');
-  
-  // Check if WhatsApp Automation is available and connected
-  if (window.WhatsAppAutomation && window.WhatsAppAutomation.connected) {
-    // Use backend WhatsApp automation
-    window.WhatsAppAutomation.sendReminder(loanId);
-  } else {
-    // Fallback to direct WhatsApp web link
-    const url = `https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`;
-    window.open(url, '_blank');
-  }
+  const url = `https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
 }
 
 // [NEW] PDF Download Requirements: Improved Client Details PDF
 function downloadClientDetailsPDF(clientId) {
-    if (typeof window.jspdf === 'undefined') {
-        showToast('PDF core library (jsPDF) not loaded', 'error');
-        return;
-    }
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const client = Store.clients().find(c => c.id === clientId);
-    if (!client) { showToast('Client not found', 'error'); return; }
-    
-    const clientLoans = Store.loans().filter(l => l.clientId === clientId);
-    const settings = Store.settings();
+  if (typeof window.jspdf === 'undefined') {
+    showToast('PDF core library (jsPDF) not loaded', 'error');
+    return;
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const client = Store.clients().find(c => c.id === clientId);
+  if (!client) { showToast('Client not found', 'error'); return; }
 
-    const pdfCur = (n) => 'Rs. ' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+  const clientLoans = Store.loans().filter(l => l.clientId === clientId);
+  const settings = Store.settings();
 
-    // Header
-    doc.setFontSize(22);
-    doc.setTextColor(41, 128, 185);
-    doc.text(settings.businessName || 'KaasFlow Finance', 14, 22);
-    doc.setFontSize(14);
-    doc.setTextColor(50, 50, 50);
-    doc.text(`Client Profile`, 14, 32);
-    
+  const pdfCur = (n) => 'Rs. ' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+
+  // Header
+  doc.setFontSize(22);
+  doc.setTextColor(41, 128, 185);
+  doc.text(settings.businessName || 'KaasFlow Finance', 14, 22);
+  doc.setFontSize(14);
+  doc.setTextColor(50, 50, 50);
+  doc.text(`Client Profile`, 14, 32);
+
+  doc.setFontSize(10);
+  doc.setTextColor(100, 100, 100);
+  doc.text(`Report Date: ${fmtDate(today())}`, 196, 22, { align: 'right' });
+
+  // Client Summary using AutoTable
+  doc.autoTable({
+    startY: 40,
+    head: [['Client Details', '']],
+    body: [
+      ['Name', client.name],
+      ['Phone', client.phone],
+      ['Address', client.address || '-'],
+      ['ID Number', client.idNum || '-'],
+      ['Occupation', client.occupation || '-'],
+      ['Registered On', fmtDate(client.createdAt)]
+    ],
+    theme: 'grid',
+    headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold' },
+    columnStyles: {
+      0: { fontStyle: 'bold', cellWidth: 60, fillColor: [245, 245, 245] }
+    },
+    styles: { fontSize: 10, cellPadding: 3 },
+  });
+
+  let finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY : doc.autoTable.previous.finalY;
+
+  doc.setFontSize(12);
+  doc.setTextColor(41, 128, 185);
+  doc.text(`Loans (${clientLoans.length})`, 14, finalY + 15);
+
+  if (clientLoans.length > 0) {
+    doc.autoTable({
+      startY: finalY + 20,
+      head: [['Principal', 'EMI', 'Duration', 'Paid', 'Balance', 'Status']],
+      body: clientLoans.map(l => {
+        const stats = calcLoanStats(l);
+        return [
+          pdfCur(l.principal),
+          pdfCur(stats.emi),
+          l.duration ? `${l.duration}m` : '-',
+          pdfCur(stats.totalPaid),
+          pdfCur(stats.remaining),
+          stats.isOverdue ? 'OVERDUE' : l.status.toUpperCase()
+        ];
+      }),
+      theme: 'striped',
+      headStyles: { fillColor: [44, 62, 80] },
+      styles: { fontSize: 9 }
+    });
+  } else {
     doc.setFontSize(10);
     doc.setTextColor(100, 100, 100);
-    doc.text(`Report Date: ${fmtDate(today())}`, 196, 22, { align: 'right' });
+    doc.text('No loans recorded for this client.', 14, finalY + 25);
+  }
 
-    // Client Summary using AutoTable
-    doc.autoTable({
-        startY: 40,
-        head: [['Client Details', '']],
-        body: [
-            ['Name', client.name],
-            ['Phone', client.phone],
-            ['Address', client.address || '-'],
-            ['ID Number', client.idNum || '-'],
-            ['Occupation', client.occupation || '-'],
-            ['Registered On', fmtDate(client.createdAt)]
-        ],
-        theme: 'grid',
-        headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold' },
-        columnStyles: {
-            0: { fontStyle: 'bold', cellWidth: 60, fillColor: [245, 245, 245] }
-        },
-        styles: { fontSize: 10, cellPadding: 3 },
-    });
-
-    let finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY : doc.autoTable.previous.finalY;
-
-    doc.setFontSize(12);
-    doc.setTextColor(41, 128, 185);
-    doc.text(`Loans (${clientLoans.length})`, 14, finalY + 15);
-
-    if (clientLoans.length > 0) {
-        doc.autoTable({
-            startY: finalY + 20,
-            head: [['Principal', 'EMI', 'Duration', 'Paid', 'Balance', 'Status']],
-            body: clientLoans.map(l => {
-                const stats = calcLoanStats(l);
-                return [
-                    pdfCur(l.principal), 
-                    pdfCur(stats.emi), 
-                    l.duration ? `${l.duration}m` : '-', 
-                    pdfCur(stats.totalPaid), 
-                    pdfCur(stats.remaining), 
-                    stats.isOverdue ? 'OVERDUE' : l.status.toUpperCase()
-                ];
-            }),
-            theme: 'striped',
-            headStyles: { fillColor: [44, 62, 80] },
-            styles: { fontSize: 9 }
-        });
-    } else {
-        doc.setFontSize(10);
-        doc.setTextColor(100, 100, 100);
-        doc.text('No loans recorded for this client.', 14, finalY + 25);
-    }
-
-    doc.save(`Client-Profile-${client.name.replace(/\s/g, '_')}.pdf`);
-    showToast('Profile Downloaded!', 'success');
+  doc.save(`Client-Profile-${client.name.replace(/\s/g, '_')}.pdf`);
+  showToast('Profile Downloaded!', 'success');
 }
 
 // [NEW] PDF Download Requirements: Improved Loan Details PDF
 function downloadLoanDetailsPDF(loanId) {
-    if (typeof window.jspdf === 'undefined') {
-        showToast('PDF core library (jsPDF) not loaded', 'error');
-        return;
-    }
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const loan = Store.loans().find(l => l.id === loanId);
-    if (!loan) { showToast('Loan not found', 'error'); return; }
-    const client = Store.clients().find(c => c.id === loan.clientId);
-    const payments = Store.payments().filter(p => p.loanId === loanId).sort((a, b) => new Date(b.date) - new Date(a.date));
-    const stats = calcLoanStats(loan);
-    const settings = Store.settings();
+  if (typeof window.jspdf === 'undefined') {
+    showToast('PDF core library (jsPDF) not loaded', 'error');
+    return;
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const loan = Store.loans().find(l => l.id === loanId);
+  if (!loan) { showToast('Loan not found', 'error'); return; }
+  const client = Store.clients().find(c => c.id === loan.clientId);
+  const payments = Store.payments().filter(p => p.loanId === loanId).sort((a, b) => new Date(b.date) - new Date(a.date));
+  const stats = calcLoanStats(loan);
+  const settings = Store.settings();
 
-    const pdfCur = (n) => 'Rs. ' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+  const pdfCur = (n) => 'Rs. ' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
-    // Business Name & Header
-    doc.setFontSize(22);
-    doc.setTextColor(41, 128, 185); // Nice blue
-    doc.text(settings.businessName || 'KaasFlow Finance', 14, 22);
-    
-    doc.setFontSize(14);
-    doc.setTextColor(50, 50, 50);
-    doc.text('Loan Statement & Payment History', 14, 32);
-    
+  // Business Name & Header
+  doc.setFontSize(22);
+  doc.setTextColor(41, 128, 185); // Nice blue
+  doc.text(settings.businessName || 'KaasFlow Finance', 14, 22);
+
+  doc.setFontSize(14);
+  doc.setTextColor(50, 50, 50);
+  doc.text('Loan Statement & Payment History', 14, 32);
+
+  doc.setFontSize(10);
+  doc.setTextColor(100, 100, 100);
+  doc.text(`Generated on: ${fmtDate(today())}`, 196, 22, { align: 'right' });
+  doc.text(`Loan ID: ${loan.id.toUpperCase()}`, 196, 28, { align: 'right' });
+
+  // Client Info
+  doc.setFontSize(11);
+  doc.setTextColor(0, 0, 0);
+  doc.text(`Client Name: ${client ? client.name : 'Unknown'}`, 14, 45);
+  doc.text(`Phone: ${client ? client.phone : 'N/A'}`, 14, 51);
+
+  // Loan Summary using AutoTable for perfect alignment
+  doc.autoTable({
+    startY: 60,
+    head: [['Loan Summary', '']],
+    body: [
+      ['Principal Amount', pdfCur(loan.principal)],
+      ['Interest Rate', `${loan.interestRate || 0}% (${loan.type})`],
+      ['Duration', loan.duration ? `${loan.duration} installments` : 'Open / No fixed duration'],
+      ['EMI Amount', pdfCur(stats.emi)],
+      ['Total Payable', pdfCur(stats.totalPayable)],
+      ['Total Paid', pdfCur(stats.totalPaid)],
+      ['Balance Remaining', pdfCur(stats.remaining)],
+      ['Loan Status', stats.isOverdue ? `OVERDUE (${stats.daysOverdue} days)` : loan.status.toUpperCase()],
+      ['Start Date', fmtDate(loan.startDate)],
+      ['Next Due Date', stats.nextDueDate ? fmtDate(stats.nextDueDate) : 'N/A']
+    ],
+    theme: 'grid',
+    headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold' },
+    columnStyles: {
+      0: { fontStyle: 'bold', cellWidth: 80, fillColor: [245, 245, 245] },
+      1: { cellWidth: 'auto' }
+    },
+    styles: { fontSize: 10, cellPadding: 3 }
+  });
+
+  let finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY : doc.autoTable.previous.finalY;
+
+  // Payment History Table
+  doc.setFontSize(14);
+  doc.setTextColor(41, 128, 185);
+  doc.text('Payment History', 14, finalY + 15);
+
+  if (payments.length === 0) {
     doc.setFontSize(10);
     doc.setTextColor(100, 100, 100);
-    doc.text(`Generated on: ${fmtDate(today())}`, 196, 22, { align: 'right' });
-    doc.text(`Loan ID: ${loan.id.toUpperCase()}`, 196, 28, { align: 'right' });
+    doc.text('No payments recorded yet.', 14, finalY + 25);
+  } else {
+    const head = [['Date', 'Amount Paid', 'Payment Mode', 'Status', 'Notes']];
+    const body = payments.map(p => [
+      fmtDate(p.date),
+      pdfCur(p.amount),
+      p.mode ? p.mode.charAt(0).toUpperCase() + p.mode.slice(1) : '-',
+      p.status ? p.status.toUpperCase() : 'PAID',
+      p.note || '-'
+    ]);
 
-    // Client Info
-    doc.setFontSize(11);
-    doc.setTextColor(0, 0, 0);
-    doc.text(`Client Name: ${client ? client.name : 'Unknown'}`, 14, 45);
-    doc.text(`Phone: ${client ? client.phone : 'N/A'}`, 14, 51);
-
-    // Loan Summary using AutoTable for perfect alignment
     doc.autoTable({
-        startY: 60,
-        head: [['Loan Summary', '']],
-        body: [
-            ['Principal Amount', pdfCur(loan.principal)],
-            ['Interest Rate', `${loan.interestRate || 0}% (${loan.type})`],
-            ['Duration', loan.duration ? `${loan.duration} installments` : 'Open / No fixed duration'],
-            ['EMI Amount', pdfCur(stats.emi)],
-            ['Total Payable', pdfCur(stats.totalPayable)],
-            ['Total Paid', pdfCur(stats.totalPaid)],
-            ['Balance Remaining', pdfCur(stats.remaining)],
-            ['Loan Status', stats.isOverdue ? `OVERDUE (${stats.daysOverdue} days)` : loan.status.toUpperCase()],
-            ['Start Date', fmtDate(loan.startDate)],
-            ['Next Due Date', stats.nextDueDate ? fmtDate(stats.nextDueDate) : 'N/A']
-        ],
-        theme: 'grid',
-        headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold' },
-        columnStyles: {
-            0: { fontStyle: 'bold', cellWidth: 80, fillColor: [245, 245, 245] },
-            1: { cellWidth: 'auto' }
-        },
-        styles: { fontSize: 10, cellPadding: 3 }
+      startY: finalY + 20,
+      head: head,
+      body: body,
+      theme: 'striped',
+      headStyles: { fillColor: [44, 62, 80], textColor: 255 },
+      styles: { fontSize: 9, cellPadding: 3 },
+      alternateRowStyles: { fillColor: [240, 248, 255] }
     });
+  }
 
-    let finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY : doc.autoTable.previous.finalY;
-
-    // Payment History Table
-    doc.setFontSize(14);
-    doc.setTextColor(41, 128, 185);
-    doc.text('Payment History', 14, finalY + 15);
-
-    if (payments.length === 0) {
-        doc.setFontSize(10);
-        doc.setTextColor(100, 100, 100);
-        doc.text('No payments recorded yet.', 14, finalY + 25);
-    } else {
-        const head = [['Date', 'Amount Paid', 'Payment Mode', 'Status', 'Notes']];
-        const body = payments.map(p => [
-            fmtDate(p.date),
-            pdfCur(p.amount),
-            p.mode ? p.mode.charAt(0).toUpperCase() + p.mode.slice(1) : '-',
-            p.status ? p.status.toUpperCase() : 'PAID',
-            p.note || '-'
-        ]);
-
-        doc.autoTable({
-            startY: finalY + 20,
-            head: head,
-            body: body,
-            theme: 'striped',
-            headStyles: { fillColor: [44, 62, 80], textColor: 255 },
-            styles: { fontSize: 9, cellPadding: 3 },
-            alternateRowStyles: { fillColor: [240, 248, 255] }
-        });
-    }
-
-    doc.save(`Loan_Statement_${client ? client.name.replace(/\s/g, '_') : 'Client'}_${loan.id.slice(-4)}.pdf`);
-    showToast('Loan Statement Downloaded!', 'success');
+  doc.save(`Loan_Statement_${client ? client.name.replace(/\s/g, '_') : 'Client'}_${loan.id.slice(-4)}.pdf`);
+  showToast('Loan Statement Downloaded!', 'success');
 }
 
 // [NEW] PDF / Word Download Requirements: Collection Details PDF
 function downloadCollectionDetailsPDF(loanId) {
-    downloadLoanDetailsPDF(loanId);
-}
-
-// ── LOAD DUMMY DATA FOR TESTING ──────────────────────────────
-function loadDummyClientsWithOverdueLoans() {
-  const dummyNames = [
-    'Ravi Kumar', 
-    'Priya Sharma'
-  ];
-
-  const clients = [];
-  const loans = [];
-  
-  // EXACT DATE: June 9, 2026
-  const dueDateString = '2026-06-09'; // HARDCODED - NO CALCULATIONS
-  
-  console.log('📅 HARDCODED due date:', dueDateString);
-  
-  dummyNames.forEach((name, index) => {
-    // Create client
-    const clientId = 'dummy-client-jun9-' + Date.now() + '-' + index;
-    const phone = '98' + String(Math.floor(10000000 + Math.random() * 90000000)).substring(0, 8);
-    
-    clients.push({
-      id: clientId,
-      name: name,
-      phone: phone,
-      address: 'Test Address ' + (index + 1),
-      idNum: '',
-      occupation: 'Business',
-      createdAt: '2026-04-10'
-    });
-
-    // Create loan with EXACT due date: June 9, 2026
-    const loanId = 'dummy-loan-jun9-' + Date.now() + '-' + index;
-    const principal = index === 0 ? 50000 : 25000;
-    
-    console.log(`📅 Creating loan for ${name} with HARDCODED due date: ${dueDateString}`);
-    
-    loans.push({
-      id: loanId,
-      clientId: clientId,
-      principal: principal,
-      interestRate: 2,
-      interestType: 'percentage',
-      duration: 12,
-      type: 'monthly',
-      startDate: '2026-04-10',
-      nextDueDate: dueDateString,
-      next_due_date: dueDateString,
-      status: 'active',
-      createdAt: '2026-04-10'
-    });
-  });
-
-  // AGGRESSIVE CLEANUP: Remove ALL old dummy data
-  let existingClients = Store.clients();
-  let existingLoans = Store.loans();
-  
-  console.log('🗑️ Before cleanup - Clients:', existingClients.length, 'Loans:', existingLoans.length);
-  
-  // Remove ALL variations of dummy data
-  existingClients = existingClients.filter(c => 
-    !c.id.startsWith('dummy-client-') && 
-    !c.id.startsWith('dummy-client-jun9-') &&
-    c.name !== 'Ravi Kumar' && 
-    c.name !== 'Priya Sharma'
-  );
-  
-  existingLoans = existingLoans.filter(l => 
-    !l.id.startsWith('dummy-loan-') &&
-    !l.id.startsWith('dummy-loan-jun9-')
-  );
-  
-  console.log('🗑️ After cleanup - Clients:', existingClients.length, 'Loans:', existingLoans.length);
-  
-  // Add new dummy clients with June 9, 2026 date
-  localStorage.setItem(LS.clients, JSON.stringify([...existingClients, ...clients]));
-  localStorage.setItem(LS.loans, JSON.stringify([...existingLoans, ...loans]));
-  
-  // Trigger sync to Supabase
-  triggerAutoSync();
-  
-  console.log('✅ Loaded 2 dummy clients with loans due EXACTLY on June 9, 2026');
-  console.log(`📅 Client 1 (Ravi Kumar): ₹50,000 due on ${dueDateString}`);
-  console.log(`📅 Client 2 (Priya Sharma): ₹25,000 due on ${dueDateString}`);
-  console.log(`📊 Verification - Loan 1 nextDueDate:`, loans[0].nextDueDate);
-  console.log(`📊 Verification - Loan 2 nextDueDate:`, loans[1].nextDueDate);
+  downloadLoanDetailsPDF(loanId);
 }
 
 // ── EXPORT / IMPORT ───────────────────────────────────────────
 function exportAllDataAsPDF() {
-    if (typeof window.jspdf === 'undefined') {
-        showToast('PDF library not loaded', 'error');
-        return;
-    }
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('p', 'pt');
-    const clients = Store.clients();
-    const loans = Store.loans();
-    const payments = Store.payments();
-    const settings = Store.settings();
+  if (typeof window.jspdf === 'undefined') {
+    showToast('PDF library not loaded', 'error');
+    return;
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('p', 'pt');
+  const clients = Store.clients();
+  const loans = Store.loans();
+  const payments = Store.payments();
+  const settings = Store.settings();
 
-    const pdfCur = (n) => 'Rs. ' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+  const pdfCur = (n) => 'Rs. ' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
-    // Title Page / Header
-    doc.setFontSize(22);
-    doc.setTextColor(41, 128, 185);
-    doc.text(settings.businessName || 'KaasFlow Data Export', doc.internal.pageSize.getWidth() / 2, 60, { align: 'center' });
-    doc.setFontSize(12);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Generated on: ${fmtDate(today())}`, doc.internal.pageSize.getWidth() / 2, 80, { align: 'center' });
+  // Title Page / Header
+  doc.setFontSize(22);
+  doc.setTextColor(41, 128, 185);
+  doc.text(settings.businessName || 'KaasFlow Data Export', doc.internal.pageSize.getWidth() / 2, 60, { align: 'center' });
+  doc.setFontSize(12);
+  doc.setTextColor(100, 100, 100);
+  doc.text(`Generated on: ${fmtDate(today())}`, doc.internal.pageSize.getWidth() / 2, 80, { align: 'center' });
 
-    // Clients Table
-    doc.setFontSize(16);
-    doc.setTextColor(50, 50, 50);
-    doc.text('Clients', 40, 120);
-    let head = [['Name', 'Phone', 'Address', 'Occupation']];
-    let body = clients.map(c => [c.name, c.phone, c.address || '-', c.occupation || '-']);
-    doc.autoTable({ startY: 130, head, body, theme: 'grid', headStyles: { fillColor: [41, 128, 185] } });
+  // Clients Table
+  doc.setFontSize(16);
+  doc.setTextColor(50, 50, 50);
+  doc.text('Clients', 40, 120);
+  let head = [['Name', 'Phone', 'Address', 'Occupation']];
+  let body = clients.map(c => [c.name, c.phone, c.address || '-', c.occupation || '-']);
+  doc.autoTable({ startY: 130, head, body, theme: 'grid', headStyles: { fillColor: [41, 128, 185] } });
 
-    // Loans Table
-    doc.addPage();
-    doc.setFontSize(16);
-    doc.text('Loans', 40, 40);
-    head = [['Client', 'Principal', 'EMI', 'Paid', 'Remaining', 'Status']];
-    body = loans.map(l => {
-        const c = clients.find(cl => cl.id === l.clientId);
-        const stats = calcLoanStats(l);
-        return [c ? c.name : 'Unknown', pdfCur(l.principal), pdfCur(stats.emi), pdfCur(stats.totalPaid), pdfCur(stats.remaining), stats.isOverdue ? 'OVERDUE' : l.status.toUpperCase()];
-    });
-    doc.autoTable({ startY: 50, head, body, theme: 'grid', headStyles: { fillColor: [41, 128, 185] } });
+  // Loans Table
+  doc.addPage();
+  doc.setFontSize(16);
+  doc.text('Loans', 40, 40);
+  head = [['Client', 'Principal', 'EMI', 'Paid', 'Remaining', 'Status']];
+  body = loans.map(l => {
+    const c = clients.find(cl => cl.id === l.clientId);
+    const stats = calcLoanStats(l);
+    return [c ? c.name : 'Unknown', pdfCur(l.principal), pdfCur(stats.emi), pdfCur(stats.totalPaid), pdfCur(stats.remaining), stats.isOverdue ? 'OVERDUE' : l.status.toUpperCase()];
+  });
+  doc.autoTable({ startY: 50, head, body, theme: 'grid', headStyles: { fillColor: [41, 128, 185] } });
 
-    // Payments Table
-    doc.addPage();
-    doc.setFontSize(16);
-    doc.text('Payments', 40, 40);
-    head = [['Date', 'Client', 'Amount', 'Mode', 'Note']];
-    body = payments.sort((a,b) => b.date.localeCompare(a.date)).map(p => {
-        const l = loans.find(ln => ln.id === p.loanId);
-        const c = l ? clients.find(cl => cl.id === l.clientId) : null;
-        return [fmtDate(p.date), c ? c.name : 'Unknown', pdfCur(p.amount), p.mode ? p.mode.charAt(0).toUpperCase() + p.mode.slice(1) : '-', p.note || '-'];
-    });
-    doc.autoTable({ startY: 50, head, body, theme: 'grid', headStyles: { fillColor: [41, 128, 185] } });
+  // Payments Table
+  doc.addPage();
+  doc.setFontSize(16);
+  doc.text('Payments', 40, 40);
+  head = [['Date', 'Client', 'Amount', 'Mode', 'Note']];
+  body = payments.sort((a, b) => b.date.localeCompare(a.date)).map(p => {
+    const l = loans.find(ln => ln.id === p.loanId);
+    const c = l ? clients.find(cl => cl.id === l.clientId) : null;
+    return [fmtDate(p.date), c ? c.name : 'Unknown', pdfCur(p.amount), p.mode ? p.mode.charAt(0).toUpperCase() + p.mode.slice(1) : '-', p.note || '-'];
+  });
+  doc.autoTable({ startY: 50, head, body, theme: 'grid', headStyles: { fillColor: [41, 128, 185] } });
 
-    doc.save(`KaasFlow-Export-${today()}.pdf`);
-    showToast('PDF Report Generated!', 'success');
+  doc.save(`KaasFlow-Export-${today()}.pdf`);
+  showToast('PDF Report Generated!', 'success');
 }
 
 function exportCSV() {
@@ -3664,410 +3509,8 @@ function confirmDelete(type, id) {
 // Holds the SW registration so we can call showNotification() with actions
 let _swReg = null;
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.ready.then(r => { 
-    _swReg = r; 
-    console.log('📡 App: Service Worker is ready');
-  });
-  
-  // Listen for messages from Service Worker
-  navigator.serviceWorker.addEventListener('message', (event) => {
-    const msg = event.data;
-    console.log('📨 App received message from SW:', msg.type, msg);
-
-    if (msg.type === 'GET_TOKEN_FOR_SW') {
-      // SW requesting token
-      const session = getSession();
-      const token = session?.token || null;
-      console.log('📤 App: Sending token to SW:', token ? '✅ Token exists' : '❌ No token');
-      if (event.ports && event.ports[0]) {
-        event.ports[0].postMessage({ token });
-      }
-    }
-
-    if (msg.type === 'GET_DUE_LOANS_DATA') {
-      // SW requesting due loans data
-      console.log('📊 App: SW requesting due loans data');
-      
-      try {
-        const loans = Store.loans().filter(l => l.status === 'active');
-        const clients = Store.clients();
-        const today = new Date().toISOString().split('T')[0];
-        
-        const dueLoans = loans
-          .map(loan => {
-            const client = clients.find(c => c.id === loan.clientId);
-            if (!client) return null;
-            
-            const dueDate = loan.nextDueDate || loan.next_due_date;
-            if (!dueDate || dueDate > today) return null;
-            
-            const emiAmount = calcLoanStats(loan).emi;
-            
-            return {
-              loanId: loan.id,
-              clientId: client.id,
-              clientName: client.name,
-              emiAmount: emiAmount,
-              dueDate: dueDate
-            };
-          })
-          .filter(Boolean);
-        
-        console.log(`📤 App: Sending ${dueLoans.length} due loans to SW`);
-        
-        if (event.ports && event.ports[0]) {
-          event.ports[0].postMessage(dueLoans);
-        }
-      } catch (error) {
-        console.error('❌ App: Error getting due loans data:', error);
-        if (event.ports && event.ports[0]) {
-          event.ports[0].postMessage([]);
-        }
-      }
-    }
-
-    if (msg.type === 'PROMPT_PARTIAL_AMOUNT') {
-      // SW requesting partial amount from user
-      console.log('💰 App: Prompting user for partial amount, EMI:', msg.emi_amount);
-      promptPartialAmountModal(msg.emi_amount, (amount) => {
-        console.log('💰 App: User entered amount:', amount);
-        if (event.ports && event.ports[0]) {
-          event.ports[0].postMessage({ amount });
-        }
-      });
-    }
-
-    if (msg.type === 'PAYMENT_RECORDED') {
-      // Payment successfully recorded
-      console.log('✅ PAYMENT_RECORDED message received:', msg);
-      console.log('💰 Payment details:', {
-        action: msg.action,
-        amount: msg.amount,
-        loan_id: msg.loan_id,
-        client_name: msg.client_name
-      });
-      
-      // Auto-update the app data
-      try {
-        console.log('🔄 Starting auto-update of app data...');
-        updatePaymentData(msg.loan_id, msg.action, msg.amount);
-        console.log('✅ App data updated successfully');
-        
-        // Show success message
-        const actionLabel = msg.action === 'paid' ? 'PAID' : 
-                           msg.action === 'unpaid' ? 'UNPAID' : 
-                           'PARTIAL PAID';
-        
-        showToast(`✅ ${actionLabel} - ₹${msg.amount} for ${msg.client_name}`, 'success');
-        
-        // Refresh the current view without full page reload
-        console.log('🔄 Refreshing current view...');
-        const currentPage = State.page;
-        if (currentPage === 'collection') {
-          renderCollectionPage();
-        } else if (currentPage === 'loans') {
-          renderLoansPage();
-        }
-      } catch (error) {
-        console.error('❌ Failed to update app data:', error);
-        console.error('❌ Error stack:', error.stack);
-        showToast('❌ Failed to update app data: ' + error.message, 'error');
-      }
-    }
-
-    if (msg.type === 'ERROR') {
-      console.error('❌ Error from SW:', msg.message);
-      showToast('❌ ' + msg.message, 'error');
-    }
-
-    if (msg.type === 'INFO') {
-      console.log('ℹ️ Info from SW:', msg.message);
-      showToast('ℹ️ ' + msg.message, 'info');
-    }
-  });
+  navigator.serviceWorker.ready.then(r => { _swReg = r; });
 }
-
-// Update payment data in the app
-function updatePaymentData(loanId, action, amount) {
-  console.log(`💾 updatePaymentData called: loanId=${loanId}, action=${action}, amount=${amount}`);
-  
-  const loans = Store.loans();
-  const payments = Store.payments();
-  
-  console.log(`💾 Current state - ${loans.length} loans, ${payments.length} payments`);
-  
-  const loan = loans.find(l => l.id === loanId);
-  if (!loan) {
-    console.error(`❌ Loan not found: ${loanId}`);
-    throw new Error(`Loan ${loanId} not found in local storage`);
-  }
-  
-  console.log(`✅ Found loan:`, loan);
-
-  // Handle UNPAID action - create a record without payment
-  if (action === 'unpaid') {
-    console.log('❌ Action is UNPAID - recording unpaid status');
-    
-    // Record unpaid status
-    const unpaidRecord = {
-      id: uid(),
-      loanId: loanId,
-      clientId: loan.clientId,
-      amount: 0,
-      status: 'unpaid',
-      date: today(),
-      mode: 'N/A',
-      note: 'Marked as UNPAID via notification',
-      createdAt: new Date().toISOString()
-    };
-    
-    payments.push(unpaidRecord);
-    Store.savePayments(payments);
-    console.log(`✅ Unpaid record saved. Total payments now: ${Store.payments().length}`);
-    
-    // Next due date stays the same (no update needed for unpaid)
-    console.log('📅 Next due date remains: ' + (loan.nextDueDate || loan.next_due_date));
-    return;
-  }
-
-  // For PAID and PARTLY_PAID, record the payment
-  const payment = {
-    id: uid(),
-    loanId: loanId,
-    clientId: loan.clientId,
-    amount: parseFloat(amount),
-    date: today(),
-    mode: 'Cash',
-    note: `${action.toUpperCase()} via notification`,
-    createdAt: new Date().toISOString()
-  };
-
-  console.log(`💾 Adding payment:`, payment);
-  payments.push(payment);
-  Store.savePayments(payments);
-  console.log(`✅ Payment saved. Total payments now: ${Store.payments().length}`);
-
-  // Calculate loan stats and update loan
-  const stats = calcLoanStats(loan);
-  const newRemaining = stats.remaining - amount;
-  console.log(`📊 Loan stats: remaining=${stats.remaining}, new remaining=${newRemaining}`);
-
-  // Update loan based on action
-  const loanIndex = loans.findIndex(l => l.id === loanId);
-  if (loanIndex !== -1) {
-    if (action === 'paid') {
-      // Full payment - update next due date
-      const currentDueDate = new Date(loan.nextDueDate || loan.next_due_date);
-      let nextDueDate;
-      
-      if (loan.type === 'weekly') {
-        nextDueDate = new Date(currentDueDate.getTime() + (7 * 24 * 60 * 60 * 1000));
-      } else {
-        // Monthly
-        nextDueDate = new Date(currentDueDate);
-        nextDueDate.setMonth(nextDueDate.getMonth() + 1);
-      }
-      
-      loan.nextDueDate = nextDueDate.toISOString().split('T')[0];
-      loan.next_due_date = loan.nextDueDate; // Support both field names
-      
-      console.log(`📅 Updated next due date to: ${loan.nextDueDate}`);
-      
-      // Check if loan is completed
-      if (newRemaining <= 0) {
-        loan.status = 'completed';
-        console.log(`✅ Loan marked as completed`);
-      }
-    } else if (action === 'partly_paid') {
-      // Partial payment - next due date stays the same
-      console.log(`💰 Partial payment recorded - next due date remains: ${loan.nextDueDate || loan.next_due_date}`);
-      
-      // Check if total paid now covers the loan
-      if (newRemaining <= 0) {
-        loan.status = 'completed';
-        console.log(`✅ Loan marked as completed (fully paid with partial payments)`);
-      }
-    }
-    
-    loans[loanIndex] = loan;
-    Store.saveLoans(loans);
-    console.log(`✅ Loan updated in storage`);
-  }
-
-  // Update notification badge
-  if (typeof updateNotifBadge === 'function') {
-    console.log('🔔 Updating notification badge...');
-    updateNotifBadge();
-  }
-  
-  console.log('✅ Payment data updated successfully in app - localStorage updated, ready for page refresh');
-}
-
-// Prompt for partial payment amount
-function promptPartialAmountModal(emiAmount, callback) {
-  // Create modal backdrop
-  const modal = document.createElement('div');
-  modal.className = 'partial-payment-modal-backdrop';
-  modal.style.cssText = `
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0,0,0,0.7);
-    backdrop-filter: blur(4px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-    animation: fadeIn 0.2s ease;
-  `;
-
-  const modalCard = document.createElement('div');
-  modalCard.className = 'partial-payment-modal-card';
-  modalCard.style.cssText = `
-    background: var(--bg-card);
-    border: 1px solid var(--border-default);
-    border-radius: 20px;
-    padding: 30px 25px;
-    max-width: 380px;
-    width: 90%;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-    animation: slideUp 0.3s ease;
-  `;
-
-  modalCard.innerHTML = `
-    <div style="text-align: center;">
-      <div style="font-size: 3rem; margin-bottom: 10px;">💰</div>
-      <h2 style="margin: 0 0 8px 0; color: var(--text-primary); font-size: 1.4rem; font-weight: 700;">Partial Payment</h2>
-      <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 0.9rem;">
-        EMI Amount: <strong style="color: var(--green-light);">₹${emiAmount.toFixed(2)}</strong>
-      </p>
-      
-      <div style="margin-bottom: 20px;">
-        <input 
-          type="number" 
-          id="partial-amt-input" 
-          placeholder="Enter partial amount" 
-          min="1" 
-          max="${emiAmount}" 
-          step="0.01"
-          class="kf-input"
-          style="
-            width: 100%;
-            padding: 14px 16px;
-            background: var(--bg-input);
-            border: 2px solid var(--border-default);
-            border-radius: 12px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            box-sizing: border-box;
-            text-align: center;
-            font-family: 'JetBrains Mono', monospace;
-          ">
-      </div>
-      
-      <div style="display: flex; gap: 10px;">
-        <button 
-          id="partial-cancel-btn"
-          class="btn-kf-outline"
-          style="
-            flex: 1; 
-            padding: 14px 20px; 
-            background: var(--bg-input); 
-            border: 1px solid var(--border-default); 
-            color: var(--text-muted);
-            border-radius: 12px; 
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.95rem;
-            transition: all 0.2s;
-          ">
-          Cancel
-        </button>
-        <button 
-          id="partial-confirm-btn"
-          class="btn-kf-primary"
-          style="
-            flex: 1; 
-            padding: 14px 20px; 
-            background: linear-gradient(135deg, #7ed321, #2e8b00); 
-            color: white; 
-            border: none; 
-            border-radius: 12px; 
-            cursor: pointer; 
-            font-weight: 700;
-            font-size: 0.95rem;
-            box-shadow: 0 4px 15px rgba(76, 175, 26, 0.3);
-            transition: all 0.3s;
-          ">
-          Confirm
-        </button>
-      </div>
-    </div>
-  `;
-
-  modal.appendChild(modalCard);
-  document.body.appendChild(modal);
-
-  const input = document.getElementById('partial-amt-input');
-  const cancelBtn = document.getElementById('partial-cancel-btn');
-  const confirmBtn = document.getElementById('partial-confirm-btn');
-
-  // Focus input
-  setTimeout(() => input.focus(), 100);
-
-  // Handle cancel
-  const handleCancel = () => {
-    modal.style.animation = 'fadeOut 0.2s ease';
-    setTimeout(() => {
-      modal.remove();
-      callback(0);
-    }, 200);
-  };
-
-  cancelBtn.addEventListener('click', handleCancel);
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) handleCancel();
-  });
-
-  // Handle confirm
-  confirmBtn.addEventListener('click', () => {
-    const amt = parseFloat(input.value);
-    if (!amt || amt <= 0) {
-      input.style.borderColor = 'var(--kf-danger)';
-      input.focus();
-      showToast('Please enter a valid amount', 'error');
-      return;
-    }
-    if (amt > emiAmount) {
-      input.style.borderColor = 'var(--kf-danger)';
-      input.focus();
-      showToast(`Amount cannot exceed ₹${emiAmount.toFixed(2)}`, 'error');
-      return;
-    }
-
-    modal.style.animation = 'fadeOut 0.2s ease';
-    setTimeout(() => {
-      modal.remove();
-      callback(amt);
-    }, 200);
-  });
-
-  // Handle Enter key
-  input.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      confirmBtn.click();
-    }
-  });
-
-  // Reset border color on input
-  input.addEventListener('input', () => {
-    input.style.borderColor = 'var(--border-default)';
-  });
-}
-
 
 /**
  * Request notification permission and schedule daily alert.
@@ -4095,7 +3538,7 @@ function scheduleNotifications() {
   } else if (Notification.permission === 'default') {
     Notification.requestPermission().then(perm => {
       if (perm === 'granted') askAndSchedule();
-    }).catch(() => {});
+    }).catch(() => { });
   }
 }
 
@@ -4113,8 +3556,8 @@ function fireTodayNotifications() {
   const lastSent = localStorage.getItem('kf_notif_sent_date');
   if (lastSent === todayStr) return;
 
-  const loans   = Store.loans().filter(l => l.status === 'active');
-  const clients  = Store.clients();
+  const loans = Store.loans().filter(l => l.status === 'active');
+  const clients = Store.clients();
 
   const items = loans
     .map(l => ({ loan: l, stats: calcLoanStats(l), client: clients.find(c => c.id === l.clientId) }))
@@ -4126,10 +3569,10 @@ function fireTodayNotifications() {
 
   items.forEach(({ loan, stats, client }, idx) => {
     setTimeout(() => {
-      const name        = client ? client.name : 'Unknown Client';
-      const amount      = fmtCur(stats.emi);
-      const dueDate     = fmtDate(stats.nextDueDate);
-      const isOverdue   = stats.isOverdue;
+      const name = client ? client.name : 'Unknown Client';
+      const amount = fmtCur(stats.emi);
+      const dueDate = fmtDate(stats.nextDueDate);
+      const isOverdue = stats.isOverdue;
 
       const title = isOverdue
         ? `⚠️ Overdue — ${name}`
@@ -4142,22 +3585,19 @@ function fireTodayNotifications() {
       ];
 
       const notifOptions = {
-        body:    bodyLines.join('\n'),
-        icon:    'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23d4a017%22/><text y=%2272%22 x=%2250%22 text-anchor=%22middle%22 font-size=%2265%22>%E2%82%B9</text></svg>',
-        badge:   'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%23d4a017%22/><text y=%2272%22 x=%2250%22 text-anchor=%22middle%22 font-size=%2265%22>%E2%82%B9</text></svg>',
-        tag:     `kf-due-${loan.id}-${todayStr}`,
+        body: bodyLines.join('\n'),
+        icon: 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23d4a017%22/><text y=%2272%22 x=%2250%22 text-anchor=%22middle%22 font-size=%2265%22>%E2%82%B9</text></svg>',
+        badge: 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%23d4a017%22/><text y=%2272%22 x=%2250%22 text-anchor=%22middle%22 font-size=%2265%22>%E2%82%B9</text></svg>',
+        tag: `kf-due-${loan.id}-${todayStr}`,
         requireInteraction: true,  // stays on screen until user acts
         actions: [
           { action: 'paid', title: '✅ Paid' },
-          { action: 'unpaid', title: '❌ Unpaid' },
+          { action: 'pending', title: '⏳ Pending' },
         ],
         data: {
           loanId: loan.id,
-          loan_id: loan.id,
           emi: stats.emi,
           amount: stats.emi,
-          client_name: name,
-          client_id: client.id,
         },
         vibrate: [200, 100, 200],  // buzz pattern on Android
       };
@@ -4170,7 +3610,7 @@ function fireTodayNotifications() {
         });
       } else {
         try { new Notification(title, { body: notifOptions.body, icon: notifOptions.icon }); }
-        catch (e) {}
+        catch (e) { }
       }
     }, idx * 900);
   });
@@ -4211,7 +3651,7 @@ function typeAIOrbText() {
   let phraseIndex = 0;
   let charIndex = 0;
   let isDeleting = false;
-  
+
   function type() {
     if (!document.getElementById('ai-typing-text')) return;
     const currentPhrase = phrases[phraseIndex];
@@ -4222,9 +3662,9 @@ function typeAIOrbText() {
       textEl.innerText = currentPhrase.substring(0, charIndex + 1);
       charIndex++;
     }
-    
+
     let typeSpeed = isDeleting ? 30 : 70;
-    
+
     if (!isDeleting && charIndex === currentPhrase.length) {
       typeSpeed = 2000;
       isDeleting = true;
@@ -4233,10 +3673,10 @@ function typeAIOrbText() {
       phraseIndex = (phraseIndex + 1) % phrases.length;
       typeSpeed = 500;
     }
-    
+
     setTimeout(type, typeSpeed);
   }
-  
+
   // Start typing
   setTimeout(type, 1000);
 }
@@ -4254,10 +3694,10 @@ function renderNotifDropdown() {
     client: clients.find(c => c.id === l.clientId)
   }));
 
-  const overdue  = allItems.filter(({ stats }) => stats.isOverdue);
+  const overdue = allItems.filter(({ stats }) => stats.isOverdue);
   const dueToday = allItems.filter(({ stats }) => !stats.isOverdue && stats.nextDueDate === todayStr && stats.remaining > 0);
 
-  const listEl  = $('#notif-list');
+  const listEl = $('#notif-list');
   const emptyEl = $('#notif-empty');
 
   if (overdue.length === 0 && dueToday.length === 0) {
@@ -4485,7 +3925,7 @@ function bindGlobal() {
     const s = Store.settings();
     s.appPin = pin;
     Store.saveSettings(s);
-    
+
     // Sync to backend (or Supabase directly)
     const sessionUser = getSession()?.user;
     if (sessionUser && sessionUser.email) {
@@ -4494,7 +3934,7 @@ function bindGlobal() {
     if (window.KFSync) {
       KFSync.backup(true);
     }
-    
+
     // Show success animation
     inputs.forEach(i => i.classList.add('success'));
     showToast('🔒 Security PIN set successfully!', 'success');
@@ -4527,12 +3967,7 @@ function bindGlobal() {
 
   // Switch Account (from lock screen)
   $('#btn-switch-account')?.addEventListener('click', () => {
-    localStorage.removeItem(LS.session);
-    const s = Store.settings();
-    delete s.appPin;
-    Store.saveSettings(s);
-    state.session = null;
-    showAuth();
+    logout(); // Use full logout for proper data isolation and cleanup
   });
 
   // Forgot Security PIN Flow
@@ -4540,17 +3975,17 @@ function bindGlobal() {
 
   $('#btn-forgot-pin')?.addEventListener('click', () => {
     resetPinEmail = Store.session()?.user?.email || '';
-    if(!resetPinEmail) {
+    if (!resetPinEmail) {
       showToast('Cannot identify user email. Please switch account and login again.', 'error');
       return;
     }
     $('#forgot-pin-email').value = resetPinEmail;
-    
+
     // Reset steps
     $('#forgot-pin-step-1').style.display = 'block';
     $('#forgot-pin-step-2').style.display = 'none';
     $('#forgot-pin-step-3').style.display = 'none';
-    
+
     // Clear inputs
     $$('.reset-otp-input').forEach(i => i.value = '');
     $$('.reset-new-pin-input').forEach(i => i.value = '');
@@ -4572,7 +4007,7 @@ function bindGlobal() {
       }
       if (e.key === 'Enter') {
         const otpStr = $$('.reset-otp-input').map(i => i.value).join('');
-        if(otpStr.length === 6) $('#btn-verify-pin-otp')?.click();
+        if (otpStr.length === 6) $('#btn-verify-pin-otp')?.click();
       }
     });
   });
@@ -4591,7 +4026,7 @@ function bindGlobal() {
       }
       if (e.key === 'Enter') {
         const pinStr = $$('.reset-new-pin-input').map(i => i.value).join('');
-        if(pinStr.length === 4) $('#btn-save-new-pin')?.click();
+        if (pinStr.length === 4) $('#btn-save-new-pin')?.click();
       }
     });
   });
@@ -4657,18 +4092,18 @@ function bindGlobal() {
     const s = Store.settings();
     s.appPin = newPin;
     Store.saveSettings(s);
-    
+
     // Sync to backend
     if (resetPinEmail) {
       apiAuth('set-pin', { email: resetPinEmail, pin: newPin }).catch(e => console.error(e));
     }
-    
+
     // Close modal
     const modalEl = document.getElementById('forgotPinModal');
     bootstrap.Modal.getInstance(modalEl)?.hide();
-    
+
     showToast('🔒 PIN reset successfully!', 'success');
-    
+
     // Automatically log them in since they verified OTP
     setTimeout(() => showApp(), 500);
   });
@@ -4773,7 +4208,7 @@ function bindGlobal() {
     const interestRate = parseFloat($('#loan-interest').value) || 0;
     const type = $('#loan-type').value;
     const startDate = $('#loan-start-date').value || today();
-    
+
     if (!clientId || !principal || principal < 1) {
       showToast('Fill in required loan fields (Client & valid Principal)', 'error'); return;
     }
@@ -4819,8 +4254,23 @@ function bindGlobal() {
 
   $('#loan-interest-type')?.addEventListener('change', (e) => {
     const label = $('#label-loan-interest');
+    const helpText = $('#interest-help-text');
+    const input = $('#loan-interest');
+    
     if (label) {
-      label.innerHTML = e.target.value === 'fixed' ? 'Fixed Interest Value <span class="text-danger">*</span>' : 'Interest Percentage <span class="text-danger">*</span>';
+      if (e.target.value === 'fixed') {
+        label.innerHTML = 'Fixed Interest Value <span class="text-danger">*</span>';
+        if (helpText) helpText.textContent = 'Fixed interest amount per month';
+        if (input) input.placeholder = '500';
+      } else if (e.target.value === 'own') {
+        label.innerHTML = 'Monthly Payment Amount <span class="text-danger">*</span>';
+        if (helpText) helpText.textContent = 'Fixed monthly payment amount (interest calculated from this)';
+        if (input) input.placeholder = '1500';
+      } else {
+        label.innerHTML = 'Interest Percentage <span class="text-danger">*</span>';
+        if (helpText) helpText.textContent = 'Percentage of principal per month';
+        if (input) input.placeholder = '2';
+      }
     }
     updateEMIPreview();
   });
@@ -4861,6 +4311,36 @@ function bindGlobal() {
     showToast(`Payment of ${fmtCur(amount)} recorded!`, 'success');
     updateNotifBadge();
     if (state.page !== 'settings') navigateTo(state.page);
+  });
+
+  // Save partial payment button listener
+  $('#save-partial-payment-btn')?.addEventListener('click', () => {
+    const loanId = $('#partial-payment-loan-id').value;
+    const amount = parseFloat($('#partial-payment-amount').value);
+    const note = $('#partial-payment-note').value.trim();
+
+    if (!loanId || !amount || amount < 1) {
+      showToast('Enter a valid partial amount', 'error'); return;
+    }
+
+    const loan = Store.loans().find(l => l.id === loanId);
+    const payment = {
+      id: uid(),
+      loanId,
+      amount,
+      date: today(),
+      note: note || 'Partial payment',
+      createdAt: new Date().toISOString()
+    };
+
+    const payments = Store.payments();
+    payments.push(payment);
+    Store.savePayments(payments);
+
+    bootstrap.Modal.getInstance($('#partialPaymentModal'))?.hide();
+    showToast(`Partial payment of ${fmtCur(amount)} recorded!`, 'success');
+    if (loan) generateReceipt(payment, loan);
+    navigateTo(state.page);
   });
 
   // Confirm delete button
@@ -4968,7 +4448,7 @@ function setupPinInputBehavior(containerSel) {
 // ── SUBSCRIPTION PAYMENT SYSTEM ──────────────────────────────
 function initiatePlanPayment(planType) {
   console.log('🎯 initiatePlanPayment called for:', planType);
-  
+
   // Close upgrade modals immediately
   ['upgradeModal', 'blockingUpgradeModal'].forEach(id => {
     const el = document.getElementById(id);
@@ -4998,7 +4478,7 @@ function initiatePlanPayment(planType) {
   RazorpayPayment.payForPlanInstant(planType, {
     onSuccess: (response) => {
       const settings = Store.settings();
-      
+
       // Save new plan and payment date
       settings.plan = planType;
       settings.paymentDate = new Date().toISOString();
@@ -5039,7 +4519,7 @@ function initiatePlanPayment(planType) {
       if (typeof showToast === 'function') {
         showToast('✅ Payment confirmed! ' + PLAN_NAMES[planType] + ' activated.', 'success');
       }
-      
+
       // Explicit limit popup for the user
       setTimeout(() => {
         alert('🎉 Upgrade Successful!\n\nYou now have unlimited access. Enjoy KaasFlow Premium!');
@@ -5065,11 +4545,11 @@ function initiatePlanPayment(planType) {
 }
 
 // ── MODAL TOGGLES FOR SETTINGS INFO ───────────────────────────
-window.openTermsModal = function() { document.getElementById('termsModal').style.display = 'flex'; }
-window.openPrivacyModal = function() { document.getElementById('privacyModal').style.display = 'flex'; }
-window.openContactModal = function() { document.getElementById('contactModal').style.display = 'flex'; }
-window.closeModal = function(id) { document.getElementById(id).style.display = 'none'; }
-window.closeContactOnOverlay = function(e) {
+window.openTermsModal = function () { document.getElementById('termsModal').style.display = 'flex'; }
+window.openPrivacyModal = function () { document.getElementById('privacyModal').style.display = 'flex'; }
+window.openContactModal = function () { document.getElementById('contactModal').style.display = 'flex'; }
+window.closeModal = function (id) { document.getElementById(id).style.display = 'none'; }
+window.closeContactOnOverlay = function (e) {
   if (e.target.id === 'contactModal') {
     closeModal('contactModal');
   }
@@ -5098,20 +4578,20 @@ window.addEventListener('appinstalled', () => {
 });
 
 // Handle floating bubble install click
-window.handleBubbleInstall = async function() {
+window.handleBubbleInstall = async function () {
   console.log('🔘 Install bubble clicked on samkass.site');
-  
+
   if (!window.deferredPrompt) {
     showToast('To install SamKass: Tap browser menu (⋮) → "Add to Home screen"', 'info');
     console.log('📱 Manual install instruction shown');
     return;
   }
-  
+
   try {
     window.deferredPrompt.prompt();
     const { outcome } = await window.deferredPrompt.userChoice;
     console.log('👤 User choice:', outcome);
-    
+
     if (outcome === 'accepted') {
       showToast('SamKass app installed successfully!', 'success');
       const bubble = $('#pwa-install-bubble');
@@ -5121,7 +4601,7 @@ window.handleBubbleInstall = async function() {
     console.error('❌ Install prompt error:', err);
     showToast('To install SamKass: Tap browser menu (⋮) → "Add to Home screen"', 'info');
   }
-  
+
   window.deferredPrompt = null;
 };
 
@@ -5143,56 +4623,23 @@ setTimeout(() => {
 
 document.addEventListener('DOMContentLoaded', () => {
   console.log('🎬 BOOT: DOMContentLoaded event fired');
-  
-  // Handle notification action from URL parameters
-  const urlParams = new URLSearchParams(window.location.search);
-  const action = urlParams.get('action');
-  const loanIds = urlParams.get('loans');
-  
-  if (action && loanIds) {
-    console.log(`🔔 Handling notification action: ${action} for loans: ${loanIds}`);
-    
-    // Wait for app to initialize, then process action
-    setTimeout(() => {
-      const loanIdArray = loanIds.split(',');
-      
-      if (action === 'paid') {
-        // Mark all loans as paid
-        loanIdArray.forEach(loanId => {
-          handlePaidNotification(loanId);
-        });
-        showToast(`✅ Marked ${loanIdArray.length} loan(s) as PAID`, 'success');
-        
-        // Navigate and refresh view
-        navigateTo('collection');
-        setTimeout(() => renderCollectionPage(), 500);
-      } else if (action === 'unpaid') {
-        // Mark all loans as unpaid - just show message
-        showToast(`❌ Marked ${loanIdArray.length} loan(s) as UNPAID`, 'info');
-        navigateTo('collection');
-      }
-      
-      // Clear URL parameters without reload
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }, 2000);
-  }
-  
+
   // Check if required dependencies are loaded
   console.log('🔍 BOOT: Checking dependencies...');
   console.log('Bootstrap:', typeof bootstrap !== 'undefined');
   console.log('Chart.js:', typeof Chart !== 'undefined');
   console.log('jsPDF:', typeof window.jspdf !== 'undefined');
-  
+
   if (typeof RazorpayPayment !== 'undefined') {
     console.log('💳 BOOT: Initializing Razorpay...');
     RazorpayPayment.init();
   } else {
     console.warn('⚠️ BOOT: RazorpayPayment not found');
   }
-  
+
   // Initialize chatbot
   initChatbot();
-  
+
   // Brief loading screen delay for smooth UX
   console.log('⏳ BOOT: Waiting 400ms before calling init()...');
   setTimeout(() => {
@@ -5245,23 +4692,23 @@ const chatbotTranslations = {
 
 function initChatbot() {
   console.log('🤖 Initializing chatbot...');
-  
+
   // Wait for DOM to be fully ready
   setTimeout(() => {
     const chatbotIcon = document.getElementById('chatbot-icon');
     const chatbotInterface = document.getElementById('chatbot-interface');
-    
+
     if (!chatbotIcon) {
       console.error('❌ Chatbot icon element not found!');
       return;
     }
-    
+
     console.log('✅ Chatbot icon element found, binding events...');
-    
+
     // Make icon draggable
     chatbotIcon.addEventListener('mousedown', startDrag);
     chatbotIcon.addEventListener('touchstart', startDrag, { passive: false });
-    
+
     // Click to open chat - use both click and touchend for better mobile support
     chatbotIcon.addEventListener('click', (e) => {
       e.preventDefault();
@@ -5270,7 +4717,7 @@ function initChatbot() {
         openChatbot();
       }
     });
-    
+
     chatbotIcon.addEventListener('touchend', (e) => {
       e.preventDefault();
       console.log('👆 Chatbot icon touched, isDragging:', isDragging);
@@ -5278,7 +4725,7 @@ function initChatbot() {
         openChatbot();
       }
     });
-    
+
     // Auto-resize textarea
     const textarea = document.getElementById('chatbot-input');
     if (textarea) {
@@ -5290,7 +4737,7 @@ function initChatbot() {
         }
       });
     }
-    
+
     console.log('✅ Chatbot initialization complete!');
   }, 500);
 }
@@ -5298,58 +4745,53 @@ function initChatbot() {
 function startDrag(e) {
   e.preventDefault();
   isDragging = false;
-  
+
   const chatbotIcon = document.getElementById('chatbot-icon');
   if (!chatbotIcon) return;
-  
+
   const rect = chatbotIcon.getBoundingClientRect();
-  
+
   const clientX = e.clientX || (e.touches && e.touches[0].clientX);
   const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-  
+
   dragOffset.x = clientX - rect.left;
   dragOffset.y = clientY - rect.top;
-  
+
+  // Add dragging class immediately for visual feedback
+  chatbotIcon.classList.add('dragging');
+
   // Add event listeners
   document.addEventListener('mousemove', drag);
   document.addEventListener('touchmove', drag, { passive: false });
   document.addEventListener('mouseup', stopDrag);
   document.addEventListener('touchend', stopDrag);
-  
-  // Only mark as dragging after a small delay to allow clicks
+
+  // Mark as dragging after a small delay to allow clicks
   setTimeout(() => {
-    if (document.addEventListener) {
-      // Check if mouse/finger moved significantly
-      const currentX = e.clientX || (e.touches && e.touches[0].clientX);
-      const currentY = e.clientY || (e.touches && e.touches[0].clientY);
-      
-      if (Math.abs(currentX - clientX) > 5 || Math.abs(currentY - clientY) > 5) {
-        isDragging = true;
-        chatbotIcon.classList.add('dragging');
-        console.log('🖱️ Started dragging chatbot');
-      }
-    }
-  }, 150);
+    isDragging = true;
+    console.log('🖱️ Started dragging chatbot');
+  }, 100);
 }
 
 function drag(e) {
   if (!isDragging) return;
-  
+
   e.preventDefault();
   const chatbotIcon = document.getElementById('chatbot-icon');
-  
+  if (!chatbotIcon) return;
+
   const clientX = e.clientX || (e.touches && e.touches[0].clientX);
   const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-  
+
   const x = clientX - dragOffset.x;
   const y = clientY - dragOffset.y;
-  
+
   const maxX = window.innerWidth - 60;
   const maxY = window.innerHeight - 60;
-  
+
   const clampedX = Math.max(0, Math.min(x, maxX));
   const clampedY = Math.max(0, Math.min(y, maxY));
-  
+
   chatbotIcon.style.left = clampedX + 'px';
   chatbotIcon.style.top = clampedY + 'px';
   chatbotIcon.style.right = 'auto';
@@ -5361,10 +4803,18 @@ function stopDrag() {
   document.removeEventListener('touchmove', drag);
   document.removeEventListener('mouseup', stopDrag);
   document.removeEventListener('touchend', stopDrag);
-  
+
   const chatbotIcon = document.getElementById('chatbot-icon');
-  chatbotIcon.classList.remove('dragging');
-  
+  if (chatbotIcon) {
+    // Snap animation when dragging stops
+    chatbotIcon.style.transition = 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
+    chatbotIcon.classList.remove('dragging');
+    
+    setTimeout(() => {
+      chatbotIcon.style.transition = '';
+    }, 300);
+  }
+
   setTimeout(() => {
     isDragging = false;
   }, 100);
@@ -5372,32 +4822,37 @@ function stopDrag() {
 
 function openChatbot() {
   console.log('🚀 Opening chatbot interface...');
-  
+
   const chatbotInterface = document.getElementById('chatbot-interface');
   const chatbotIcon = document.getElementById('chatbot-icon');
-  
+
   if (!chatbotInterface) {
     console.error('❌ Chatbot interface element not found!');
     return;
   }
-  
+
   if (!chatbotIcon) {
     console.error('❌ Chatbot icon element not found!');
     return;
   }
-  
+
   console.log('✅ Opening chatbot interface...');
-  
+
+  // Add pulse animation to icon before closing
+  chatbotIcon.classList.add('pulse');
+
   // Remove closing class if present
   chatbotInterface.classList.remove('closing');
-  
+
   // Show with smooth animation
   chatbotInterface.style.display = 'flex';
-  chatbotIcon.style.display = 'none';
-  
+  setTimeout(() => {
+    chatbotIcon.style.display = 'none';
+  }, 100);
+
   // Update language
   updateChatbotLanguage();
-  
+
   // Focus input after animation
   setTimeout(() => {
     const input = document.getElementById('chatbot-input');
@@ -5405,6 +4860,7 @@ function openChatbot() {
       input.focus();
       console.log('✅ Chatbot input focused');
     }
+    chatbotIcon.classList.remove('pulse');
   }, 400);
 }
 
@@ -5413,21 +4869,29 @@ window.openChatbot = openChatbot;
 
 function closeChatbot() {
   console.log('🚪 Closing chatbot interface...');
-  
+
   const chatbotInterface = document.getElementById('chatbot-interface');
   const chatbotIcon = document.getElementById('chatbot-icon');
-  
+
   if (chatbotInterface && chatbotIcon) {
     // Add closing animation class
     chatbotInterface.classList.add('closing');
-    
+
+    // Add pulse animation to icon
+    chatbotIcon.classList.add('pulse');
+
     // Wait for animation to complete before hiding
     setTimeout(() => {
       chatbotInterface.style.display = 'none';
       chatbotInterface.classList.remove('closing');
       chatbotIcon.style.display = 'flex';
+      
+      setTimeout(() => {
+        chatbotIcon.classList.remove('pulse');
+      }, 600);
+      
       console.log('✅ Chatbot interface closed');
-    }, 300);
+    }, 400);
   }
 }
 
@@ -5438,12 +4902,12 @@ function updateChatbotLanguage() {
   const settings = Store.settings();
   currentLang = settings.lang || 'en';
   const t = chatbotTranslations[currentLang] || chatbotTranslations.en;
-  
+
   const title = document.getElementById('chatbot-title');
   const subtitle = document.getElementById('chatbot-subtitle');
   const welcome = document.getElementById('welcome-message');
   const placeholder = document.getElementById('chatbot-input');
-  
+
   if (title) title.textContent = t.title;
   if (subtitle) subtitle.textContent = t.subtitle;
   if (welcome) welcome.textContent = t.welcome;
@@ -5452,36 +4916,36 @@ function updateChatbotLanguage() {
 
 function sendMessage() {
   console.log('💬 Sending message...');
-  
+
   const input = document.getElementById('chatbot-input');
   if (!input) {
     console.error('❌ Chatbot input not found!');
     return;
   }
-  
+
   const message = input.value.trim();
-  
+
   if (!message) {
     console.log('⚠️ Empty message, skipping...');
     return;
   }
-  
+
   console.log('📤 Message:', message);
-  
+
   // Detect language from input
   const detectedLang = detectLanguage(message);
   console.log('🌐 Detected language:', detectedLang);
-  
+
   // Add user message
   addMessage(message, 'user');
-  
+
   // Clear input
   input.value = '';
   autoResizeTextarea();
-  
+
   // Show thinking indicator
   showTypingIndicator();
-  
+
   // Process message and respond
   setTimeout(() => {
     hideTypingIndicator();
@@ -5504,7 +4968,7 @@ function addMessage(message, type) {
   const messagesContainer = document.getElementById('chatbot-messages');
   const messageDiv = document.createElement('div');
   messageDiv.className = type + '-message';
-  
+
   if (type === 'user') {
     messageDiv.innerHTML = `
       <div class="message-content">${message}</div>
@@ -5519,7 +4983,7 @@ function addMessage(message, type) {
       <div class="message-content">${message}</div>
     `;
   }
-  
+
   messagesContainer.appendChild(messageDiv);
   messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
@@ -5529,7 +4993,7 @@ function showTypingIndicator() {
   const typingDiv = document.createElement('div');
   typingDiv.className = 'bot-message typing-indicator';
   typingDiv.id = 'typing-indicator';
-  
+
   typingDiv.innerHTML = `
     <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #7ed321, #4caf1a); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
@@ -5542,7 +5006,7 @@ function showTypingIndicator() {
       <div class="typing-dot"></div>
     </div>
   `;
-  
+
   messagesContainer.appendChild(typingDiv);
   messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
@@ -5556,48 +5020,48 @@ function hideTypingIndicator() {
 
 function processUserMessage(message, language) {
   const lowerMessage = message.toLowerCase();
-  
+
   // Get app data
   const clients = Store.clients();
   const loans = Store.loans();
   const payments = Store.payments();
   const settings = Store.settings();
-  
+
   // Use appropriate language for response
   const t = chatbotTranslations[language] || chatbotTranslations.en;
-  
+
   // Calculate key metrics
   const totalLent = loans.reduce((sum, loan) => sum + loan.principal, 0);
   const totalCollected = payments.reduce((sum, p) => sum + p.amount, 0);
   const outstandingBalance = totalLent - totalCollected;
   const activeLoans = loans.filter(l => l.status === 'active');
-  
+
   // Today's data
   const today = new Date().toISOString().split('T')[0];
   const todayPayments = payments.filter(p => p.date === today);
   const todayCollection = todayPayments.reduce((sum, p) => sum + p.amount, 0);
-  
+
   // Client-related queries
   if (lowerMessage.includes('client') || lowerMessage.includes('வாடிக்கையாளர்') || lowerMessage.includes('customer')) {
     if (lowerMessage.includes('how many') || lowerMessage.includes('எத்தனை') || lowerMessage.includes('count')) {
-      return language === 'ta' 
+      return language === 'ta'
         ? `உங்களிடம் மொத்தம் ${clients.length} வாடிக்கையாளர்கள் உள்ளனர். ${activeLoans.length} பேருக்கு செயலில் உள்ள கடன்கள் உள்ளன.`
         : `You have a total of ${clients.length} clients. ${activeLoans.length} have active loans.`;
     }
-    
+
     if (lowerMessage.includes('list') || lowerMessage.includes('பட்டியல்')) {
       if (clients.length === 0) {
-        return language === 'ta' 
+        return language === 'ta'
           ? 'உங்களிடம் இன்னும் வாடிக்கையாளர்கள் எவரும் இல்லை.'
           : 'You don\'t have any clients yet.';
       }
       const clientList = clients.slice(0, 5).map(c => c.name).join(', ');
       const moreText = clients.length > 5 ? (language === 'ta' ? ` மற்றும் ${clients.length - 5} மேலும்` : ` and ${clients.length - 5} more`) : '';
-      return language === 'ta' 
+      return language === 'ta'
         ? `உங்கள் வாடிக்கையாளர்கள்: ${clientList}${moreText}.`
         : `Your clients: ${clientList}${moreText}.`;
     }
-    
+
     if (lowerMessage.includes('top') || lowerMessage.includes('best') || lowerMessage.includes('சிறந்த')) {
       const clientStats = clients.map(client => {
         const clientLoans = loans.filter(l => l.clientId === client.id);
@@ -5609,41 +5073,41 @@ function processUserMessage(message, language) {
         const totalPaid = clientPayments.reduce((sum, p) => sum + p.amount, 0);
         return { ...client, totalLent, totalPaid, balance: totalLent - totalPaid };
       }).sort((a, b) => b.totalLent - a.totalLent);
-      
+
       if (clientStats.length === 0) return t.noData;
-      
+
       const topClient = clientStats[0];
-      return language === 'ta' 
+      return language === 'ta'
         ? `உங்கள் மிகப்பெரிய வாடிக்கையாளர் ${topClient.name} - ₹${topClient.totalLent.toLocaleString()} கடன்.`
         : `Your biggest client is ${topClient.name} - ₹${topClient.totalLent.toLocaleString()} lent.`;
     }
   }
-  
+
   // Loan-related queries
   if (lowerMessage.includes('loan') || lowerMessage.includes('கடன்') || lowerMessage.includes('lend')) {
     if (lowerMessage.includes('total') || lowerMessage.includes('amount') || lowerMessage.includes('மொத்தம்')) {
-      return language === 'ta' 
+      return language === 'ta'
         ? `நீங்கள் மொத்தம் ₹${totalLent.toLocaleString()} கடன் கொடுத்துள்ளீர்கள். ${loans.length} கடன்கள் இதுவரை வழங்கப்பட்டுள்ளன.`
         : `You have lent a total of ₹${totalLent.toLocaleString()} across ${loans.length} loans.`;
     }
-    
+
     if (lowerMessage.includes('active') || lowerMessage.includes('செயலில்')) {
       const activePrincipal = activeLoans.reduce((sum, l) => sum + l.principal, 0);
-      return language === 'ta' 
+      return language === 'ta'
         ? `உங்களிடம் ${activeLoans.length} செயலில் உள்ள கடன்கள் உள்ளன, மொத்தம் ₹${activePrincipal.toLocaleString()}.`
         : `You have ${activeLoans.length} active loans totaling ₹${activePrincipal.toLocaleString()}.`;
     }
-    
+
     if (lowerMessage.includes('biggest') || lowerMessage.includes('largest') || lowerMessage.includes('பெரிய')) {
       if (loans.length === 0) return t.noData;
       const biggestLoan = loans.sort((a, b) => b.principal - a.principal)[0];
       const client = clients.find(c => c.id === biggestLoan.clientId);
-      return language === 'ta' 
+      return language === 'ta'
         ? `மிகப்பெரிய கடன் ${client?.name || 'Unknown'} - ₹${biggestLoan.principal.toLocaleString()}.`
         : `Biggest loan is to ${client?.name || 'Unknown'} - ₹${biggestLoan.principal.toLocaleString()}.`;
     }
   }
-  
+
   // Payment and collection queries
   if (lowerMessage.includes('payment') || lowerMessage.includes('பணம்') || lowerMessage.includes('collect') || lowerMessage.includes('due')) {
     if (lowerMessage.includes('today') || lowerMessage.includes('இன்று')) {
@@ -5654,63 +5118,63 @@ function processUserMessage(message, language) {
           return stats.nextDue && stats.nextDue <= today && stats.nextDue >= today;
         });
         const dueAmount = dueToday.reduce((sum, loan) => sum + calcLoanStats(loan).emi, 0);
-        
-        return language === 'ta' 
+
+        return language === 'ta'
           ? `இன்று ₹${dueAmount.toLocaleString()} சேகரிக்க வேண்டும் (${dueToday.length} கடன்கள்).`
           : `Today you need to collect ₹${dueAmount.toLocaleString()} from ${dueToday.length} loans.`;
       } else {
-        return language === 'ta' 
+        return language === 'ta'
           ? `இன்று நீங்கள் ₹${todayCollection.toLocaleString()} பெற்றுள்ளீர்கள் (${todayPayments.length} பணம் செலுத்துதல்கள்).`
           : `Today you collected ₹${todayCollection.toLocaleString()} from ${todayPayments.length} payments.`;
       }
     }
-    
+
     if (lowerMessage.includes('total') || lowerMessage.includes('மொத்தம்')) {
-      return language === 'ta' 
+      return language === 'ta'
         ? `நீங்கள் மொத்தம் ₹${totalCollected.toLocaleString()} சேகரித்துள்ளீர்கள் ${payments.length} பணம் செலுத்துதல்களில்.`
         : `You have collected a total of ₹${totalCollected.toLocaleString()} from ${payments.length} payments.`;
     }
-    
+
     if (lowerMessage.includes('overdue') || lowerMessage.includes('late') || lowerMessage.includes('தாமதம்')) {
       const overdueLoans = activeLoans.filter(loan => {
         const stats = calcLoanStats(loan);
         return stats.nextDue && new Date(stats.nextDue) < new Date(today);
       });
-      
+
       if (overdueLoans.length === 0) {
-        return language === 'ta' 
+        return language === 'ta'
           ? 'தாமதமான கடன்கள் எதுவும் இல்லை. நன்று!'
           : 'No overdue loans. Great!';
       }
-      
+
       const overdueAmount = overdueLoans.reduce((sum, loan) => sum + calcLoanStats(loan).emi, 0);
-      return language === 'ta' 
+      return language === 'ta'
         ? `${overdueLoans.length} கடன்கள் தாமதமாகியுள்ளன, மொத்தம் ₹${overdueAmount.toLocaleString()}.`
         : `${overdueLoans.length} loans are overdue, totaling ₹${overdueAmount.toLocaleString()}.`;
     }
   }
-  
+
   // Financial summary and dashboard queries
   if (lowerMessage.includes('summary') || lowerMessage.includes('overview') || lowerMessage.includes('dashboard') || lowerMessage.includes('சுருக்கம்')) {
-    return language === 'ta' 
+    return language === 'ta'
       ? `📊 உங்கள் நிதி சுருக்கம்:\n💰 மொத்த கடன்: ₹${totalLent.toLocaleString()}\n💳 சேகரிக்கப்பட்டது: ₹${totalCollected.toLocaleString()}\n📈 இருப்பு: ₹${outstandingBalance.toLocaleString()}\n👥 வாடிக்கையாளர்கள்: ${clients.length}\n📋 செயலில் உள்ள கடன்கள்: ${activeLoans.length}`
       : `📊 Your Financial Summary:\n💰 Total Lent: ₹${totalLent.toLocaleString()}\n💳 Collected: ₹${totalCollected.toLocaleString()}\n📈 Outstanding: ₹${outstandingBalance.toLocaleString()}\n👥 Clients: ${clients.length}\n📋 Active Loans: ${activeLoans.length}`;
   }
-  
+
   // Balance and outstanding queries
   if (lowerMessage.includes('balance') || lowerMessage.includes('outstanding') || lowerMessage.includes('இருப்பு') || lowerMessage.includes('நிலுவை')) {
-    const balanceText = language === 'ta' 
+    const balanceText = language === 'ta'
       ? `உங்கள் நிலுவை தொகை ₹${outstandingBalance.toLocaleString()}.`
       : `Your outstanding balance is ₹${outstandingBalance.toLocaleString()}.`;
-      
+
     if (outstandingBalance > totalLent * 0.8) {
-      return balanceText + (language === 'ta' 
+      return balanceText + (language === 'ta'
         ? ' பெரும்பாலான தொகை இன்னும் நிலுவையில் உள்ளது.'
         : ' Most of your money is still outstanding.');
     }
     return balanceText;
   }
-  
+
   // Interest and profit queries  
   if (lowerMessage.includes('interest') || lowerMessage.includes('profit') || lowerMessage.includes('வட்டி') || lowerMessage.includes('லாபம்')) {
     const totalInterest = payments.reduce((sum, p) => {
@@ -5718,83 +5182,83 @@ function processUserMessage(message, language) {
       if (!loan) return sum;
       return sum + Math.max(0, p.amount - (loan.principal / (loan.duration || 12)));
     }, 0);
-    
-    return language === 'ta' 
+
+    return language === 'ta'
       ? `தோராயமாக ₹${totalInterest.toLocaleString()} வட்டி வருமானம் கிடைத்துள்ளது.`
       : `Approximately ₹${totalInterest.toLocaleString()} in interest income earned.`;
   }
-  
+
   // Help and feature queries
   if (lowerMessage.includes('help') || lowerMessage.includes('உதவி') || lowerMessage.includes('how to') || lowerMessage.includes('எப்படி')) {
-    return language === 'ta' 
+    return language === 'ta'
       ? 'நான் உங்கள் வாடிக்கையாளர்கள், கடன்கள், பணம் செலுத்துதல் மற்றும் அறிக்கைகள் குறித்து உதவ முடியும். "சுருக்கம்", "இன்று வரவேண்டிய தொகை", "மிகப்பெரிய கடன்" போன்ற கேள்விகள் கேளுங்கள்!'
       : 'I can help with your clients, loans, payments, and reports. Try asking "summary", "due today", "biggest loan", or specific client names!';
   }
-  
+
   // Search for specific client names in the message
-  const clientMatch = clients.find(c => 
-    c.name.toLowerCase().includes(lowerMessage.replace(/[^\w\s]/g, '')) || 
+  const clientMatch = clients.find(c =>
+    c.name.toLowerCase().includes(lowerMessage.replace(/[^\w\s]/g, '')) ||
     lowerMessage.includes(c.name.toLowerCase())
   );
-  
+
   if (clientMatch) {
     const clientLoans = loans.filter(l => l.clientId === clientMatch.id);
     const clientPayments = payments.filter(p => {
       const loan = loans.find(l => l.id === p.loanId);
       return loan && loan.clientId === clientMatch.id;
     });
-    
+
     const totalLent = clientLoans.reduce((sum, l) => sum + l.principal, 0);
     const totalPaid = clientPayments.reduce((sum, p) => sum + p.amount, 0);
     const activeCount = clientLoans.filter(l => l.status === 'active').length;
-    
-    return language === 'ta' 
+
+    return language === 'ta'
       ? `${clientMatch.name}:\n💰 மொத்த கடன்: ₹${totalLent.toLocaleString()}\n💳 செலுத்தப்பட்டது: ₹${totalPaid.toLocaleString()}\n📈 இருப்பு: ₹${(totalLent - totalPaid).toLocaleString()}\n📱 தொலைபேசி: ${clientMatch.phone || 'N/A'}\n📋 செயலில் உள்ள கடன்கள்: ${activeCount}`
       : `${clientMatch.name}:\n💰 Total Lent: ₹${totalLent.toLocaleString()}\n💳 Paid: ₹${totalPaid.toLocaleString()}\n📈 Balance: ₹${(totalLent - totalPaid).toLocaleString()}\n📱 Phone: ${clientMatch.phone || 'N/A'}\n📋 Active Loans: ${activeCount}`;
   }
-  
+
   // Number queries (amounts, percentages, etc.)
   const numberMatch = lowerMessage.match(/\d+/);
   if (numberMatch && (lowerMessage.includes('amount') || lowerMessage.includes('rupees') || lowerMessage.includes('₹'))) {
     const amount = parseInt(numberMatch[0]);
     const matchingLoans = loans.filter(l => l.principal >= amount * 0.9 && l.principal <= amount * 1.1);
-    
+
     if (matchingLoans.length > 0) {
-      return language === 'ta' 
+      return language === 'ta'
         ? `₹${amount.toLocaleString()} அருகே ${matchingLoans.length} கடன்கள் கண்டுபிடிக்கப்பட்டன.`
         : `Found ${matchingLoans.length} loans around ₹${amount.toLocaleString()}.`;
     }
   }
-  
+
   // Default fallback with helpful suggestions
-  const suggestions = language === 'ta' 
+  const suggestions = language === 'ta'
     ? ['சுருக்கம்', 'இன்று வரவேண்டிய தொகை', 'மொத்த கடன்', 'வாடிக்கையாளர்கள் பட்டியல்']
     : ['summary', 'due today', 'total loans', 'client list'];
-    
-  return (language === 'ta' ? 'மன்னிக்கவும், அதைப் புரிந்துகொள்ள முடியவில்லை. ' : 'Sorry, I didn\'t understand that. ') + 
-         (language === 'ta' ? 'இவற்றை முயற்சி செய்யுங்கள்: ' : 'Try asking: ') + 
-         suggestions.join(', ') + 
-         (language === 'ta' ? ' அல்லது வாடிக்கையாளர் பெயர்கள்.' : ' or client names.');
+
+  return (language === 'ta' ? 'மன்னிக்கவும், அதைப் புரிந்துகொள்ள முடியவில்லை. ' : 'Sorry, I didn\'t understand that. ') +
+    (language === 'ta' ? 'இவற்றை முயற்சி செய்யுங்கள்: ' : 'Try asking: ') +
+    suggestions.join(', ') +
+    (language === 'ta' ? ' அல்லது வாடிக்கையாளர் பெயர்கள்.' : ' or client names.');
 }
 
 function autoResizeTextarea() {
   const textarea = document.getElementById('chatbot-input');
   if (!textarea) return;
-  
+
   textarea.style.height = 'auto';
   textarea.style.height = Math.min(textarea.scrollHeight, 100) + 'px';
 }
 
 function toggleVoiceInput() {
   console.log('🎤 Toggling voice input...');
-  
+
   if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
     const t = chatbotTranslations[currentLang] || chatbotTranslations.en;
     addMessage(t.voiceError, 'bot');
     console.log('❌ Speech recognition not supported');
     return;
   }
-  
+
   if (isRecording) {
     stopVoiceRecording();
   } else {
@@ -5808,36 +5272,36 @@ window.toggleVoiceInput = toggleVoiceInput;
 function startVoiceRecording() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   recognition = new SpeechRecognition();
-  
+
   recognition.continuous = false;
   recognition.interimResults = false;
   recognition.lang = currentLang === 'ta' ? 'ta-IN' : 'en-US';
-  
+
   const voiceButton = document.getElementById('chatbot-voice');
   const t = chatbotTranslations[currentLang] || chatbotTranslations.en;
-  
+
   recognition.onstart = () => {
     isRecording = true;
     voiceButton.classList.add('recording');
     addMessage(t.voiceStart, 'bot');
   };
-  
+
   recognition.onresult = (event) => {
     const transcript = event.results[0][0].transcript;
     document.getElementById('chatbot-input').value = transcript;
     autoResizeTextarea();
   };
-  
+
   recognition.onerror = () => {
     isRecording = false;
     voiceButton.classList.remove('recording');
   };
-  
+
   recognition.onend = () => {
     isRecording = false;
     voiceButton.classList.remove('recording');
   };
-  
+
   recognition.start();
 }
 
@@ -5869,4 +5333,3 @@ document.addEventListener('visibilitychange', () => {
     });
   }
 });
-

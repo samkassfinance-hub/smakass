@@ -25,113 +25,6 @@
     href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+Tamil:wght@400;500;600;700&display=swap"
     rel="stylesheet" />
 
-  <!-- ✅ WhatsApp Direct Functions - loaded FIRST, no backend needed -->
-  <script>
-    // These global functions are defined in <head> so they load before any other JS.
-    // They use localStorage only - NO backend API calls whatsoever.
-
-    function _waFormatPhone(phone) {
-      if (!phone) return '';
-      var c = phone.replace(/[\s\-\(\)\+]/g, '');
-      if (c.charAt(0) === '0') c = '91' + c.slice(1);
-      if (c.length === 10 && /^\d+$/.test(c)) c = '91' + c;
-      return c;
-    }
-
-    function _waToast(msg, type) {
-      if (typeof showToast === 'function') { showToast(msg, type); }
-      else { console.log('[WA]', msg); }
-    }
-
-    function _waUpdateUI(connected, phone) {
-      var cb = document.getElementById('btn-wa-connect');
-      var db = document.getElementById('btn-wa-disconnect');
-      var tb = document.getElementById('btn-wa-test');
-      var sb = document.getElementById('wa-status-badge');
-      var rs = document.getElementById('wa-reminder-settings');
-      var pi = document.getElementById('wa-phone-input');
-      if (connected) {
-        if (cb) cb.classList.add('d-none');
-        if (db) db.classList.remove('d-none');
-        if (tb) tb.classList.remove('d-none');
-        if (rs) rs.classList.remove('d-none');
-        if (sb) sb.innerHTML = '<span style="background:rgba(37,211,102,0.15);color:#25D366;border:1px solid rgba(37,211,102,0.3);padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;"><i class="fa-solid fa-circle-check" style="margin-right:6px;"></i>Connected</span>';
-        if (pi && !pi.value && phone) pi.value = phone;
-      } else {
-        if (cb) cb.classList.remove('d-none');
-        if (db) db.classList.add('d-none');
-        if (tb) tb.classList.add('d-none');
-        if (rs) rs.classList.add('d-none');
-        if (sb) sb.innerHTML = '<span style="background:rgba(153,153,153,0.15);color:#999;border:1px solid rgba(153,153,153,0.3);padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;"><i class="fa-solid fa-circle" style="margin-right:6px;"></i>Not Connected</span>';
-      }
-    }
-
-    function waConnect() {
-      var pi = document.getElementById('wa-phone-input');
-      var phone = pi ? pi.value.trim() : '';
-      if (!phone) { _waToast('Please enter your WhatsApp number', 'error'); return; }
-      var digits = phone.replace(/\D/g, '');
-      if (digits.length < 10) { _waToast('Please enter a valid phone number (at least 10 digits)', 'error'); return; }
-      var formatted = _waFormatPhone(phone);
-      try {
-        var cfg = { connected: true, phoneNumber: formatted, rawPhone: phone, connectedAt: new Date().toISOString(), dueTodayEnabled: true, dueTomorrowEnabled: true, overdueEnabled: true };
-        localStorage.setItem('wa_automation_config', JSON.stringify(cfg));
-        // Sync with WhatsAppAutomation object if it exists
-        if (window.WhatsAppAutomation) {
-          window.WhatsAppAutomation.connected = true;
-          window.WhatsAppAutomation.phoneNumber = formatted;
-          window.WhatsAppAutomation.config = cfg;
-        }
-      } catch (e) { }
-      _waUpdateUI(true, phone);
-      _waToast('\u2705 WhatsApp connected! You can now send reminders.', 'success');
-    }
-
-    function waDisconnect() {
-      if (!confirm('Disconnect WhatsApp? You will need to reconnect later.')) return;
-      try { localStorage.removeItem('wa_automation_config'); } catch (e) { }
-      if (window.WhatsAppAutomation) {
-        window.WhatsAppAutomation.connected = false;
-        window.WhatsAppAutomation.phoneNumber = null;
-        window.WhatsAppAutomation.config = {};
-      }
-      _waUpdateUI(false, null);
-      _waToast('WhatsApp disconnected', 'info');
-    }
-
-    function waSendTest() {
-      var cfg = {};
-      try { cfg = JSON.parse(localStorage.getItem('wa_automation_config') || '{}'); } catch (e) { }
-      if (!cfg.connected || !cfg.phoneNumber) { _waToast('WhatsApp is not connected. Please connect first.', 'error'); return; }
-      var msg = '\u2705 Hello from SamKass! Your WhatsApp automation is working. Payment reminders will be sent via WhatsApp.';
-      window.open('https://wa.me/' + cfg.phoneNumber + '?text=' + encodeURIComponent(msg), '_blank');
-      _waToast('\ud83d\udcf1 WhatsApp opened with test message!', 'success');
-    }
-
-    function waRemind(loanId) {
-      var cfg = {};
-      try { cfg = JSON.parse(localStorage.getItem('wa_automation_config') || '{}'); } catch (e) { }
-      if (!cfg.connected) { _waToast('WhatsApp not connected. Go to Settings > WhatsApp to connect.', 'error'); return; }
-      var loan = typeof Store !== 'undefined' ? Store.loans().find(function (l) { return l.id === loanId; }) : null;
-      if (!loan) { _waToast('Loan not found', 'error'); return; }
-      var client = typeof Store !== 'undefined' ? Store.clients().find(function (c) { return c.id === loan.clientId; }) : null;
-      if (!client || !client.phone) { _waToast('Client phone number not available', 'error'); return; }
-      var stats = typeof calcLoanStats === 'function' ? calcLoanStats(loan) : null;
-      var fmtFn = typeof fmtCur === 'function' ? fmtCur : function (n) { return '\u20b9' + Number(n).toLocaleString('en-IN'); };
-      var msg;
-      if (stats && stats.isOverdue) {
-        msg = 'Dear ' + client.name + ',\n\nYour EMI of ' + fmtFn(stats.emi) + ' is OVERDUE by ' + stats.daysOverdue + ' day(s). Please pay immediately to avoid penalties.\n\nThank you,\nSamKass Finance';
-      } else if (stats) {
-        msg = 'Dear ' + client.name + ',\n\nFriendly reminder: Your EMI of ' + fmtFn(stats.emi) + ' is due. Please pay on time.\n\nThank you,\nSamKass Finance';
-      } else {
-        msg = 'Dear ' + client.name + ',\n\nThis is a reminder about your loan payment. Please contact us.\n\nThank you,\nSamKass Finance';
-      }
-      var clientPhone = _waFormatPhone(client.phone);
-      window.open('https://wa.me/' + clientPhone + '?text=' + encodeURIComponent(msg), '_blank');
-      _waToast('\ud83d\udcf1 WhatsApp reminder sent to ' + client.name, 'success');
-    }
-  </script>
-
   <style>
     /* Loading indicator - show before JS loads */
     #app-loading {
@@ -556,38 +449,6 @@
       100% {
         opacity: 1;
         transform: translateY(0);
-      }
-    }
-
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-      }
-
-      to {
-        opacity: 1;
-      }
-    }
-
-    @keyframes fadeOut {
-      from {
-        opacity: 1;
-      }
-
-      to {
-        opacity: 0;
-      }
-    }
-
-    @keyframes slideUp {
-      from {
-        opacity: 0;
-        transform: translateY(20px) scale(0.95);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
       }
     }
 
@@ -1045,54 +906,109 @@
 
     /* ── CHATBOT STYLES ─────────────────────────────────────────── */
     @keyframes float {
-
-      0%,
-      100% {
+      0%, 100% {
         transform: translateY(0px);
       }
-
       50% {
-        transform: translateY(-10px);
+        transform: translateY(-12px);
+      }
+    }
+
+    @keyframes pulse-glow {
+      0% {
+        box-shadow: 0 4px 20px rgba(126, 211, 33, 0.4), 0 0 0 0 rgba(126, 211, 33, 0.7);
+      }
+      50% {
+        box-shadow: 0 4px 20px rgba(126, 211, 33, 0.6), 0 0 0 12px rgba(126, 211, 33, 0);
+      }
+      100% {
+        box-shadow: 0 4px 20px rgba(126, 211, 33, 0.4), 0 0 0 0 rgba(126, 211, 33, 0.7);
       }
     }
 
     @keyframes slideInUp {
       from {
-        transform: translate(-50%, 100%);
+        transform: translate(-50%, 100%) scale(0.9);
         opacity: 0;
       }
-
       to {
-        transform: translate(-50%, -50%);
+        transform: translate(-50%, -50%) scale(1);
         opacity: 1;
       }
     }
 
     @keyframes slideOutDown {
       from {
-        transform: translate(-50%, -50%);
+        transform: translate(-50%, -50%) scale(1);
         opacity: 1;
       }
-
       to {
-        transform: translate(-50%, 100%);
+        transform: translate(-50%, 100%) scale(0.9);
         opacity: 0;
       }
+    }
+
+    @keyframes bounceIn {
+      0% {
+        transform: scale(0.3);
+        opacity: 0;
+      }
+      50% {
+        opacity: 1;
+      }
+      70% {
+        transform: scale(1.05);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+      20%, 40%, 60%, 80% { transform: translateX(2px); }
     }
 
     @keyframes fadeIn {
       from {
         opacity: 0;
       }
-
       to {
         opacity: 1;
       }
     }
 
+    #chatbot-widget {
+      --chatbot-x: 0;
+      --chatbot-y: 0;
+    }
+
+    .chatbot-icon {
+      position: fixed !important;
+      bottom: 250px !important;
+      right: 20px !important;
+      width: 60px !important;
+      height: 60px !important;
+      background: linear-gradient(135deg, #7ed321, #4caf1a) !important;
+      border-radius: 50% !important;
+      cursor: grab !important;
+      z-index: 9998 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      animation: float 3s ease-in-out infinite !important;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+      box-shadow: 0 6px 24px rgba(126, 211, 33, 0.5) !important;
+      border: 2px solid rgba(255, 255, 255, 0.1) !important;
+      user-select: none !important;
+    }
+
     .chatbot-icon:hover {
-      transform: scale(1.05);
-      box-shadow: 0 6px 25px rgba(126, 211, 33, 0.6);
+      transform: scale(1.12) translateY(-4px);
+      box-shadow: 0 10px 35px rgba(126, 211, 33, 0.7);
+      border-color: rgba(255, 255, 255, 0.2);
+      animation: pulse-glow 2s ease-in-out infinite;
     }
 
     .chatbot-icon:active {
@@ -1101,16 +1017,38 @@
 
     .chatbot-icon.dragging {
       cursor: grabbing;
-      animation: none;
-      box-shadow: 0 8px 30px rgba(126, 211, 33, 0.6);
+      animation: none !important;
+      box-shadow: 0 12px 40px rgba(126, 211, 33, 0.8);
+      transform: scale(1.15);
+    }
+
+    .chatbot-icon.pulse {
+      animation: bounceIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
     .chatbot-interface {
-      animation: slideInUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      animation: slideInUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+      transform: translate(-50%, -50%) !important;
     }
 
     .chatbot-interface.closing {
-      animation: slideOutDown 0.3s ease-out forwards;
+      animation: slideOutDown 0.4s ease-out forwards !important;
+    }
+
+    .chatbot-header {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .chatbot-header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(45deg, rgba(255, 255, 255, 0.1), transparent);
+      pointer-events: none;
     }
 
     .chatbot-messages {
@@ -1131,13 +1069,17 @@
       border-radius: 3px;
     }
 
+    .chatbot-messages::-webkit-scrollbar-thumb:hover {
+      background: var(--green-mid);
+    }
+
     .bot-message,
     .user-message {
-      animation: fadeIn 0.3s ease-out;
+      animation: fadeIn 0.4s ease-out;
+      display: flex;
     }
 
     .user-message {
-      display: flex;
       justify-content: flex-end;
     }
 
@@ -1145,22 +1087,48 @@
       background: linear-gradient(135deg, #7ed321, #4caf1a);
       color: white;
       padding: 12px 16px;
-      border-radius: 16px 16px 4px 16px;
+      border-radius: 18px 18px 4px 18px;
       font-size: 14px;
       line-height: 1.4;
       max-width: 240px;
       word-wrap: break-word;
+      box-shadow: 0 4px 12px rgba(126, 211, 33, 0.3);
+      animation: slideInRight 0.3s ease-out;
     }
 
     .bot-message .message-content {
       background: var(--bg-input);
       padding: 12px 16px;
-      border-radius: 16px 16px 16px 4px;
+      border-radius: 18px 18px 18px 4px;
       color: var(--text-primary);
       font-size: 14px;
       line-height: 1.4;
       max-width: 240px;
       word-wrap: break-word;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      animation: slideInLeft 0.3s ease-out;
+    }
+
+    @keyframes slideInRight {
+      from {
+        transform: translateX(20px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideInLeft {
+      from {
+        transform: translateX(-20px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
     }
 
     .typing-indicator {
@@ -1206,41 +1174,45 @@
     }
 
     #chatbot-input:focus {
-      border-color: var(--green-mid);
-      box-shadow: 0 0 0 3px rgba(126, 211, 33, 0.15);
+      border-color: var(--green-mid) !important;
+      box-shadow: 0 0 0 3px rgba(126, 211, 33, 0.2) !important;
+      background: rgba(126, 211, 33, 0.05) !important;
+    }
+
+    #chatbot-send {
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
     }
 
     #chatbot-send:hover {
-      transform: scale(1.05);
+      transform: scale(1.08) rotate(5deg);
+      box-shadow: 0 6px 20px rgba(126, 211, 33, 0.4);
     }
 
     #chatbot-send:active {
-      transform: scale(0.95);
+      transform: scale(0.92);
+    }
+
+    #chatbot-voice {
+      transition: all 0.3s ease !important;
     }
 
     #chatbot-voice:hover {
       background: var(--green-glow);
       border-color: var(--green-mid);
       color: var(--green-mid);
+      transform: scale(1.05);
     }
 
     #chatbot-voice.recording {
       background: #ef4444;
       border-color: #ef4444;
       color: white;
-      animation: pulse 1s infinite;
+      animation: pulse 1s infinite, shake 0.5s ease-in-out infinite;
     }
 
     @keyframes pulse {
-
-      0%,
-      100% {
-        opacity: 1;
-      }
-
-      50% {
-        opacity: 0.7;
-      }
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
     }
 
     /* Toast Pro */
@@ -1925,13 +1897,6 @@
 
       if (logoBubbleContainer) {
         makeDraggable(logoBubbleContainer, async function () {
-          // Check if app is already installed
-          if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
-            // App is already installed
-            alert('✅ App is already installed on your device!');
-            return;
-          }
-
           // Directly trigger native PWA install prompt (no custom modal)
           if (deferredPrompt) {
             try {
@@ -2706,6 +2671,7 @@
                 <select id="loan-interest-type" class="form-select kf-input">
                   <option value="percentage">Percentage Interest</option>
                   <option value="fixed">Fixed Interest</option>
+                  <option value="own">Own Interest (Fixed Monthly Payment)</option>
                 </select>
               </div>
               <div class="col-6">
@@ -2728,6 +2694,7 @@
                     class="text-danger">*</span></label>
                 <input type="number" id="loan-interest" class="form-control kf-input" placeholder="2" min="0" step="0.1"
                   data-ocid="loan.interest_input" />
+                <small class="form-text text-muted" style="font-size: 0.75rem; display: block; margin-top: 2px;" id="interest-help-text"></small>
               </div>
             </div>
 
@@ -2823,6 +2790,36 @@
           <button type="button" class="btn-kf-primary" id="save-payment-btn" data-ocid="payment.save_button">
             <i class="fa-solid fa-check me-2"></i><span data-i18n="confirmPayment">Confirm Payment</span>
           </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Partial Payment Modal -->
+  <div class="modal fade" id="partialPaymentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+      <div class="modal-content kf-modal-content">
+        <div class="modal-header kf-modal-header">
+          <h5 class="modal-title">Partly Paid</h5>
+          <button type="button" class="btn-close kf-btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="partial-payment-form">
+            <input type="hidden" id="partial-payment-loan-id" />
+            <div class="mb-3">
+              <label class="form-label">Enter Partial Amount (₹)</label>
+              <input type="number" id="partial-payment-amount" class="form-control kf-input" placeholder="Amount"
+                min="1" required />
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Note</label>
+              <input type="text" id="partial-payment-note" class="form-control kf-input" value="Partial payment" />
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer kf-modal-footer">
+          <button type="button" class="btn-kf-outline" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn-kf-primary" id="save-partial-payment-btn">Record Payment</button>
         </div>
       </div>
     </div>
@@ -3106,7 +3103,8 @@
 
       <h4>10. Contact Information</h4>
       <p>For any inquiries regarding these Terms and Conditions, please reach out to us at: <a
-          href="mailto:samkassfinance@gmail.com" style="color:var(--text-accent-blue);">samkassfinance@gmail.com</a></p>
+          href="mailto:mohansampath098@gmail.com" style="color:var(--text-accent-blue);">mohansampath098@gmail.com</a>
+      </p>
     </div>
   </div>
 
@@ -3189,7 +3187,8 @@
 
       <h4>8. Contact Us</h4>
       <p>If you have any questions or concerns about this Privacy Policy, please contact us at: <a
-          href="mailto:samkassfinance@gmail.com" style="color:var(--text-accent-blue);">samkassfinance@gmail.com</a></p>
+          href="mailto:mohansampath098@gmail.com" style="color:var(--text-accent-blue);">mohansampath098@gmail.com</a>
+      </p>
     </div>
   </div>
 
@@ -3220,34 +3219,13 @@
       </a>
 
       <!-- Email -->
-      <a href="mailto:samkassfinance@gmail.com" class="contact-item-row">
+      <a href="mailto:mohansampath098@gmail.com" class="contact-item-row">
         <div class="contact-item-icon">✉️</div>
         <div>
           <div class="contact-item-label">Email Support</div>
-          <div class="contact-item-value">samkassfinance@gmail.com</div>
+          <div class="contact-item-value">mohansampath098@gmail.com</div>
         </div>
       </a>
-    </div>
-  </div>
-
-  <!-- WhatsApp QR Modal -->
-  <div class="modal fade" id="waQRModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content kf-modal">
-        <div class="modal-header">
-          <h5 class="modal-title"><i class="fa-brands fa-whatsapp me-2" style="color: #25D366;"></i>Connect WhatsApp
-          </h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body text-center" style="padding: 2rem;">
-          <p class="text-muted-kf mb-4">Scan this QR code with your WhatsApp app (Linked Devices) to connect.</p>
-          <div id="wa-qr-image" class="mb-4"
-            style="min-height: 250px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
-            <!-- QR code will be injected here -->
-          </div>
-          <p class="text-muted-kf fs-sm">This window will automatically close once connected.</p>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -3365,12 +3343,6 @@
   <script src="razorpay.js" defer></script>
   <script src="subscription.js?v=3" defer></script>
   <script src="client-limit-enforcement.js" defer></script>
-  <script src="config.js" defer></script>
-  <script src="simple-notifications.js" defer></script>
-  <script src="push-notifications.js" defer></script>
-  <script src="test-notification-auto-update.js" defer></script>
-  <script src="test-notification-fix.js" defer></script>
-  <script src="whatsapp-automation.js?v=99" defer></script>
 
   <!-- Final Fallback Script -->
   <script>
