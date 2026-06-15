@@ -1294,7 +1294,21 @@ function calcLoanStats(loan) {
   let totalPayable = loan.principal;
   let emi = 0;
 
-  if (interestType === 'own') {
+  // Handle "Total Amount with Interest" mode
+  if (interestType === 'total-amount-mode') {
+    // principal = total amount, interestRate = monthly due amount
+    totalPayable = loan.principal;
+    emi = loan.interestRate || 0;
+    monthlyPayment = emi;
+    const payments = Store.payments().filter(p => p.loanId === loan.id);
+    const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
+    const remaining = Math.max(0, totalPayable - totalPaid);
+    const progress = Math.min(100, Math.round((totalPaid / totalPayable) * 100));
+    const nextDueDate = calcNextDue(loan, payments);
+    const isOverdue = nextDueDate && nextDueDate < today() && loan.status === 'active';
+    const daysOverdue = isOverdue ? daysDiff(today(), nextDueDate) : 0;
+    return { emi, totalPayable, totalInterest: 0, totalPaid, remaining, progress, nextDueDate, isOverdue, daysOverdue };
+  } else if (interestType === 'own') {
     // For 'own' interest type: interestRate is the fixed monthly payment
     monthlyPayment = loan.interestRate || 0;
     if (duration > 0) {
@@ -1538,8 +1552,13 @@ function renderClients(container) {
         </button>
       </div>
       <div class="search-bar-wrapper">
-        <i class="fa-solid fa-magnifying-glass"></i>
-        <input type="search" class="search-input" id="client-search" placeholder="${t('searchClients')}" value="${state.clientSearch}" data-ocid="clients.search_input" />
+        <div class="search-input-container">
+          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+          <input type="search" class="search-input" id="client-search" placeholder="${t('searchClients')}" value="${state.clientSearch}" data-ocid="clients.search_input" />
+          <button class="search-clear-btn" id="client-search-clear" style="display: none;">
+            <i class="fa-solid fa-circle-xmark"></i>
+          </button>
+        </div>
       </div>
       <div id="clients-list" class="stagger-children"></div>
     </div>`;
@@ -1553,10 +1572,27 @@ function renderClients(container) {
       openClientModal();
     }
   });
-  $('#client-search').addEventListener('input', e => {
+  
+  const searchInput = $('#client-search');
+  const clearBtn = $('#client-search-clear');
+  
+  // Show/hide clear button based on input
+  searchInput.addEventListener('input', e => {
     state.clientSearch = e.target.value;
+    clearBtn.style.display = e.target.value ? 'block' : 'none';
     renderClientsList(Store.clients(), Store.loans());
   });
+  
+  // Clear search
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      state.clientSearch = '';
+      clearBtn.style.display = 'none';
+      searchInput.focus();
+      renderClientsList(Store.clients(), Store.loans());
+    });
+  }
 }
 
 function renderClientsList(clients, loans) {
@@ -1704,6 +1740,9 @@ function renderLoans(container) {
           <i class="fa-solid fa-plus me-1"></i>${t('addLoan')}
         </button>
       </div>
+      <div style="margin-bottom: 1rem;">
+        <input type="text" id="loans-search" class="form-control kf-input" placeholder="Search loans by client name..." style="max-width: 400px;">
+      </div>
       <div class="filter-tabs">
         <button class="filter-tab ${state.loanFilter === 'all' ? 'active' : ''}" data-filter="all" data-ocid="loans.filter.all_tab">${t('all')}</button>
         <button class="filter-tab ${state.loanFilter === 'active' ? 'active' : ''}" data-filter="active" data-ocid="loans.filter.active_tab">${t('active')}</button>
@@ -1719,7 +1758,7 @@ function renderLoans(container) {
     if (!canUsePremiumFeatures()) {
       bootstrap.Modal.getOrCreateInstance($('#upgradeModal')).show();
     } else {
-      openLoanModal();
+      bootstrap.Modal.getOrCreateInstance($('#loanTypeModal')).show();
     }
   });
   $$('.filter-tab').forEach(btn => {
@@ -1884,7 +1923,7 @@ function openFullyPaidModal(loanId) {
   new bootstrap.Modal($('#fullyPaidModal')).show();
 }
 
-function openLoanModal(clientId = null, loanId = null) {
+function openLoanModal(clientId = null, loanId = null, loanMode = 'traditional') {
   const clients = Store.clients();
   const select = $('#loan-client-select');
   select.innerHTML = '<option value="">Select client…</option>' +
@@ -1892,49 +1931,91 @@ function openLoanModal(clientId = null, loanId = null) {
 
   $('#loanModalLabel').textContent = loanId ? t('editLoan') : t('addLoan');
   $('#loan-edit-id').value = loanId || '';
+  $('#loan-mode').value = loanMode;
   $('#loan-start-date').value = today();
   $('#emi-preview').classList.add('d-none');
+
+  const traditionalTypesSection = $('#traditional-types-section');
+  const traditionalLoanSection = $('#traditional-loan-section');
+  const traditionalDurationSection = $('#traditional-duration-section');
+  const totalAmountSection = $('#total-amount-mode');
+
+  const showTraditional = () => {
+    if (traditionalTypesSection) traditionalTypesSection.style.display = '';
+    if (traditionalLoanSection) traditionalLoanSection.style.display = '';
+    if (traditionalDurationSection) traditionalDurationSection.style.display = '';
+    if (totalAmountSection) totalAmountSection.classList.add('d-none');
+  };
+
+  const showTotalAmount = () => {
+    if (traditionalTypesSection) traditionalTypesSection.style.display = 'none';
+    if (traditionalLoanSection) traditionalLoanSection.style.display = 'none';
+    if (traditionalDurationSection) traditionalDurationSection.style.display = 'none';
+    if (totalAmountSection) totalAmountSection.classList.remove('d-none');
+  };
+
+  if (loanMode === 'total-amount-with-interest') {
+    showTotalAmount();
+  } else {
+    showTraditional();
+  }
 
   if (loanId) {
     const l = Store.loans().find(x => x.id === loanId);
     if (l) {
       select.value = l.clientId;
-      $('#loan-interest-type').value = l.interestType || 'percentage';
-      const label = $('#label-loan-interest');
-      const helpText = $('#interest-help-text');
-      const input = $('#loan-interest');
       
-      if (label) {
-        if (l.interestType === 'fixed') {
-          label.innerHTML = 'Fixed Interest Value <span class="text-danger">*</span>';
-          if (helpText) helpText.textContent = 'Fixed interest amount per month';
-          if (input) input.placeholder = '500';
-        } else if (l.interestType === 'own') {
-          label.innerHTML = 'Monthly Payment Amount <span class="text-danger">*</span>';
-          if (helpText) helpText.textContent = 'Fixed monthly payment amount (interest calculated from this)';
-          if (input) input.placeholder = '1500';
-        } else {
-          label.innerHTML = 'Interest Percentage <span class="text-danger">*</span>';
-          if (helpText) helpText.textContent = 'Percentage of principal per month';
-          if (input) input.placeholder = '2';
+      if (l.interestType === 'total-amount-mode') {
+        $('#loan-mode').value = 'total-amount-with-interest';
+        showTotalAmount();
+        $('#loan-total-amount').value = l.principal;
+        $('#loan-monthly-due').value = l.interestRate;
+      } else {
+        $('#loan-mode').value = 'traditional';
+        showTraditional();
+        
+        $('#loan-interest-type').value = l.interestType || 'percentage';
+        const label = $('#label-loan-interest');
+        const helpText = $('#interest-help-text');
+        const input = $('#loan-interest');
+        
+        if (label) {
+          if (l.interestType === 'fixed') {
+            label.innerHTML = 'Fixed Interest Value <span class="text-danger">*</span>';
+            if (helpText) helpText.textContent = 'Fixed interest amount per month';
+            if (input) input.placeholder = '500';
+          } else if (l.interestType === 'own') {
+            label.innerHTML = 'Monthly Payment Amount <span class="text-danger">*</span>';
+            if (helpText) helpText.textContent = 'Fixed monthly payment amount (interest calculated from this)';
+            if (input) input.placeholder = '1500';
+          } else {
+            label.innerHTML = 'Interest Percentage <span class="text-danger">*</span>';
+            if (helpText) helpText.textContent = 'Percentage of principal per month';
+            if (input) input.placeholder = '2';
+          }
         }
+        $('#loan-principal').value = l.principal;
+        $('#loan-interest').value = l.interestRate;
+        $('#loan-duration').value = l.duration || '';
       }
-      $('#loan-principal').value = l.principal;
-      $('#loan-interest').value = l.interestRate;
-      $('#loan-duration').value = l.duration || '';
       $('#loan-type').value = l.type;
       $('#loan-start-date').value = l.startDate;
       updateEMIPreview();
     }
   } else {
     $('#loan-form').reset();
-    $('#loan-interest-type').value = 'percentage';
-    const label = $('#label-loan-interest');
-    const helpText = $('#interest-help-text');
-    const input = $('#loan-interest');
-    if (label) label.innerHTML = 'Interest Percentage <span class="text-danger">*</span>';
-    if (helpText) helpText.textContent = 'Percentage of principal per month';
-    if (input) input.placeholder = '2';
+    if (loanMode === 'total-amount-with-interest') {
+      showTotalAmount();
+    } else {
+      showTraditional();
+      $('#loan-interest-type').value = 'percentage';
+      const label = $('#label-loan-interest');
+      const helpText = $('#interest-help-text');
+      const input = $('#loan-interest');
+      if (label) label.innerHTML = 'Interest Percentage <span class="text-danger">*</span>';
+      if (helpText) helpText.textContent = 'Percentage of principal per month';
+      if (input) input.placeholder = '2';
+    }
     $('#loan-start-date').value = today();
     if (clientId) select.value = clientId;
   }
@@ -4256,26 +4337,50 @@ function bindGlobal() {
   // Save loan button
   $('#save-loan-btn').addEventListener('click', () => {
     const clientId = $('#loan-client-select').value;
-    const interestType = $('#loan-interest-type').value || 'percentage';
-    const principal = parseFloat($('#loan-principal').value);
-    const durationVal = $('#loan-duration').value;
-    const duration = durationVal ? parseInt(durationVal) : 0;
-    const interestRate = parseFloat($('#loan-interest').value) || 0;
+    const loanMode = $('#loan-mode').value;
     const type = $('#loan-type').value;
     const startDate = $('#loan-start-date').value || today();
 
-    if (!clientId || !principal || principal < 1) {
-      showToast('Fill in required loan fields (Client & valid Principal)', 'error'); return;
+    if (!clientId) {
+      showToast('Select a client', 'error'); return;
     }
-    if (interestRate < 0) {
-      showToast('Interest cannot be negative', 'error'); return;
+
+    let loanData = { clientId, type, startDate, loanMode };
+
+    if (loanMode === 'total-amount-with-interest') {
+      const totalAmount = parseFloat($('#loan-total-amount').value);
+      const monthlyDue = parseFloat($('#loan-monthly-due').value);
+      
+      if (!totalAmount || totalAmount < 1 || !monthlyDue || monthlyDue < 1) {
+        showToast('Fill in Total Amount and Monthly Due', 'error'); return;
+      }
+      if (monthlyDue > totalAmount) {
+        showToast('Monthly Due cannot be greater than Total Amount', 'error'); return;
+      }
+      
+      loanData = { ...loanData, principal: totalAmount, interestRate: monthlyDue, interestType: 'total-amount-mode', duration: 0 };
+    } else {
+      const interestType = $('#loan-interest-type').value || 'percentage';
+      const principal = parseFloat($('#loan-principal').value);
+      const durationVal = $('#loan-duration').value;
+      const duration = durationVal ? parseInt(durationVal) : 0;
+      const interestRate = parseFloat($('#loan-interest').value) || 0;
+      
+      if (!principal || principal < 1) {
+        showToast('Fill in required loan fields (Client & valid Principal)', 'error'); return;
+      }
+      if (interestRate < 0) {
+        showToast('Interest cannot be negative', 'error'); return;
+      }
+      
+      loanData = { ...loanData, interestType, principal, interestRate, duration };
     }
 
     const editId = $('#loan-edit-id').value;
     const loans = Store.loans();
     if (editId) {
       const idx = loans.findIndex(l => l.id === editId);
-      if (idx !== -1) loans[idx] = { ...loans[idx], clientId, interestType, principal, interestRate, duration, type, startDate };
+      if (idx !== -1) loans[idx] = { ...loans[idx], ...loanData };
     } else {
       if (!canUsePremiumFeatures()) {
         const modal = bootstrap.Modal.getInstance($('#loanModal'));
@@ -4283,7 +4388,7 @@ function bindGlobal() {
         bootstrap.Modal.getOrCreateInstance($('#upgradeModal')).show();
         return;
       }
-      const newLoan = { id: uid(), clientId, interestType, principal, interestRate, duration, type, startDate, status: 'active', createdAt: today() };
+      const newLoan = { id: uid(), ...loanData, status: 'active', createdAt: today() };
       loans.push(newLoan);
     }
     Store.saveLoans(loans);
@@ -4291,6 +4396,17 @@ function bindGlobal() {
     showToast(editId ? 'Loan updated!' : 'Loan added!', 'success');
     if (state.page === 'loans') navigateTo('loans');
     else if (state.page === 'clients') navigateTo('clients');
+  });
+
+  // Loan type selection handlers
+  $('#btn-loan-total-with-interest')?.addEventListener('click', () => {
+    bootstrap.Modal.getInstance($('#loanTypeModal'))?.hide();
+    openLoanModal(null, null, 'total-amount-with-interest');
+  });
+
+  $('#btn-loan-traditional')?.addEventListener('click', () => {
+    bootstrap.Modal.getInstance($('#loanTypeModal'))?.hide();
+    openLoanModal(null, null, 'traditional');
   });
 
   // EMI Preview live calculation
@@ -4749,6 +4865,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize chatbot
   initChatbot();
+
+  // Initialize calculator
+  initCalculator();
+
+  // Initialize feature popup handlers
+  initFeaturePopup();
 
   // Brief loading screen delay for smooth UX
   console.log('⏳ BOOT: Waiting 400ms before calling init()...');
@@ -5443,3 +5565,247 @@ document.addEventListener('visibilitychange', () => {
     });
   }
 });
+
+
+// ── CALCULATOR - COMPLETE REBUILD ──────────────────────────────────
+
+const Calculator = {
+  num1: '',
+  num2: '',
+  operator: null,
+  display: '0',
+  
+  // Add digit to current number
+  addDigit(digit) {
+    if (this.operator === null) {
+      // Still entering first number
+      if (this.num1 === '0' && digit !== '.') {
+        this.num1 = digit;
+      } else if (digit === '.' && this.num1.includes('.')) {
+        return; // Don't add another decimal
+      } else {
+        this.num1 += digit;
+      }
+      this.display = this.num1;
+    } else {
+      // Entering second number
+      if (this.num2 === '0' && digit !== '.') {
+        this.num2 = digit;
+      } else if (digit === '.' && this.num2.includes('.')) {
+        return; // Don't add another decimal
+      } else {
+        this.num2 += digit;
+      }
+      this.display = this.num1 + ' ' + this.operator + ' ' + this.num2;
+    }
+  },
+  
+  // Set operator
+  setOperator(op) {
+    if (this.num1 === '') return;
+    if (this.num2 !== '') {
+      this.calculate(); // Calculate if there's a pending operation
+    }
+    this.operator = op;
+    this.num2 = '';
+    this.display = this.num1 + ' ' + this.operator;
+  },
+  
+  // Calculate result
+  calculate() {
+    if (this.num1 === '' || this.operator === null || this.num2 === '') {
+      return;
+    }
+    
+    const n1 = parseFloat(this.num1);
+    const n2 = parseFloat(this.num2);
+    let result = 0;
+    
+    switch(this.operator) {
+      case '+': result = n1 + n2; break;
+      case '−': result = n1 - n2; break;
+      case '×': result = n1 * n2; break;
+      case '÷': result = n2 !== 0 ? n1 / n2 : 0; break;
+    }
+    
+    this.num1 = parseFloat(result.toFixed(10)).toString();
+    this.num2 = '';
+    this.operator = null;
+    this.display = this.num1;
+  },
+  
+  // Backspace
+  backspace() {
+    if (this.operator === null) {
+      if (this.num1.length > 1) {
+        this.num1 = this.num1.slice(0, -1);
+      } else {
+        this.num1 = '0';
+      }
+      this.display = this.num1;
+    } else {
+      if (this.num2.length > 1) {
+        this.num2 = this.num2.slice(0, -1);
+        this.display = this.num1 + ' ' + this.operator + ' ' + this.num2;
+      } else {
+        this.num2 = '';
+        this.display = this.num1 + ' ' + this.operator;
+      }
+    }
+  },
+  
+  // Percentage
+  percent() {
+    if (this.operator === null) {
+      this.num1 = (parseFloat(this.num1) / 100).toString();
+      this.display = this.num1;
+    } else {
+      this.num2 = (parseFloat(this.num2) / 100).toString();
+      this.display = this.num1 + ' ' + this.operator + ' ' + this.num2;
+    }
+  },
+  
+  // Clear all
+  clear() {
+    this.num1 = '';
+    this.num2 = '';
+    this.operator = null;
+    this.display = '0';
+  },
+  
+  getDisplay() {
+    return this.display;
+  }
+};
+
+function initCalculator() {
+  const btns = document.querySelectorAll('.calc-btn');
+  const closeBtn = document.getElementById('btn-close-calculator');
+
+  btns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      handleBtn(btn);
+    });
+  });
+
+  if (closeBtn) {
+    closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeCalculator();
+    });
+  }
+
+  refreshDisplay();
+}
+
+function handleBtn(btn) {
+  const val = btn.dataset.value;
+  const act = btn.dataset.action;
+
+  if (val) {
+    // Number clicked
+    Calculator.addDigit(val);
+  } else if (act === 'clear') {
+    Calculator.clear();
+  } else if (act === 'backspace') {
+    Calculator.backspace();
+  } else if (act === 'decimal') {
+    Calculator.addDigit('.');
+  } else if (act === 'percent') {
+    Calculator.percent();
+  } else if (act === 'add') {
+    Calculator.setOperator('+');
+  } else if (act === 'subtract') {
+    Calculator.setOperator('−');
+  } else if (act === 'multiply') {
+    Calculator.setOperator('×');
+  } else if (act === 'divide') {
+    Calculator.setOperator('÷');
+  } else if (act === 'equals') {
+    Calculator.calculate();
+  }
+
+  refreshDisplay();
+}
+
+function refreshDisplay() {
+  const el = document.getElementById('calculator-display');
+  if (el) {
+    el.textContent = Calculator.getDisplay();
+  }
+}
+
+function openCalculator() {
+  hideFeaturePopup();
+  const wrap = document.getElementById('calculator-wrapper');
+  if (wrap) {
+    wrap.style.display = 'flex';
+    Calculator.clear();
+    refreshDisplay();
+  }
+}
+
+function closeCalculator() {
+  const wrap = document.getElementById('calculator-wrapper');
+  if (wrap) {
+    wrap.style.display = 'none';
+    Calculator.clear();
+  }
+}
+
+
+// ── FEATURE POPUP ──────────────────────────────────────
+
+function initFeaturePopup() {
+  const calcBtn = document.getElementById('btn-open-calculator');
+  const chatBtn = document.getElementById('btn-open-chatbot-direct');
+
+  if (calcBtn) {
+    calcBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      hideFeaturePopup();
+      openCalculator();
+    });
+  }
+
+  if (chatBtn) {
+    chatBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      hideFeaturePopup();
+      openChatbot();
+    });
+  }
+
+  const wrap = document.getElementById('calculator-wrapper');
+  if (wrap) {
+    wrap.addEventListener('click', (e) => {
+      if (e.target === wrap) closeCalculator();
+    });
+  }
+}
+
+window.showFeaturePopup = function() {
+  const popup = document.getElementById('feature-selection-popup');
+  const wrap = document.getElementById('calculator-wrapper');
+  
+  if (wrap && wrap.style.display === 'flex') return;
+
+  if (popup) popup.style.display = 'block';
+};
+
+function hideFeaturePopup() {
+  const popup = document.getElementById('feature-selection-popup');
+  if (popup) popup.style.display = 'none';
+}
+
+document.addEventListener('click', (e) => {
+  const popup = document.getElementById('feature-selection-popup');
+  const icon = document.getElementById('chatbot-icon');
+  
+  if (popup && popup.style.display === 'block') {
+    if (!popup.contains(e.target) && !icon?.contains(e.target)) {
+      hideFeaturePopup();
+    }
+  }
+}, true);

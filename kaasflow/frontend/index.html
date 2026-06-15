@@ -2378,10 +2378,69 @@
   <!-- ===== MAIN APP ===== -->
   <div id="main-app" style="display:none;">
 
+    <!-- Feature Selection Popup -->
+    <div id="feature-selection-popup" style="position: fixed; bottom: 80px; right: 20px; background: white; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); padding: 1.5rem; z-index: 9997; display: none; min-width: 200px; animation: slideUp 0.3s ease-out;">
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <button id="btn-open-calculator" style="padding: 1rem; background: linear-gradient(135deg, #3498db, #2980b9); color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 1rem; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+          <i class="fa-solid fa-calculator"></i>Calculator
+        </button>
+        <button id="btn-open-chatbot-direct" style="padding: 1rem; background: linear-gradient(135deg, #7ed321, #4caf1a); color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 1rem; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+          <i class="fa-solid fa-robot"></i>Chatbot
+        </button>
+      </div>
+    </div>
+
+    <!-- Calculator Wrapper with Modal Overlay -->
+    <div id="calculator-wrapper" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: none; align-items: center; justify-content: center; z-index: 9999; background: rgba(0, 0, 0, 0.7); padding: 1rem; overflow: hidden;">
+      <div id="calculator-interface" style="position: relative; width: 100%; max-width: 380px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 24px; box-shadow: 0 25px 80px rgba(0,0,0,0.95); display: flex; flex-direction: column; padding: 1.5rem; animation: slideInUp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); overflow: hidden;">
+        <!-- Calculator Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+          <h3 style="color: #fff; margin: 0; font-size: 1.3rem; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Calculator</h3>
+          <button id="btn-close-calculator" style="background: rgba(0,0,0,0.1); border: none; color: #000; font-size: 1.4rem; cursor: pointer; padding: 6px 10px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; border-radius: 8px;"><i class="fa-solid fa-times"></i></button>
+        </div>
+
+        <!-- Display Screen -->
+        <div id="calculator-display" style="background: linear-gradient(135deg, #0f1419 0%, #1a1a2e 100%); color: #00ff00; padding: 1.5rem; border-radius: 14px; text-align: right; font-size: 2.4rem; margin-bottom: 1.5rem; font-family: 'Courier New', monospace; min-height: 75px; display: flex; align-items: center; justify-content: flex-end; word-wrap: break-word; word-break: break-all; border: 2px solid #00ff00; overflow: hidden; text-shadow: 0 0 10px rgba(0,255,0,0.3); font-weight: 600;">0</div>
+
+        <!-- Calculator Buttons Grid -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.85rem; pointer-events: auto;">
+          <!-- Row 1: Functions -->
+          <button class="calc-btn" data-action="clear" style="background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%); color: white; border: none; padding: 1.1rem 0.5rem; border-radius: 12px; font-size: 1.05rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease; user-select: none; box-shadow: 0 4px 12px rgba(255,107,107,0.3);">AC</button>
+          <button class="calc-btn" data-action="percent" style="background: linear-gradient(135deg, #666 0%, #555 100%); color: #fff; border: none; padding: 1.1rem 0.5rem; border-radius: 12px; font-size: 1.05rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease; user-select: none; box-shadow: 0 4px 12px rgba(100,100,100,0.3);">%</button>
+          <button class="calc-btn" data-action="backspace" style="background: linear-gradient(135deg, #666 0%, #555 100%); color: #fff; border: none; padding: 1.1rem 0.5rem; border-radius: 12px; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease; user-select: none; box-shadow: 0 4px 12px rgba(100,100,100,0.3);"><i class="fa-solid fa-delete-left"></i></button>
+          <button class="calc-btn" data-action="divide" style="background: linear-gradient(135deg, #ff9500 0%, #ff8c00 100%); color: white; border: none; padding: 1.1rem 0.5rem; border-radius: 12px; font-size: 1.25rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease; user-select: none; box-shadow: 0 4px 12px rgba(255,149,0,0.4);">÷</button>
+
+          <!-- Row 2: Numbers 7,8,9 and Multiply -->
+          <button class="calc-btn" data-value="7" style="background: linear-gradient(135deg, #3a4a5c 0%, #2d3a4a 100%); color: #1df0ff; border: none; padding: 1.1rem 0.5rem; border-radius: 12px; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease; user-select: none; box-shadow: 0 4px 12px rgba(29,240,255,0.2);">7</button>
+          <button class="calc-btn" data-value="8" style="background: linear-gradient(135deg, #3a4a5c 0%, #2d3a4a 100%); color: #1df0ff; border: none; padding: 1.1rem 0.5rem; border-radius: 12px; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease; user-select: none; box-shadow: 0 4px 12px rgba(29,240,255,0.2);">8</button>
+          <button class="calc-btn" data-value="9" style="background: linear-gradient(135deg, #3a4a5c 0%, #2d3a4a 100%); color: #1df0ff; border: none; padding: 1.1rem 0.5rem; border-radius: 12px; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease; user-select: none; box-shadow: 0 4px 12px rgba(29,240,255,0.2);">9</button>
+          <button class="calc-btn" data-action="multiply" style="background: linear-gradient(135deg, #ff9500 0%, #ff8c00 100%); color: white; border: none; padding: 1.1rem 0.5rem; border-radius: 12px; font-size: 1.25rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease; user-select: none; box-shadow: 0 4px 12px rgba(255,149,0,0.4);">×</button>
+
+          <!-- Row 3: Numbers 4,5,6 and Subtract -->
+          <button class="calc-btn" data-value="4" style="background: linear-gradient(135deg, #3a4a5c 0%, #2d3a4a 100%); color: #1df0ff; border: none; padding: 1.1rem 0.5rem; border-radius: 12px; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease; user-select: none; box-shadow: 0 4px 12px rgba(29,240,255,0.2);">4</button>
+          <button class="calc-btn" data-value="5" style="background: linear-gradient(135deg, #3a4a5c 0%, #2d3a4a 100%); color: #1df0ff; border: none; padding: 1.1rem 0.5rem; border-radius: 12px; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease; user-select: none; box-shadow: 0 4px 12px rgba(29,240,255,0.2);">5</button>
+          <button class="calc-btn" data-value="6" style="background: linear-gradient(135deg, #3a4a5c 0%, #2d3a4a 100%); color: #1df0ff; border: none; padding: 1.1rem 0.5rem; border-radius: 12px; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease; user-select: none; box-shadow: 0 4px 12px rgba(29,240,255,0.2);">6</button>
+          <button class="calc-btn" data-action="subtract" style="background: linear-gradient(135deg, #ff9500 0%, #ff8c00 100%); color: white; border: none; padding: 1.1rem 0.5rem; border-radius: 12px; font-size: 1.25rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease; user-select: none; box-shadow: 0 4px 12px rgba(255,149,0,0.4);">−</button>
+
+          <!-- Row 4: Numbers 1,2,3 and Add -->
+          <button class="calc-btn" data-value="1" style="background: linear-gradient(135deg, #3a4a5c 0%, #2d3a4a 100%); color: #1df0ff; border: none; padding: 1.1rem 0.5rem; border-radius: 12px; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease; user-select: none; box-shadow: 0 4px 12px rgba(29,240,255,0.2);">1</button>
+          <button class="calc-btn" data-value="2" style="background: linear-gradient(135deg, #3a4a5c 0%, #2d3a4a 100%); color: #1df0ff; border: none; padding: 1.1rem 0.5rem; border-radius: 12px; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease; user-select: none; box-shadow: 0 4px 12px rgba(29,240,255,0.2);">2</button>
+          <button class="calc-btn" data-value="3" style="background: linear-gradient(135deg, #3a4a5c 0%, #2d3a4a 100%); color: #1df0ff; border: none; padding: 1.1rem 0.5rem; border-radius: 12px; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease; user-select: none; box-shadow: 0 4px 12px rgba(29,240,255,0.2);">3</button>
+          <button class="calc-btn" data-action="add" style="background: linear-gradient(135deg, #ff9500 0%, #ff8c00 100%); color: white; border: none; padding: 1.1rem 0.5rem; border-radius: 12px; font-size: 1.25rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease; user-select: none; box-shadow: 0 4px 12px rgba(255,149,0,0.4);">+</button>
+
+          <!-- Row 5: Numbers 0 and Decimal, Equals -->
+          <button class="calc-btn" data-value="00" style="background: linear-gradient(135deg, #3a4a5c 0%, #2d3a4a 100%); color: #1df0ff; border: none; padding: 1.1rem 0.5rem; border-radius: 12px; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease; user-select: none; box-shadow: 0 4px 12px rgba(29,240,255,0.2);">00</button>
+          <button class="calc-btn" data-value="0" style="background: linear-gradient(135deg, #3a4a5c 0%, #2d3a4a 100%); color: #1df0ff; border: none; padding: 1.1rem 0.5rem; border-radius: 12px; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease; user-select: none; box-shadow: 0 4px 12px rgba(29,240,255,0.2);">0</button>
+          <button class="calc-btn" data-action="decimal" style="background: linear-gradient(135deg, #3a4a5c 0%, #2d3a4a 100%); color: #1df0ff; border: none; padding: 1.1rem 0.5rem; border-radius: 12px; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease; user-select: none; box-shadow: 0 4px 12px rgba(29,240,255,0.2);">.</button>
+          <button class="calc-btn" data-action="equals" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 1.1rem 0.5rem; border-radius: 12px; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease; user-select: none; box-shadow: 0 4px 12px rgba(16,185,129,0.4);">=</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Floating Chatbot Widget -->
     <div id="chatbot-widget" style="display: none;">
       <!-- Floating Bot Icon with Cute Robot -->
-      <div id="chatbot-icon" class="chatbot-icon" onclick="window.openChatbot && window.openChatbot()"
+      <div id="chatbot-icon" class="chatbot-icon" onclick="window.showFeaturePopup && window.showFeaturePopup()"
         style="position: fixed; bottom: 250px; right: 20px; width: 60px; height: 60px; background: linear-gradient(135deg, #7ed321, #4caf1a); border-radius: 50%; box-shadow: 0 4px 20px rgba(126, 211, 33, 0.4); cursor: grab; z-index: 9998; display: flex; align-items: center; justify-content: center; animation: float 3s ease-in-out infinite; transition: transform 0.2s ease;">
         <!-- Cute Robot SVG -->
         <svg width="36" height="36" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -2655,6 +2714,40 @@
     </div>
   </div>
 
+  <!-- Select Loan Type Modal -->
+  <div class="modal fade" id="loanTypeModal" tabindex="-1" aria-labelledby="loanTypeModalLabel" aria-hidden="true"
+    data-ocid="loan.type_selection_dialog">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content kf-modal-content">
+        <div class="modal-header kf-modal-header">
+          <h5 class="modal-title" id="loanTypeModalLabel">Add Loan</h5>
+          <button type="button" class="btn-close kf-btn-close" data-bs-dismiss="modal" aria-label="Close"
+            data-ocid="loan.type_close_button"></button>
+        </div>
+        <div class="modal-body">
+          <div class="d-flex flex-column gap-3">
+            <button type="button" class="btn-option" id="btn-loan-total-with-interest" style="padding:1.5rem; text-align:left; border:2px solid var(--color-border); border-radius:8px; background:transparent; cursor:pointer; transition:all 0.2s;">
+              <div style="font-weight:700; font-size:1.1rem; margin-bottom:0.5rem; color:var(--color-primary);">
+                <i class="fa-solid fa-calculator me-2"></i>Total Amount with Interest
+              </div>
+              <div style="font-size:0.9rem; color:var(--color-text-muted);">
+                Enter total amount and monthly payment. Principal is calculated separately. Interest is paid until principal is fully repaid.
+              </div>
+            </button>
+            <button type="button" class="btn-option" id="btn-loan-traditional" style="padding:1.5rem; text-align:left; border:2px solid var(--color-border); border-radius:8px; background:transparent; cursor:pointer; transition:all 0.2s;">
+              <div style="font-weight:700; font-size:1.1rem; margin-bottom:0.5rem; color:var(--color-primary);">
+                <i class="fa-solid fa-coins me-2"></i>Total Amount and Interest
+              </div>
+              <div style="font-size:0.9rem; color:var(--color-text-muted);">
+                Traditional method. Enter principal and interest rate. EMI is calculated automatically.
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Add Loan Modal -->
   <div class="modal fade" id="loanModal" tabindex="-1" aria-labelledby="loanModalLabel" aria-hidden="true"
     data-ocid="loan.dialog">
@@ -2668,6 +2761,7 @@
         <div class="modal-body">
           <form id="loan-form" novalidate>
             <input type="hidden" id="loan-edit-id" />
+            <input type="hidden" id="loan-mode" value="traditional" />
             <div class="mb-3">
               <label class="form-label" for="loan-client-select">Client <span class="text-danger">*</span></label>
               <select id="loan-client-select" class="form-select kf-input" data-ocid="loan.client_select">
@@ -2675,7 +2769,7 @@
               </select>
             </div>
 
-            <div class="row g-2 mb-3">
+            <div class="row g-2 mb-3" id="traditional-types-section">
               <div class="col-6">
                 <label class="form-label" for="loan-interest-type">Interest Type</label>
                 <select id="loan-interest-type" class="form-select kf-input">
@@ -2693,7 +2787,7 @@
               </div>
             </div>
 
-            <div class="row g-2 mb-3">
+            <div class="row g-2 mb-3" id="traditional-loan-section">
               <div class="col-6">
                 <label class="form-label" for="loan-principal">Principal (₹) <span class="text-danger">*</span></label>
                 <input type="number" id="loan-principal" class="form-control kf-input" placeholder="50000" min="1"
@@ -2708,23 +2802,37 @@
               </div>
             </div>
 
-            <div class="mb-3">
+            <div class="mb-3" id="traditional-duration-section">
               <label class="form-label" for="loan-duration">Duration (months)</label>
               <input type="number" id="loan-duration" class="form-control kf-input" placeholder="Optional" min="1"
                 data-ocid="loan.duration_input" />
             </div>
 
-            <div class="mb-3">
-              <label class="form-label" for="loan-start-date">Start Date</label>
-              <input type="date" id="loan-start-date" class="form-control kf-input" data-ocid="loan.start_date_input" />
+            <!-- Total Amount with Interest Mode Fields -->
+            <div id="total-amount-mode" class="d-none">
+              <div class="mb-3" style="padding:1rem; background:rgba(52, 152, 219, 0.05); border-left:4px solid var(--color-primary); border-radius:4px; margin-bottom:1rem;">
+                <small style="color:var(--color-text-muted); font-weight:600; display:block; margin-bottom:0.5rem;">
+                  <i class="fa-solid fa-info-circle me-2"></i>Your principal amount is separate
+                </small>
+                <small style="color:var(--color-text-muted); font-size:0.8rem;">
+                  For example, if you enter 100,000 as total amount and 10,000 as monthly due, it will take 10 months to complete the loan. Principal is treated independently; interest is paid separately.
+                </small>
+              </div>
+              <div class="mb-3">
+                <label class="form-label" for="loan-total-amount">Total Amount (₹) <span class="text-danger">*</span></label>
+                <input type="number" id="loan-total-amount" class="form-control kf-input" placeholder="100000" min="1"
+                  data-ocid="loan.total_amount_input" />
+              </div>
+              <div class="mb-3">
+                <label class="form-label" for="loan-monthly-due">Monthly Due Amount (₹) <span class="text-danger">*</span></label>
+                <input type="number" id="loan-monthly-due" class="form-control kf-input" placeholder="10000" min="1"
+                  data-ocid="loan.monthly_due_input" />
+              </div>
             </div>
 
             <div class="mb-3">
-              <label class="form-label" for="loan-next-due-date">Next Due Date</label>
-              <input type="date" id="loan-next-due-date" class="form-control kf-input"
-                data-ocid="loan.next_due_date_input" placeholder="When is the next payment due?" />
-              <small class="form-text text-muted" style="font-size: 0.8rem; display: block; margin-top: 4px;">Set when
-                the client needs to pay next</small>
+              <label class="form-label" for="loan-start-date">Start Date</label>
+              <input type="date" id="loan-start-date" class="form-control kf-input" data-ocid="loan.start_date_input" />
             </div>
 
             <!-- EMI Preview -->

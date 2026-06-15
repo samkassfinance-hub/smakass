@@ -1003,38 +1003,109 @@ body.tamil-text .nav-tab i {
 /* ── 16. SEARCH BAR ────────────────────────────────────────── */
 .search-bar-wrapper {
   position: relative;
-  margin-bottom: 0.875rem;
+  margin-bottom: 1.5rem;
+  width: 100%;
 }
 
-.search-bar-wrapper i {
-  position: absolute;
-  left: 0.875rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--color-text-muted);
-  font-size: 0.9rem;
+.search-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: var(--kf-input-bg);
+  border: 1.5px solid var(--kf-input-border);
+  border-radius: 16px;
+  padding: 0 1rem;
+  min-height: 54px;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.search-input-container:focus-within {
+  border-color: var(--green-mid);
+  box-shadow: 0 0 0 4px rgba(76, 175, 26, 0.12), 0 6px 20px rgba(76, 175, 26, 0.15);
+  transform: translateY(-2px);
+}
+
+.search-icon {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  margin-right: 0.75rem;
   pointer-events: none;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.search-input-container:focus-within .search-icon {
+  color: var(--green-mid);
+  transform: scale(1.1);
 }
 
 .search-input {
-  width: 100%;
-  background: var(--color-bg-input);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: 2rem;
-  padding: 0.625rem 1rem 0.625rem 2.5rem;
-  font-family: 'Baloo 2', sans-serif;
-  font-size: 0.9375rem;
-  min-height: 48px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--kf-text);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 500;
+  outline: none;
+  min-width: 0;
+  padding: 0;
 }
 
-.search-input::placeholder { color: var(--color-text-muted); opacity: 0.7; }
+.search-input::placeholder {
+  color: var(--text-muted);
+  font-weight: 400;
+  opacity: 0.7;
+}
 
-.search-input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(212, 160, 23, 0.15);
+.search-clear-btn {
+  background: none;
+  border: none;
+  padding: 0.5rem;
+  margin-left: 0.5rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 1rem;
+  display: none;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  border-radius: 8px;
+}
+
+.search-clear-btn:hover {
+  color: var(--green-mid);
+  background: rgba(76, 175, 26, 0.1);
+  transform: scale(1.15) rotate(90deg);
+}
+
+.search-clear-btn:active {
+  transform: scale(1) rotate(90deg);
+}
+
+/* Light theme adjustments */
+[data-theme="light"] .search-input-container {
+  background: var(--bg-input);
+  border-color: var(--border-default);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .search-input-container:focus-within {
+  border-color: var(--green-mid);
+  box-shadow: 0 0 0 4px rgba(92, 161, 18, 0.1), 0 4px 12px rgba(92, 161, 18, 0.15);
+}
+
+[data-theme="light"] .search-icon {
+  color: var(--text-muted);
+}
+
+[data-theme="light"] .search-input-container:focus-within .search-icon {
+  color: var(--green-light);
+}
+
+[data-theme="light"] .search-clear-btn:hover {
+  color: var(--green-mid);
+  background: rgba(92, 161, 18, 0.1);
 }
 
 /* ── 17. BADGES ────────────────────────────────────────────── */
@@ -1308,7 +1379,7 @@ body.tamil-text .nav-tab i {
 .kf-btn-close {
   background: none;
   border: none;
-  color: var(--color-text-muted);
+  color: #000 !important;
   width: 32px;
   height: 32px;
   display: flex;
@@ -1326,7 +1397,7 @@ body.tamil-text .nav-tab i {
   font-weight: 900;
 }
 
-.kf-btn-close:hover { background: var(--color-bg-secondary); color: var(--color-text); }
+.kf-btn-close:hover { background: rgba(0,0,0,0.1); color: #000 !important; }
 
 .kf-modal-footer {
   background: var(--color-bg-card) !important;
@@ -2846,3 +2917,96 @@ body.tamil-text .nav-tab i {
 .pulse-syncing {
   animation: pulse-syncing 1.2s infinite;
 }
+
+/* Loan Type Selection Buttons */
+.btn-option {
+  padding: 1.5rem !important;
+  text-align: left;
+  border: 2px solid var(--color-border);
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-option:hover {
+  border-color: var(--color-primary);
+  background: rgba(52, 152, 219, 0.05);
+  transform: translateX(4px);
+}
+
+.btn-option:active {
+  transform: translateX(2px);
+}
+
+/* Feature Selection Popup Animation */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#feature-selection-popup {
+  animation: slideUp 0.3s ease-out !important;
+}
+
+/* Calculator Button Hover/Active Effects */
+.calc-btn {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+}
+
+.calc-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.4) !important;
+}
+
+.calc-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25) !important;
+}
+
+/* Calculator Interface Animation */
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#calculator-wrapper {
+  animation: fadeIn 0.3s ease-out !important;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+#calculator-interface {
+  animation: slideInUp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+/* Close button hover */
+#btn-close-calculator:hover {
+  background: rgba(255,255,255,0.2) !important;
+  color: #fff !important;
+}
+
+#btn-close-calculator:active {
+  transform: scale(0.95);
+}
+
+
