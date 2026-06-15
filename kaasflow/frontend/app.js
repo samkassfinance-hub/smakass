@@ -1266,6 +1266,29 @@ function calcLoanStats(loan) {
   const duration = loan.duration || 0;
   const interestType = loan.interestType || 'percentage';
   
+  // If loan is closed, don't calculate any further interest
+  if (loan.status === 'closed' || loan.isLocked) {
+    const payments = Store.payments().filter(p => p.loanId === loan.id);
+    const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
+    
+    // For closed loans, totalPayable is fixed at the amount that was marked as fully paid
+    const totalPayable = loan.closedAmount || (loan.principal + (loan.totalInterest || 0));
+    const remaining = Math.max(0, totalPayable - totalPaid);
+    const progress = Math.min(100, Math.round((totalPaid / totalPayable) * 100));
+    
+    return { 
+      emi: 0, 
+      totalPayable: totalPayable, 
+      totalInterest: 0, 
+      totalPaid, 
+      remaining, 
+      progress: 100, 
+      nextDueDate: null, 
+      isOverdue: false, 
+      daysOverdue: 0 
+    };
+  }
+  
   let monthlyPayment = 0;
   let totalInterest = 0;
   let totalPayable = loan.principal;
@@ -1716,6 +1739,14 @@ function renderLoansList(loans, clients) {
   if (state.loanFilter === 'overdue') filtered = loans.filter(l => calcLoanStats(l).isOverdue);
   if (state.loanFilter === 'completed') filtered = loans.filter(l => l.status === 'completed');
 
+  // Sort: active/overdue first, then closed loans at the end
+  filtered.sort((a, b) => {
+    const aIsClosed = a.status === 'closed';
+    const bIsClosed = b.status === 'closed';
+    if (aIsClosed !== bIsClosed) return aIsClosed ? 1 : -1;
+    return 0;
+  });
+
   if (filtered.length === 0) {
     listEl.innerHTML = `<div class="empty-state" data-ocid="loans.empty_state">
       <div class="empty-state-icon"><i class="fa-solid fa-money-bill-wave"></i></div>
@@ -1728,13 +1759,18 @@ function renderLoansList(loans, clients) {
   listEl.innerHTML = filtered.map((l, i) => {
     const stats = calcLoanStats(l);
     const client = clients.find(c => c.id === l.clientId);
-    const statusClass = stats.isOverdue ? 'overdue' : l.status === 'completed' ? 'completed' : '';
+    const statusClass = stats.isOverdue ? 'overdue' : l.status === 'completed' ? 'completed' : l.status === 'closed' ? 'closed' : '';
+    const loanIdColor = l.status === 'closed' ? 'color: #ff4444; font-weight: 700;' : '';
+    
     return `
-    <div class="loan-card ${statusClass}" data-ocid="loans.item.${i + 1}">
+    <div class="loan-card ${statusClass}" data-ocid="loans.item.${i + 1}" data-loan-id="${l.id}">
       <div class="loan-card-header">
-        <div class="loan-card-name">${client ? client.name : 'Unknown'}</div>
-        <span class="badge-kf ${stats.isOverdue ? 'badge-overdue' : l.status === 'completed' ? 'badge-completed' : 'badge-active'}">
-          ${stats.isOverdue ? 'OVERDUE' : l.status.toUpperCase()}
+        <div class="loan-card-name" style="display:flex; align-items:center; gap:0.5rem;">
+          <span>${client ? client.name : 'Unknown'}</span>
+          <span style="font-size:0.75rem; ${loanIdColor}">[${l.id.substring(0, 8)}]</span>
+        </div>
+        <span class="badge-kf ${stats.isOverdue ? 'badge-overdue' : l.status === 'completed' ? 'badge-completed' : l.status === 'closed' ? 'badge-completed' : 'badge-active'}">
+          ${stats.isOverdue ? 'OVERDUE' : l.status === 'closed' ? 'CLOSED' : l.status.toUpperCase()}
         </span>
       </div>
       <div class="loan-card-grid">
@@ -1742,14 +1778,17 @@ function renderLoansList(loans, clients) {
         <div class="loan-card-stat"><div class="loan-card-label">${t('principal')}</div><div class="loan-card-value">${fmtCur(l.principal)}</div></div>
         <div class="loan-card-stat"><div class="loan-card-label">Paid</div><div class="loan-card-value">${fmtCur(stats.totalPaid)}</div></div>
         <div class="loan-card-stat"><div class="loan-card-label">Remaining</div><div class="loan-card-value">${fmtCur(stats.remaining)}</div></div>
-        <div class="loan-card-stat"><div class="loan-card-label">${t('nextDue')}</div><div class="loan-card-value" style="font-size:.8rem">${stats.nextDueDate ? fmtDate(stats.nextDueDate) : '—'}</div></div>
+        <div class="loan-card-stat"><div class="loan-card-label">${t('nextDue')}</div><div class="loan-card-value" style="font-size:.8rem">${l.status === 'closed' ? 'N/A' : stats.nextDueDate ? fmtDate(stats.nextDueDate) : '—'}</div></div>
         <div class="loan-card-stat"><div class="loan-card-label">Progress</div><div class="loan-card-value">${stats.progress}%</div></div>
       </div>
-      <div class="kf-progress"><div class="kf-progress-fill ${stats.isOverdue ? 'danger' : stats.progress === 100 ? 'success' : ''}" style="width:${stats.progress}%"></div></div>
+      <div class="kf-progress"><div class="kf-progress-fill ${stats.isOverdue ? 'danger' : stats.progress === 100 ? 'success' : l.status === 'closed' ? 'success' : ''}" style="width:${stats.progress}%"></div></div>
       <div class="loan-card-actions d-flex flex-wrap gap-2">
         <button class="btn-kf-ghost" style="font-size:.8rem;min-height:36px;padding:.375rem .75rem" data-action="info" data-id="${l.id}"><i class="fa-solid fa-circle-info me-1"></i>About</button>
-        <button class="btn-kf-ghost" style="font-size:.8rem;min-height:36px;padding:.375rem .75rem" data-action="edit" data-id="${l.id}" data-ocid="loans.edit_button.${i + 1}"><i class="fa-solid fa-pen me-1"></i>Edit</button>
-        <button class="btn-kf-ghost" style="font-size:.8rem;min-height:36px;padding:.375rem .75rem" data-action="remind" data-id="${l.id}" title="Send WhatsApp Message" aria-label="WhatsApp Message" data-ocid="loans.remind.${i + 1}"><i class="fa-brands fa-whatsapp me-1" style="color:#25D366; font-size:1.1rem;"></i>${t('whatsapp')}</button>
+        ${l.status !== 'closed' ? `
+          <button class="btn-kf-ghost" style="font-size:.8rem;min-height:36px;padding:.375rem .75rem" data-action="edit" data-id="${l.id}" data-ocid="loans.edit_button.${i + 1}"><i class="fa-solid fa-pen me-1"></i>Edit</button>
+          <button class="btn-kf-ghost" style="font-size:.8rem;min-height:36px;padding:.375rem .75rem; color:var(--kf-success)" data-action="fully-paid" data-id="${l.id}"><i class="fa-solid fa-check me-1"></i>Fully Paid</button>
+          <button class="btn-kf-ghost" style="font-size:.8rem;min-height:36px;padding:.375rem .75rem" data-action="remind" data-id="${l.id}" title="Send WhatsApp Message" aria-label="WhatsApp Message" data-ocid="loans.remind.${i + 1}"><i class="fa-brands fa-whatsapp me-1" style="color:#25D366; font-size:1.1rem;"></i>${t('whatsapp')}</button>
+        ` : ''}
         <button class="btn-icon" data-action="download" data-id="${l.id}" aria-label="Download" data-ocid="loans.download_button.${i + 1}"><i class="fa-solid fa-download"></i></button>
         <button class="btn-icon danger" data-action="delete" data-id="${l.id}" aria-label="Delete" data-ocid="loans.delete_button.${i + 1}"><i class="fa-solid fa-trash"></i></button>
       </div>
@@ -1765,6 +1804,7 @@ function renderLoansList(loans, clients) {
     if (btn.dataset.action === 'edit') openLoanModal(null, id);
     if (btn.dataset.action === 'download') downloadLoanDetailsPDF(id);
     if (btn.dataset.action === 'delete') confirmDelete('loan', id);
+    if (btn.dataset.action === 'fully-paid') openFullyPaidModal(id);
   });
 }
 
@@ -1827,6 +1867,21 @@ function openLoanInfo(loanId) {
 
   $('#loan-info-body').innerHTML = html;
   new bootstrap.Modal($('#loanInfoModal')).show();
+}
+
+// ── FULLY PAID MODAL ───────────────────────────────────────────
+function openFullyPaidModal(loanId) {
+  const loan = Store.loans().find(l => l.id === loanId);
+  if (!loan) return;
+  const stats = calcLoanStats(loan);
+  
+  $('#fully-paid-loan-id').value = loanId;
+  $('#fully-paid-loan-display').value = loanId;
+  $('#fully-paid-total-required').value = fmtCur(stats.totalPayable);
+  $('#fully-paid-amount').value = '';
+  $('#fully-paid-note').value = '';
+  
+  new bootstrap.Modal($('#fullyPaidModal')).show();
 }
 
 function openLoanModal(clientId = null, loanId = null) {
@@ -4340,6 +4395,61 @@ function bindGlobal() {
     bootstrap.Modal.getInstance($('#partialPaymentModal'))?.hide();
     showToast(`Partial payment of ${fmtCur(amount)} recorded!`, 'success');
     if (loan) generateReceipt(payment, loan);
+    navigateTo(state.page);
+  });
+
+  // Fully Paid button handler
+  $('#confirm-fully-paid-btn')?.addEventListener('click', () => {
+    const loanId = $('#fully-paid-loan-id').value;
+    const enteredAmount = parseFloat($('#fully-paid-amount').value);
+    const note = $('#fully-paid-note').value.trim();
+
+    if (!loanId || !enteredAmount || enteredAmount < 1) {
+      showToast('Enter a valid amount', 'error'); return;
+    }
+
+    const loan = Store.loans().find(l => l.id === loanId);
+    if (!loan) { showToast('Loan not found', 'error'); return; }
+
+    const stats = calcLoanStats(loan);
+    const totalPayable = stats.totalPayable;
+
+    // Validate that entered amount matches total payable
+    if (Math.abs(enteredAmount - totalPayable) > 0.01) {
+      showToast(`Amount mismatch! Expected ₹${fmtCur(totalPayable)} but got ₹${fmtCur(enteredAmount)}`, 'error');
+      return;
+    }
+
+    // Record the final payment
+    const payment = {
+      id: uid(),
+      loanId,
+      amount: enteredAmount,
+      date: today(),
+      note: note || 'Full settlement',
+      createdAt: new Date().toISOString()
+    };
+
+    const payments = Store.payments();
+    payments.push(payment);
+    Store.savePayments(payments);
+
+    // Mark loan as closed and prevent further changes
+    const loans = Store.loans();
+    const loanIdx = loans.findIndex(l => l.id === loanId);
+    if (loanIdx !== -1) {
+      loans[loanIdx].status = 'closed';
+      loans[loanIdx].closedAt = today();
+      loans[loanIdx].closedAmount = enteredAmount;
+      // Lock the loan to prevent interest accrual
+      loans[loanIdx].isLocked = true;
+    }
+    Store.saveLoans(loans);
+
+    bootstrap.Modal.getInstance($('#fullyPaidModal'))?.hide();
+    showToast(`Loan fully paid and closed! ₹${fmtCur(enteredAmount)} received.`, 'success');
+    generateReceipt(payment, loan);
+    updateNotifBadge();
     navigateTo(state.page);
   });
 

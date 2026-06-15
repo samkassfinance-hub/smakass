@@ -1096,6 +1096,11 @@ body.tamil-text .nav-tab i {
 
 .loan-card.overdue { border-left-color: var(--color-danger); }
 .loan-card.completed { border-left-color: var(--color-success); opacity: 0.75; }
+.loan-card.closed { 
+  border-left-color: #ff4444; 
+  opacity: 0.8;
+  background: linear-gradient(135deg, rgba(255, 68, 68, 0.05), rgba(76, 175, 26, 0.05));
+}
 .loan-card:hover { box-shadow: var(--shadow-elevated); }
 
 .loan-card-header {

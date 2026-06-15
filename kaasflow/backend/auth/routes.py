@@ -11,6 +11,13 @@ from .password_handler import hash_password, verify_password
 from .magic_link import generate_magic_link_token, verify_magic_link_token
 from .rate_limiter import check_rate_limit, record_failed_attempt, clear_attempts
 
+# Import enhanced email service
+try:
+    from email_service import send_email_via_resend, send_welcome_email, send_otp_email, send_pin_reset_email
+    USE_NEW_EMAIL_SERVICE = True
+except ImportError:
+    USE_NEW_EMAIL_SERVICE = False
+
 auth_bp = Blueprint('pro_auth', __name__)
 
 is_vercel = os.environ.get("VERCEL") == "1"

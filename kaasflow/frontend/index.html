@@ -571,7 +571,7 @@
     }
 
     .header-title {
-      font-family: 'Outfit', sans-serif !important;
+      font-family: 'Outfit', sansv-serif !important;
       font-weight: 800 !important;
       letter-spacing: -0.5px;
     }
@@ -679,6 +679,16 @@
       color: var(--kf-success) !important;
       background: rgba(16, 185, 129, 0.05) !important;
       box-shadow: 0 0 15px rgba(16, 185, 129, 0.3) !important;
+    }
+
+    /* OTP Container - 2 rows layout */
+    .otp-inputs-container {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      justify-items: center;
+      max-width: 300px;
+      margin: 0 auto;
     }
 
     /* Filter Tabs */
@@ -2851,6 +2861,43 @@
     </div>
   </div>
 
+  <!-- Fully Paid Modal -->
+  <div class="modal fade" id="fullyPaidModal" tabindex="-1" aria-hidden="true" data-ocid="loan.fully_paid_dialog">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+      <div class="modal-content kf-modal-content">
+        <div class="modal-header kf-modal-header">
+          <h5 class="modal-title"><i class="fa-solid fa-check-circle me-2" style="color:var(--kf-success)"></i>Mark as Fully Paid</h5>
+          <button type="button" class="btn-close kf-btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="fully-paid-form">
+            <input type="hidden" id="fully-paid-loan-id" />
+            <div class="mb-3">
+              <label class="form-label">Loan ID</label>
+              <input type="text" id="fully-paid-loan-display" class="form-control kf-input" disabled />
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Total Amount to Pay (₹)</label>
+              <input type="text" id="fully-paid-total-required" class="form-control kf-input" disabled style="font-weight:700; color:var(--color-primary);" />
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Enter Amount Paid (₹) <span class="text-danger">*</span></label>
+              <input type="number" id="fully-paid-amount" class="form-control kf-input" placeholder="Amount paid" min="1" required />
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Note (Optional)</label>
+              <input type="text" id="fully-paid-note" class="form-control kf-input" placeholder="e.g., Full settlement" />
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer kf-modal-footer">
+          <button type="button" class="btn-kf-outline" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn-kf-primary" id="confirm-fully-paid-btn">Mark as Fully Paid</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- About Loan Modal -->
   <div class="modal fade" id="loanInfoModal" tabindex="-1" aria-hidden="true" data-ocid="loan.info_dialog">
     <div class="modal-dialog modal-dialog-centered modal-sm">
@@ -3261,22 +3308,16 @@
 
           <!-- Step 2: Verify OTP -->
           <div id="forgot-pin-step-2" style="display:none;">
-            <p class="text-muted-kf" style="font-size:0.875rem; margin-bottom:1rem; text-align:center;">
+            <p class="text-muted-kf" style="font-size:0.875rem; margin-bottom:1.5rem; text-align:center;">
               Enter the 6-digit code sent to your email.
             </p>
-            <div style="display:flex; justify-content:center; gap:0.5rem; margin-bottom:1.5rem">
-              <input type="text" maxlength="1" class="pin-digit-input reset-otp-input" data-idx="0" inputmode="numeric"
-                pattern="[0-9]" />
-              <input type="text" maxlength="1" class="pin-digit-input reset-otp-input" data-idx="1" inputmode="numeric"
-                pattern="[0-9]" />
-              <input type="text" maxlength="1" class="pin-digit-input reset-otp-input" data-idx="2" inputmode="numeric"
-                pattern="[0-9]" />
-              <input type="text" maxlength="1" class="pin-digit-input reset-otp-input" data-idx="3" inputmode="numeric"
-                pattern="[0-9]" />
-              <input type="text" maxlength="1" class="pin-digit-input reset-otp-input" data-idx="4" inputmode="numeric"
-                pattern="[0-9]" />
-              <input type="text" maxlength="1" class="pin-digit-input reset-otp-input" data-idx="5" inputmode="numeric"
-                pattern="[0-9]" />
+            <div class="otp-inputs-container" style="margin-bottom:1.5rem">
+              <input type="text" maxlength="1" class="pin-digit-input reset-otp-input" data-idx="0" inputmode="numeric" pattern="[0-9]" />
+              <input type="text" maxlength="1" class="pin-digit-input reset-otp-input" data-idx="1" inputmode="numeric" pattern="[0-9]" />
+              <input type="text" maxlength="1" class="pin-digit-input reset-otp-input" data-idx="2" inputmode="numeric" pattern="[0-9]" />
+              <input type="text" maxlength="1" class="pin-digit-input reset-otp-input" data-idx="3" inputmode="numeric" pattern="[0-9]" />
+              <input type="text" maxlength="1" class="pin-digit-input reset-otp-input" data-idx="4" inputmode="numeric" pattern="[0-9]" />
+              <input type="text" maxlength="1" class="pin-digit-input reset-otp-input" data-idx="5" inputmode="numeric" pattern="[0-9]" />
             </div>
             <button type="button" class="btn-kf-primary w-100" id="btn-verify-pin-otp">
               Verify OTP <i class="fa-solid fa-check ms-1"></i>
