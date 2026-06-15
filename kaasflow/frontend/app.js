@@ -4944,17 +4944,19 @@ function initChatbot() {
     // Click to open chat - use both click and touchend for better mobile support
     chatbotIcon.addEventListener('click', (e) => {
       e.preventDefault();
+      e.stopPropagation();
       console.log('🔘 Chatbot icon clicked, isDragging:', isDragging);
       if (!isDragging) {
-        openChatbot();
+        showFeaturePopup();
       }
     });
 
     chatbotIcon.addEventListener('touchend', (e) => {
       e.preventDefault();
+      e.stopPropagation();
       console.log('👆 Chatbot icon touched, isDragging:', isDragging);
       if (!isDragging) {
-        openChatbot();
+        showFeaturePopup();
       }
     });
 
