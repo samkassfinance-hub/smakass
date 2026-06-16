@@ -246,6 +246,18 @@ def google_auth():
                      (email, google_id, name, picture))
         conn.commit()
         user = conn.execute('SELECT * FROM pro_users WHERE email = ?', (email,)).fetchone()
+        
+        # Create FREE subscription entry for new user
+        try:
+            from subscription_manager import create_user_subscription_entry
+            subscription_result = create_user_subscription_entry(email)
+            if subscription_result.get('success'):
+                print(f"✅ Subscription created for new Google user: {email}")
+            else:
+                print(f"⚠️ Failed to create subscription for {email}: {subscription_result.get('error')}")
+        except Exception as e:
+            print(f"⚠️ Error creating subscription: {e}")
+        
         try:
             send_welcome_email(email, name)
         except Exception as e:
@@ -281,6 +293,17 @@ def register():
     conn.commit()
     user = conn.execute('SELECT * FROM pro_users WHERE email = ?', (email,)).fetchone()
     conn.close()
+    
+    # Create FREE subscription entry for new user
+    try:
+        from subscription_manager import create_user_subscription_entry
+        subscription_result = create_user_subscription_entry(email)
+        if subscription_result.get('success'):
+            print(f"✅ Subscription created for new user: {email}")
+        else:
+            print(f"⚠️ Failed to create subscription for {email}: {subscription_result.get('error')}")
+    except Exception as e:
+        print(f"⚠️ Error creating subscription: {e}")
     
     try:
         send_welcome_email(email, name)
