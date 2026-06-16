@@ -405,10 +405,10 @@ export default function SupabaseModal({
                 <ExternalLink size={10} />
               </a>
               <a
-                href="mailto:mohansampath098@gmail.com"
+                href="mailto:samkassfinance@gmail.com"
                 className="supabase-contact-chip email"
               >
-                <span>Γ£ë∩╕Å</span> mohansampath098@gmail.com
+                <span>Γ£ë∩╕Å</span> samkassfinance@gmail.com
               </a>
             </div>
           </div>

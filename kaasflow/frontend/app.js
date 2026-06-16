@@ -119,7 +119,47 @@ const T = {
     delete: 'Delete',
     upgradePlan: 'Upgrade Plan',
     buyClientSlots: 'Buy Client Slots',
-    extraClients: 'Extra Clients'
+    extraClients: 'Extra Clients',
+    // New translations for validation & messages
+    validEmail: 'Enter a valid email address',
+    enterPassword: 'Enter your password',
+    passwordMinLength: 'Password must be at least 6 characters',
+    enterName: 'Enter your name',
+    validEmailRequired: 'Enter valid email',
+    enterValidPin: 'Enter a valid 4-digit PIN',
+    enterYourPin: 'Enter your 4-digit PIN',
+    incorrectPin: 'Incorrect PIN. Try again.',
+    sending: 'Sending...',
+    secureLinkSent: 'A secure login link has been sent to your email!',
+    offlineMode: 'Running in offline mode. Magic links require internet.',
+    verifying: 'Verifying...',
+    sendOtp: 'Send OTP',
+    verifyOtp: 'Verify OTP',
+    welcome: (name) => `Welcome, ${name}`,
+    searchLoans: 'Search loans by client name...',
+    selectClient: 'Select client…',
+    fixedInterestValue: 'Fixed Interest Value',
+    monthlyPaymentAmount: 'Monthly Payment Amount',
+    interestPercentage: 'Interest Percentage',
+    fixedInterestDesc: 'Fixed interest amount per month',
+    paymentAmountDesc: 'Fixed monthly payment amount (interest calculated from this)',
+    percentageInterestDesc: 'Percentage of principal per month',
+    paid: 'Paid',
+    remaining: 'Remaining',
+    progress: 'Progress',
+    about: 'About',
+    fullyPaid: 'Fully Paid',
+    partlyPaid: 'Partly Paid',
+    noDefaulters: 'No defaulters. Great recovery rate!',
+    confirmClearData: 'Are you sure you want to delete ALL clients, loans and payment data? This cannot be undone.',
+    confirmLogout: 'Are you sure you want to logout?',
+    confirmDeleteAccount: 'Are you sure you want to completely DELETE your account and ALL data? This action cannot be undone.',
+    recycleBinEmpty: 'Recycle bin is empty.',
+    appInstalledSuccess: 'App installed successfully! Check your home screen.',
+    supabaseUrl: 'Supabase Project URL',
+    supabaseAnonKey: 'Supabase Anon Key',
+    fixedMonthlyPayment: 'Fixed Monthly Payment',
+    trialsUsed: 'Trial Clients Used'
   },
   ta: {
     home: 'முகப்பு', clients: 'வாடிக்கையாளர்கள்',
@@ -196,7 +236,46 @@ const T = {
     delete: 'நீக்கு',
     upgradePlan: 'திட்டத்தை மேம்படுத்து',
     buyClientSlots: 'வாடிக்கையாளர் இடங்களை வாங்கவும்',
-    extraClients: 'கூடுதல் வாடிக்கையாளர்கள்'
+    extraClients: 'கூடுதல் வாடிக்கையாளர்கள்',
+    validEmail: 'சரியான மின்னஞ்சல் முகவரியை உள்ளிடவும்',
+    enterPassword: 'உங்கள் கடவுச்சொல்லை உள்ளிடவும்',
+    passwordMinLength: 'கடவுச்சொல் குறைந்தது 6 எழுத்துக்கள் இருக்க வேண்டும்',
+    enterName: 'உங்கள் பெயரை உள்ளிடவும்',
+    validEmailRequired: 'சரியான மின்னஞ்சலை உள்ளிடவும்',
+    enterValidPin: 'சரியான 4 இலக்க PIN ஐ உள்ளிடவும்',
+    enterYourPin: 'உங்கள் 4 இலக்க PIN ஐ உள்ளிடவும்',
+    incorrectPin: 'தவறான PIN. மீண்டும் முயலவும்.',
+    sending: 'அனுப்பப்படுகிறது...',
+    secureLinkSent: 'உங்கள் மின்னஞ்சலுக்கு பாதுகாப்பு உள்நுழைவு இணைப்பு அனுப்பப்பட்டுள்ளது!',
+    offlineMode: 'ஆஃப்லைன் பயன்முறையில் இயங்குகிறது. மேஜிக் இணைப்புகளுக்கு இணையம் தேவை.',
+    verifying: 'சரிபார்க்கப்படுகிறது...',
+    sendOtp: 'OTP அனுப்பு',
+    verifyOtp: 'OTP சரிபார்க்கவும்',
+    welcome: (name) => `வரவேற்கிறோம், ${name}`,
+    searchLoans: 'வாடிக்கையாளர் பெயரின் மூலம் கடன்களை தேடவும்...',
+    selectClient: 'வாடிக்கையாளரைத் தேர்ந்தெடுக்கவும்…',
+    fixedInterestValue: 'நிலையான வட்டி மதிப்பு',
+    monthlyPaymentAmount: 'மாதாந்திர கட்டணத் தொகை',
+    interestPercentage: 'வட்டி சதவீதம்',
+    fixedInterestDesc: 'மாதத்திற்கு நிலையான வட்டித் தொகை',
+    paymentAmountDesc: 'நிலையான மாதாந்திர கட்டணத் தொகை (வட்டி இதிலிருந்து கணக்கிடப்படும்)',
+    percentageInterestDesc: 'ஒவ்வொரு மாசத்திற்கும் அசலின் சதவீதம்',
+    paid: 'செலுத்தப்பட்டது',
+    remaining: 'மீதமுள்ள',
+    progress: 'முன்னேற்றம்',
+    about: 'பற்றி',
+    fullyPaid: 'முழுமையாக செலுத்தப்பட்டது',
+    partlyPaid: 'பகுதியாக செலுத்தப்பட்டது',
+    noDefaulters: 'இயல்புநிறுத்தல் இல்லை. சிறந்த வசூல் விகிதம்!',
+    confirmClearData: 'எல்லா வாடிக்கையாளர்கள், கடன்கள் மற்றும் கட்டணத் தரவை நீக்க விரும்புகிறீர்களா? இதை செயல்தவிர்க்க முடியாது.',
+    confirmLogout: 'நீங்கள் வெளியேற விரும்புகிறீர்களா?',
+    confirmDeleteAccount: 'உங்கள் கணக்கு மற்றும் அனைத்து தரவையும் முழுமையாக நீக்க விரும்புகிறீர்களா? இந்த நடவடிக்கையை செயல்தவிர்க்க முடியாது.',
+    recycleBinEmpty: 'மறுசுழற்சி பெட்டி காலியாக உள்ளது.',
+    appInstalledSuccess: 'ஆப் வெற்றிகரமாக நிறுவப்பட்டுள்ளது! உங்கள் முகப்புத் திரையை சரிபார்க்கவும்.',
+    supabaseUrl: 'Supabase திட்ட URL',
+    supabaseAnonKey: 'Supabase அனாநுரூப விசை',
+    fixedMonthlyPayment: 'நிலையான மாதாந்திர கட்டணம்',
+    trialsUsed: 'சோதனை வாடிக்கையாளர்கள் பயன்படுத்தப்பட்டுள்ளனர்'
   }
 };
 
@@ -2574,29 +2653,41 @@ function renderSettings(container) {
 
   $('#btn-load-dummy-clients')?.addEventListener('click', () => {
     const todayStr = today();
-    const d = new Date();
-    d.setMonth(d.getMonth() - 1); // Set start date to 1 month ago for monthly loan
-    const startStr = d.toISOString().split('T')[0];
+    
+    // Calculate tomorrow's date
+    const tomorrowDate = new Date();
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    const tomorrowStr = tomorrowDate.toISOString().split('T')[0];
 
     const dummyClients = [];
     const dummyLoans = [];
 
     for (let i = 1; i <= 5; i++) {
       const cid = 'c_dummy_' + uid();
+      
+      // Determine if this client belongs to today or tomorrow
+      const isToday = i <= 3; // First 3 clients are today
+      const clientDate = isToday ? todayStr : tomorrowStr;
+      
+      // Calculate start date 1 month ago from the client's date
+      const d = new Date(clientDate);
+      d.setMonth(d.getMonth() - 1);
+      const startStr = d.toISOString().split('T')[0];
+      
       dummyClients.push({
         id: cid, name: 'Demo Client ' + i, phone: '987654321' + i,
-        address: 'Sample Address', occupation: 'Demo', createdAt: todayStr
+        address: 'Sample Address', occupation: 'Demo', createdAt: clientDate
       });
       dummyLoans.push({
         id: 'l_dummy_' + uid(), clientId: cid, principal: 10000,
         interestRate: 2, interestType: 'percentage', duration: 12,
-        type: 'monthly', startDate: startStr, status: 'active', createdAt: startStr
+        type: 'monthly', startDate: startStr, status: 'active', createdAt: clientDate
       });
     }
 
     Store.set('clients', [...Store.clients(), ...dummyClients]);
     Store.set('loans', [...Store.loans(), ...dummyLoans]);
-    showToast('5 dummy clients with dues today loaded!', 'success');
+    showToast('5 dummy clients loaded - 3 with today\'s date, 2 with tomorrow\'s date!', 'success');
     navigateTo('settings');
   });
 
@@ -2730,7 +2821,7 @@ function renderSettings(container) {
             </div>
             
             <p class="text-muted-kf fs-sm mb-4" style="line-height: 1.6; background: rgba(255,255,255,0.03); border: 1px solid var(--kf-card-border); border-radius: 12px; padding: 12px;">
-              If you would like to use your own private storage for your financier data, you can connect your personal data securely. Once connected, all future data will automatically sync to your private storage. If you need this service CONTACT whatsapp number: <strong>7904987242</strong> or mail <strong>{ mohansampath098@gmail.com }</strong>
+              If you would like to use your own private storage for your financier data, you can connect your personal data securely. Once connected, all future data will automatically sync to your private storage. If you need this service CONTACT whatsapp number: <strong>7904987242</strong> or mail <strong>{ samkassfinance@gmail.com }</strong>
             </p>
 
             <div class="d-flex align-items-center gap-2 mb-4 p-2" style="background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px dashed var(--kf-card-border)">
@@ -4051,7 +4142,7 @@ function bindGlobal() {
     const pin = inputs.map(i => i.value).join('');
     const errEl = $('#pin-setup-error');
     if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
-      errEl.textContent = 'Enter a valid 4-digit PIN';
+      errEl.textContent = t('enterValidPin');
       errEl.classList.remove('d-none');
       inputs.forEach(i => i.classList.add('shake'));
       setTimeout(() => inputs.forEach(i => i.classList.remove('shake')), 500);
@@ -4084,12 +4175,12 @@ function bindGlobal() {
     const errEl = $('#pin-lock-error');
     const savedPin = getPin();
     if (pin.length !== 4) {
-      errEl.textContent = 'Enter your 4-digit PIN';
+      errEl.textContent = t('enterYourPin');
       errEl.classList.remove('d-none');
       return;
     }
     if (pin !== savedPin) {
-      errEl.textContent = 'Incorrect PIN. Try again.';
+      errEl.textContent = t('incorrectPin');
       errEl.classList.remove('d-none');
       inputs.forEach(i => { i.classList.add('shake'); i.value = ''; });
       setTimeout(() => { inputs.forEach(i => i.classList.remove('shake')); inputs[0]?.focus(); }, 500);
@@ -4947,7 +5038,14 @@ function initChatbot() {
       e.stopPropagation();
       console.log('🔘 Chatbot icon clicked, isDragging:', isDragging);
       if (!isDragging) {
-        showFeaturePopup();
+        const chatbotInterface = document.getElementById('chatbot-interface');
+        const isOpen = chatbotInterface && chatbotInterface.style.display === 'flex';
+        
+        if (isOpen) {
+          closeChatbot();
+        } else {
+          showFeaturePopup();
+        }
       }
     });
 
@@ -4956,7 +5054,14 @@ function initChatbot() {
       e.stopPropagation();
       console.log('👆 Chatbot icon touched, isDragging:', isDragging);
       if (!isDragging) {
-        showFeaturePopup();
+        const chatbotInterface = document.getElementById('chatbot-interface');
+        const isOpen = chatbotInterface && chatbotInterface.style.display === 'flex';
+        
+        if (isOpen) {
+          closeChatbot();
+        } else {
+          showFeaturePopup();
+        }
       }
     });
 

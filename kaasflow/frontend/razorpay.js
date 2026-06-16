@@ -78,8 +78,8 @@ const RazorpayPayment = {
   // Pre-load orders for all plans (called when upgrade modal opens)
   async preloadOrders() {
     console.log('🔄 Pre-loading orders for all plans...');
-    const plans = ['monthly', 'quarterly', 'yearly'];
-    const amounts = { monthly: 270, quarterly: 850, yearly: 1999 };
+    const plans = ['oneday', 'monthly', 'quarterly', 'yearly'];
+    const amounts = { oneday: 8, monthly: 270, quarterly: 850, yearly: 1999 };
 
     for (const plan of plans) {
       try {
@@ -353,6 +353,7 @@ const RazorpayPayment = {
     console.log('💰 payForPlan:', planType);
 
     const plans = {
+      'oneday':    { amount: 8,    name: '1-Day Trial' },
       'monthly':   { amount: 270,  name: 'Monthly Plan' },
       'quarterly': { amount: 850,  name: 'Quarterly Plan' },
       'yearly':    { amount: 1999, name: 'Yearly Plan' }
@@ -429,6 +430,7 @@ const RazorpayPayment = {
     console.log('💰 payForPlanInstant:', planType);
 
     const plans = {
+      'oneday':    { amount: 8,    name: '1-Day Trial' },
       'monthly':   { amount: 270,  name: 'Monthly Plan' },
       'quarterly': { amount: 850,  name: 'Quarterly Plan' },
       'yearly':    { amount: 1999, name: 'Yearly Plan' }

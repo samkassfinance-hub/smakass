@@ -88,6 +88,26 @@
       },
       badge: 'PRO',
       savings: 'Save ₹1,241'
+    },
+    ONEDAY: {
+      id: 'oneday',
+      name: '1-Day Trial',
+      price: 8, // ₹8
+      clientLimit: Infinity,
+      duration: 1,
+      features: {
+        clients: Infinity,
+        loans: true,
+        basicReports: true,
+        collection: true,
+        whatsappReminders: true,
+        excelExport: true,
+        pdfReceipts: true,
+        dataBackup: true,
+        advancedReports: true
+      },
+      badge: 'TRIAL',
+      savings: 'Try it now'
     }
   };
 
@@ -298,6 +318,7 @@
           ${this.renderPlanCard(PLANS.MONTHLY, currentPlan.id === 'monthly')}
           ${this.renderPlanCard(PLANS.QUARTERLY, currentPlan.id === 'quarterly')}
           ${this.renderPlanCard(PLANS.YEARLY, currentPlan.id === 'yearly')}
+          ${this.renderPlanCard(PLANS.ONEDAY, currentPlan.id === 'oneday')}
         </div>
         <p class="text-center text-muted-kf mt-3" style="font-size:0.75rem;">
           Free plan: up to 20 clients only. Upgrade to add unlimited clients.
