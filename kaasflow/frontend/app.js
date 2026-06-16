@@ -1088,6 +1088,11 @@ async function showApp() {
 
   updatePlanBanner();
   checkAccessControl();
+  
+  // CHECK SUBSCRIPTION EXPIRY - Show blocking modal if expired
+  if (window.KFSubscription && window.KFSubscription.ui) {
+    window.KFSubscription.ui.checkExpiry();
+  }
 
   // Render immediately with local data for zero-delay UX
   navigateTo(state.page || 'dashboard');

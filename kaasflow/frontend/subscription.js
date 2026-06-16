@@ -7,8 +7,8 @@
 (function() {
   'use strict';
 
-  // ─── YOUR RAZORPAY KEY ID (replace with your actual key) ─────
-  const RAZORPAY_KEY = 'rzp_live_SuharfZYrJBbHj'; // Your live Razorpay Key ID
+  // ─── RAZORPAY KEY ID (fetched from backend dynamically) ─────
+  // Key is set during manager initialization
 
   const PLANS = {
     FREE: {

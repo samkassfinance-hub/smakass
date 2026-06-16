@@ -3492,6 +3492,30 @@
   <script src="subscription.js?v=3" defer></script>
   <script src="client-limit-enforcement.js" defer></script>
 
+  <!-- Payment System Initialization -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('📄 Initializing payment system...');
+      
+      // Ensure Razorpay key is always set
+      if (typeof window.RazorpayPayment !== 'undefined') {
+        window.RazorpayPayment.keyId = window.RazorpayPayment.keyId || 'rzp_test_T2ccqRvYXx6jzC';
+        console.log('✅ Razorpay key ready: ' + window.RazorpayPayment.keyId.substring(0, 20) + '...');
+        
+        if (typeof window.RazorpayPayment.init === 'function') {
+          window.RazorpayPayment.init().catch(e => console.warn('Init warning:', e));
+        }
+      }
+    });
+    
+    // Ensure key is set even if DOMContentLoaded already fired
+    if (document.readyState === 'complete') {
+      if (typeof window.RazorpayPayment !== 'undefined') {
+        window.RazorpayPayment.keyId = window.RazorpayPayment.keyId || 'rzp_test_T2ccqRvYXx6jzC';
+      }
+    }
+  </script>
+
   <!-- Final Fallback Script -->
   <script>
     // Ultra-safe fallback - if nothing else works, at least show something

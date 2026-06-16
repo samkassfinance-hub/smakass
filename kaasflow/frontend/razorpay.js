@@ -1,6 +1,6 @@
 // Razorpay Payment Integration - FIXED & WORKING
 const RazorpayPayment = {
-  keyId: 'rzp_live_SuharfZYrJBbHj',
+  keyId: null, // Will be fetched from backend during init()
   sdkLoaded: false,
   preloadedOrders: {},
 
@@ -49,24 +49,37 @@ const RazorpayPayment = {
       return;
     }
 
-    console.log('🔑 Using Key ID:', this.keyId);
+    console.log('🔑 Loading Razorpay Key...');
 
-    // Try to fetch key from backend (optional)
+    // Set hardcoded key as fallback (will be updated from backend if available)
+    this.keyId = 'rzp_test_T2ccqRvYXx6jzC';
+    console.log('✅ Using Razorpay key: ' + this.keyId.substring(0, 20) + '...');
+
+    // Try to fetch key from backend (optional, for live keys)
     try {
       const apiBase = this.getApiBase();
-      const res = await fetch(`${apiBase}/payment/key`, { signal: AbortSignal.timeout(5000) });
+      console.log(`📡 Attempting to fetch key from backend: ${apiBase}/payment/key`);
+      
+      const res = await fetch(`${apiBase}/payment/key`, { 
+        signal: AbortSignal.timeout(3000),
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+      });
+      
       if (res.ok) {
         const data = await res.json();
-        if (data.key) {
+        
+        if (data.key && data.key.startsWith('rzp_')) {
           this.keyId = data.key;
-          console.log('✅ Updated key from backend:', this.keyId);
+          console.log('✅ Updated key from backend: ' + this.keyId.substring(0, 20) + '...');
         }
       }
     } catch (e) {
-      console.warn("⚠️ Could not fetch key from backend, using hardcoded key:", e.message);
+      console.warn('⚠️  Could not fetch key from backend:', e.message);
+      console.log('✅ Using fallback key: ' + this.keyId.substring(0, 20) + '...');
     }
 
-    console.log('✅ RazorpayPayment initialized successfully');
+    console.log('✅ RazorpayPayment initialized with key:', this.keyId.substring(0, 20) + '...');
   },
 
   getApiBase() {
@@ -227,6 +240,20 @@ const RazorpayPayment = {
     const userIdentifier = this.getUserIdentifier();
     const userPhone = this.getUserPhone();
     const userEmail = this.getUserEmail();
+
+    // CRITICAL: Validate key before attempting payment
+    if (!this.keyId || this.keyId === null || this.keyId === 'null') {
+      console.error('❌ CRITICAL ERROR: No Razorpay key available!');
+      console.error('keyId value:', this.keyId);
+      const msg = 'Payment gateway not configured. Backend may not be running or RAZORPAY_KEY_ID not set in .env';
+      console.error(msg);
+      alert(msg);
+      if (typeof showToast === 'function') showToast(msg, 'error');
+      options.onError?.({ error: msg });
+      return;
+    }
+
+    console.log('✅ Key validated:', this.keyId.substring(0, 20) + '...');
 
     const rzpOptions = {
       key: this.keyId,

@@ -6,10 +6,11 @@ from auth.jwt_handler import decode_token
 
 def get_razorpay_client():
     """Dynamically get the razorpay client to avoid cold-start import errors"""
-    key_id = os.getenv('RAZORPAY_KEY_ID', 'rzp_live_SuharfZYrJBbHj')
-    key_secret = os.getenv('RAZORPAY_KEY_SECRET', 'FsmmZywk4NGiI1PxIS4UWb0e')
+    key_id = os.getenv('RAZORPAY_KEY_ID')
+    key_secret = os.getenv('RAZORPAY_KEY_SECRET')
+    
     if not key_id or not key_secret:
-        raise Exception("Razorpay API keys are missing in the environment.")
+        raise Exception("Razorpay API keys missing. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in .env")
     return razorpay.Client(auth=(key_id, key_secret))
 
 def get_user_email_from_token():
@@ -119,9 +120,9 @@ def payment_routes(app):
     
     @app.route('/api/payment/key', methods=['GET'])
     def get_payment_key():
-        key = os.getenv('RAZORPAY_KEY_ID', 'rzp_live_SuharfZYrJBbHj')
+        key = os.getenv('RAZORPAY_KEY_ID')
         if not key:
-            return jsonify({'error': 'Razorpay key not configured'}), 500
+            return jsonify({'error': 'Razorpay key not configured in environment'}), 500
         return jsonify({'key': key})
 
     @app.route('/api/payment/verify', methods=['POST'])
