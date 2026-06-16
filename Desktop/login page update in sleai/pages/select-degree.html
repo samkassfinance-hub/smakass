@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Degree - College Admission System</title>
+    <link rel="stylesheet" href="../style.css">
+    <style>
+        .degree-container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+        .degree-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        .degree-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .degree-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2);
+        }
+        .degree-card h3 {
+            margin: 0;
+            font-size: 1.3em;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.1em;
+            color: #666;
+        }
+        .error {
+            background-color: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .back-btn {
+            display: inline-block;
+            margin-bottom: 20px;
+            padding: 10px 20px;
+            background-color: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .back-btn:hover {
+            background-color: #764ba2;
+        }
+    </style>
+</head>
+<body>
+    <div class="degree-container">
+        <a href="../index.html" class="back-btn">← Back to Home</a>
+        <h1>Select Your Degree</h1>
+        <div id="degreeList" class="degree-grid">
+            <div class="loading">Loading degrees...</div>
+        </div>
+        <div id="error"></div>
+    </div>
+
+    <script src="../scripts/college-system.js"></script>
+    <script>
+        async function loadDegrees() {
+            try {
+                const data = await window.collegeSystem.loadDatabase();
+                const degreeList = document.getElementById('degreeList');
+                
+                if (!data || !data.degrees || data.degrees.length === 0) {
+                    degreeList.innerHTML = '<div class="error">No degrees available. Please add degrees to data/database.json</div>';
+                    return;
+                }
+
+                degreeList.innerHTML = '';
+                data.degrees.forEach(degree => {
+                    const card = document.createElement('div');
+                    card.className = 'degree-card';
+                    card.innerHTML = `<h3>${degree}</h3>`;
+                    card.onclick = () => selectDegree(degree);
+                    degreeList.appendChild(card);
+                });
+            } catch (error) {
+                console.error('Error loading degrees:', error);
+                document.getElementById('error').innerHTML = 
+                    '<div class="error">Error loading degrees. Make sure data/database.json exists and is valid JSON.</div>';
+            }
+        }
+
+        function selectDegree(degree) {
+            sessionStorage.setItem('selectedDegree', degree);
+            window.location.href = 'admission-type.html';
+        }
+
+        loadDegrees();
+    </script>
+</body>
+</html>

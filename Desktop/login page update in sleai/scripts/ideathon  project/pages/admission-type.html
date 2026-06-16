@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admission Type - College Admission System</title>
+    <link rel="stylesheet" href="../style.css">
+    <style>
+        .admission-container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+        .admission-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+        .admission-card {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .admission-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.2);
+            transform: translateY(-5px);
+        }
+        .admission-card .icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        .admission-card h3 {
+            color: #333;
+            margin: 15px 0;
+            font-size: 1.3em;
+        }
+        .admission-card p {
+            color: #666;
+            font-size: 0.95em;
+            line-height: 1.5;
+        }
+        .degree-info {
+            background-color: #f0f4ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-weight: 500;
+            color: #667eea;
+        }
+        .back-btn {
+            display: inline-block;
+            margin-bottom: 20px;
+            padding: 10px 20px;
+            background-color: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .back-btn:hover {
+            background-color: #764ba2;
+        }
+    </style>
+</head>
+<body>
+    <div class="admission-container">
+        <a href="select-degree.html" class="back-btn">← Back to Degrees</a>
+        <h1>Choose Your Admission Path</h1>
+        <div class="degree-info">
+            Selected Degree: <span id="degreeDisplay"></span>
+        </div>
+
+        <div class="admission-grid">
+            <div class="admission-card" onclick="goToPage('cutoff-system.html')">
+                <div class="icon">📊</div>
+                <h3>Cutoff / Counselling</h3>
+                <p>Enter your subject marks and get your cutoff score. Find colleges based on your performance.</p>
+            </div>
+
+            <div class="admission-card" onclick="goToPage('exam-system.html')">
+                <div class="icon">📝</div>
+                <h3>Entrance Exam</h3>
+                <p>Enter your entrance exam score or rank. Get colleges matching your exam performance.</p>
+            </div>
+
+            <div class="admission-card" onclick="goToPage('management-system.html')">
+                <div class="icon">💰</div>
+                <h3>Management Quota</h3>
+                <p>Enter your budget. Find colleges within your management quota fee range.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function displayDegree() {
+            const degree = sessionStorage.getItem('selectedDegree');
+            if (degree) {
+                document.getElementById('degreeDisplay').textContent = degree;
+            } else {
+                window.location.href = 'select-degree.html';
+            }
+        }
+
+        function goToPage(page) {
+            window.location.href = page;
+        }
+
+        displayDegree();
+    </script>
+</body>
+</html>

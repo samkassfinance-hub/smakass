@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Management Quota System - College Admission</title>
+    <link rel="stylesheet" href="../style.css">
+    <style>
+        .management-container {
+            max-width: 700px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+            box-sizing: border-box;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+        }
+        .budget-info {
+            background-color: #e8f5e9;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+            font-size: 0.9em;
+            color: #2e7d32;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .btn-primary {
+            background-color: #667eea;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #764ba2;
+        }
+        .btn-secondary {
+            background-color: #ddd;
+            color: #333;
+        }
+        .btn-secondary:hover {
+            background-color: #ccc;
+        }
+        .result-box {
+            background-color: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 5px;
+            margin-top: 30px;
+            display: none;
+        }
+        .result-box.show {
+            display: block;
+        }
+        .result-box h3 {
+            margin-top: 0;
+            color: #667eea;
+        }
+        .error {
+            background-color: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            display: none;
+        }
+        .error.show {
+            display: block;
+        }
+        .back-btn {
+            display: inline-block;
+            margin-bottom: 20px;
+            padding: 10px 20px;
+            background-color: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .back-btn:hover {
+            background-color: #764ba2;
+        }
+        .degree-info {
+            background-color: #f0f4ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-weight: 500;
+            color: #667eea;
+        }
+        .budget-display {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="management-container">
+        <a href="admission-type.html" class="back-btn">← Back</a>
+        <h1>Management Quota System</h1>
+        <div class="degree-info">
+            Degree: <span id="degreeDisplay"></span>
+        </div>
+
+        <div id="error" class="error"></div>
+
+        <form id="managementForm">
+            <div class="form-group">
+                <label for="budget">Your Budget (₹)</label>
+                <input type="number" id="budget" placeholder="Enter your budget in rupees" min="0" required>
+            </div>
+
+            <div class="budget-info">
+                <strong>💡 Tip:</strong> Enter the maximum amount you can spend per year on management quota fees. We'll show you colleges within your budget range.
+            </div>
+
+            <div class="button-group">
+                <button type="submit" class="btn btn-primary">Search Colleges</button>
+                <button type="reset" class="btn btn-secondary">Clear</button>
+            </div>
+        </form>
+
+        <div id="resultBox" class="result-box">
+            <h3>Colleges Within Your Budget</h3>
+            <div class="budget-display">₹ <span id="budgetDisplay">0</span></div>
+            <p>Finding colleges with management quota fees matching your budget...</p>
+            <button class="btn btn-primary" onclick="viewResults()" style="width: 100%; margin-top: 15px;">
+                View Results
+            </button>
+        </div>
+    </div>
+
+    <script src="../scripts/college-system.js"></script>
+    <script>
+        let dbData = null;
+
+        async function initPage() {
+            try {
+                dbData = await window.collegeSystem.loadDatabase();
+                const degree = sessionStorage.getItem('selectedDegree');
+                
+                if (!degree) {
+                    window.location.href = 'select-degree.html';
+                    return;
+                }
+
+                document.getElementById('degreeDisplay').textContent = degree;
+            } catch (error) {
+                showError('Error loading page data');
+                console.error(error);
+            }
+        }
+
+        document.getElementById('managementForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            searchColleges();
+        });
+
+        function searchColleges() {
+            const budget = document.getElementById('budget').value;
+
+            if (!budget || budget <= 0) {
+                showError('Please enter a valid budget');
+                return;
+            }
+
+            sessionStorage.setItem('budget', budget);
+            sessionStorage.setItem('admissionType', 'management');
+
+            document.getElementById('budgetDisplay').textContent = budget;
+            document.getElementById('resultBox').classList.add('show');
+            document.getElementById('error').classList.remove('show');
+        }
+
+        function viewResults() {
+            window.location.href = 'colleges-result.html';
+        }
+
+        function showError(message) {
+            const errorBox = document.getElementById('error');
+            errorBox.textContent = message;
+            errorBox.classList.add('show');
+        }
+
+        initPage();
+    </script>
+</body>
+</html>

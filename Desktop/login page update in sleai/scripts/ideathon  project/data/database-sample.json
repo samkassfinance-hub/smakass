@@ -1,0 +1,364 @@
+{
+  "degrees": [
+    "Engineering",
+    "Medical",
+    "Agriculture",
+    "Nursing",
+    "Pharmacy",
+    "Physiotherapy",
+    "MBA/Management",
+    "Hotel Management"
+  ],
+  "subjects": {
+    "Engineering": ["Mathematics", "Physics", "Chemistry"],
+    "Medical": ["Biology", "Physics", "Chemistry"],
+    "Nursing": ["Biology", "Chemistry", "English"],
+    "Pharmacy": ["Biology", "Chemistry", "Physics"],
+    "Physiotherapy": ["Biology", "Chemistry", "Physics"],
+    "MBA/Management": ["Quantitative", "Reasoning", "English"],
+    "Hotel Management": ["Hospitality", "Management", "Communication"]
+  },
+  "cutoff_formula": {
+    "Engineering": "(marks.Mathematics / 2) + (marks.Physics / 4) + (marks.Chemistry / 4)",
+    "Medical": "marks.Biology + marks.Physics + marks.Chemistry",
+    "Nursing": "marks.Biology + marks.Chemistry + marks.English",
+    "Pharmacy": "marks.Biology + marks.Chemistry + marks.Physics",
+    "Physiotherapy": "marks.Biology + marks.Chemistry + marks.Physics",
+    "MBA/Management": "(marks.Quantitative * 0.4) + (marks.Reasoning * 0.3) + (marks.English * 0.3)",
+    "Hotel Management": "(marks.Hospitality * 0.4) + (marks.Management * 0.3) + (marks.Communication * 0.3)"
+  },
+  "entrance_exams": [
+    "TNEA",
+    "JEE Main",
+    "NEET",
+    "TANCET",
+    "GATE",
+    "CLAT"
+  ],
+  "colleges": {
+    "cutoff": [
+      {
+        "college_name": "IIT Madras",
+        "degree": "Engineering",
+        "location": "Chennai",
+        "cutoff_range": "180-195"
+      },
+      {
+        "college_name": "NIT Tiruchirappalli",
+        "degree": "Engineering",
+        "location": "Tiruchirappalli",
+        "cutoff_range": "160-175"
+      },
+      {
+        "college_name": "Anna University",
+        "degree": "Engineering",
+        "location": "Chennai",
+        "cutoff_range": "140-160"
+      }
+      ,
+      {
+        "college_name": "Vanavarayar Institute of Agriculture, Pollachi",
+        "degree": "Agriculture",
+        "location": "Pollachi",
+        "cutoff_range": "168-178"
+      },
+      {
+        "college_name": "PGP College of Agricultural Sciences, Namakal",
+        "degree": "Agriculture",
+        "location": "Namakal",
+        "cutoff_range": "165-176"
+      },
+      {
+        "college_name": "Adhiparasakthi Agricultural College, Vellore",
+        "degree": "Agriculture",
+        "location": "Vellore",
+        "cutoff_range": "163-174"
+      },
+      {
+        "college_name": "Imayam Institute of Agriculture, Trichy",
+        "degree": "Agriculture",
+        "location": "Trichy",
+        "cutoff_range": "160-172"
+      },
+      {
+        "college_name": "Thanthai Roever Institute of Agriculture, Perambalur",
+        "degree": "Agriculture",
+        "location": "Perambalur",
+        "cutoff_range": "158-170"
+      },
+      {
+        "college_name": "RVS Agricultural College, Thanjavur",
+        "degree": "Agriculture",
+        "location": "Thanjavur",
+        "cutoff_range": "156-168"
+      },
+      {
+        "college_name": "Sree Sowdambika College of Agriculture, Virudhunagar",
+        "degree": "Agriculture",
+        "location": "Virudhunagar",
+        "cutoff_range": "154-166"
+      },
+      {
+        "college_name": "KSK College of Agriculture, Thanjavur",
+        "degree": "Agriculture",
+        "location": "Thanjavur",
+        "cutoff_range": "152-164"
+      },
+      {
+        "college_name": "Jai Shriram College of Agriculture, Tiruppur",
+        "degree": "Agriculture",
+        "location": "Tiruppur",
+        "cutoff_range": "150-163"
+      },
+      {
+        "college_name": "Vivekananda College of Agriculture, Tiruchengode",
+        "degree": "Agriculture",
+        "location": "Tiruchengode",
+        "cutoff_range": "148-162"
+      },
+      {
+        "college_name": "Presidency College, Chennai",
+        "degree": "Arts & Science",
+        "location": "Chennai",
+        "cutoff_range": "175-200"
+      },
+      {
+        "college_name": "Government Arts College, Coimbatore",
+        "degree": "Arts & Science",
+        "location": "Coimbatore",
+        "cutoff_range": "170-192"
+      },
+      {
+        "college_name": "Government Arts College, Salem",
+        "degree": "Arts & Science",
+        "location": "Salem",
+        "cutoff_range": "167-189"
+      },
+      {
+        "college_name": "Government Arts College, Trichy",
+        "degree": "Arts & Science",
+        "location": "Trichy",
+        "cutoff_range": "165-187"
+      },
+      {
+        "college_name": "Government Arts College, Madurai",
+        "degree": "Arts & Science",
+        "location": "Madurai",
+        "cutoff_range": "163-185"
+      },
+      {
+        "college_name": "Government Arts College, Kumbakonam",
+        "degree": "Arts & Science",
+        "location": "Kumbakonam",
+        "cutoff_range": "160-183"
+      },
+      {
+        "college_name": "Government Arts College, Nandanam, Chennai",
+        "degree": "Arts & Science",
+        "location": "Chennai",
+        "cutoff_range": "158-181"
+      },
+      {
+        "college_name": "Government Arts College, Dharmapuri",
+        "degree": "Arts & Science",
+        "location": "Dharmapuri",
+        "cutoff_range": "155-178"
+      },
+      {
+        "college_name": "Government Arts College, Udhagamandalam",
+        "degree": "Arts & Science",
+        "location": "Udhagamandalam",
+        "cutoff_range": "153-176"
+      },
+      {
+        "college_name": "Government Arts College, Villupuram",
+        "degree": "Arts & Science",
+        "location": "Villupuram",
+        "cutoff_range": "150-173"
+      },
+      {
+        "college_name": "Government Arts College, Coimbatore (BCA)",
+        "degree": "Arts & Science",
+        "location": "Coimbatore",
+        "cutoff_range": "173-195"
+      },
+      {
+        "college_name": "Government Arts College, Salem (BCA)",
+        "degree": "Arts & Science",
+        "location": "Salem",
+        "cutoff_range": "170-192"
+      },
+      {
+        "college_name": "Presidency College, Chennai (BCA)",
+        "degree": "Arts & Science",
+        "location": "Chennai",
+        "cutoff_range": "172-194"
+      },
+      {
+        "college_name": "Loyola College, Chennai (Aided)",
+        "degree": "Arts & Science",
+        "location": "Chennai",
+        "cutoff_range": "165-185"
+      },
+      {
+        "college_name": "Madras Christian College, Chennai",
+        "degree": "Arts & Science",
+        "location": "Chennai",
+        "cutoff_range": "163-183"
+      },
+      {
+        "college_name": "Bishop Heber College, Trichy",
+        "degree": "Arts & Science",
+        "location": "Trichy",
+        "cutoff_range": "158-179"
+      },
+      {
+        "college_name": "VHNSN College, Virudhunagar",
+        "degree": "Arts & Science",
+        "location": "Virudhunagar",
+        "cutoff_range": "153-175"
+      },
+      {
+        "college_name": "National College, Trichy",
+        "degree": "Arts & Science",
+        "location": "Trichy",
+        "cutoff_range": "150-172"
+      }
+      ,
+      {
+        "college_name": "Madras Medical College, College of Nursing",
+        "degree": "Nursing",
+        "location": "Chennai",
+        "cutoff_range": "175-195"
+      },
+      {
+        "college_name": "Christian Medical College (CMC), Vellore",
+        "degree": "Nursing",
+        "location": "Vellore",
+        "cutoff_range": "170-190"
+      },
+      {
+        "college_name": "PSG College of Nursing",
+        "degree": "Nursing",
+        "location": "Coimbatore",
+        "cutoff_range": "165-185"
+      },
+      {
+        "college_name": "SRM College of Nursing",
+        "degree": "Nursing",
+        "location": "Chennai",
+        "cutoff_range": "155-175"
+      },
+      {
+        "college_name": "Saveetha College of Nursing",
+        "degree": "Nursing",
+        "location": "Chennai",
+        "cutoff_range": "150-170"
+      },
+      {
+        "college_name": "Madras Medical College, College of Pharmacy",
+        "degree": "Pharmacy",
+        "location": "Chennai",
+        "cutoff_range": "180-198"
+      },
+      {
+        "college_name": "JSS College of Pharmacy",
+        "degree": "Pharmacy",
+        "location": "Ooty",
+        "cutoff_range": "175-195"
+      },
+      {
+        "college_name": "PSG College of Pharmacy",
+        "degree": "Pharmacy",
+        "location": "Coimbatore",
+        "cutoff_range": "170-190"
+      },
+      {
+        "college_name": "Annamalai University, Faculty of Pharmacy",
+        "degree": "Pharmacy",
+        "location": "Chidambaram",
+        "cutoff_range": "165-185"
+      },
+      {
+        "college_name": "SRM College of Pharmacy",
+        "degree": "Pharmacy",
+        "location": "Chennai",
+        "cutoff_range": "160-180"
+      }
+    ],
+    "exam": [
+      {
+        "college_name": "IIT Madras",
+        "degree": "Engineering",
+        "location": "Chennai",
+        "exam_required": "JEE Main",
+        "score_range": "95-99 percentile"
+      },
+      {
+        "college_name": "Madras Medical College",
+        "degree": "Medical",
+        "location": "Chennai",
+        "exam_required": "NEET",
+        "score_range": "600-720"
+      },
+      {
+        "college_name": "Stanley Medical College",
+        "degree": "Medical",
+        "location": "Chennai",
+        "exam_required": "NEET",
+        "score_range": "550-600"
+      }
+    ],
+    "management": [
+      {
+        "college_name": "SRM College of Pharmacy",
+        "degree": "Pharmacy",
+        "location": "Chennai",
+        "fee_range": "150000-200000"
+      },
+      {
+        "college_name": "Saveetha College of Pharmacy",
+        "degree": "Pharmacy",
+        "location": "Chennai",
+        "fee_range": "125000-175000"
+      },
+      {
+        "college_name": "PSG College of Pharmacy",
+        "degree": "Pharmacy",
+        "location": "Coimbatore",
+        "fee_range": "100000-150000"
+      },
+      {
+        "college_name": "SRM College of Nursing",
+        "degree": "Nursing",
+        "location": "Chennai",
+        "fee_range": "120000-160000"
+      },
+      {
+        "college_name": "Saveetha College of Nursing",
+        "degree": "Nursing",
+        "location": "Chennai",
+        "fee_range": "100000-140000"
+      },
+      {
+        "college_name": "PSG Institute of Management",
+        "degree": "MBA/Management",
+        "location": "Coimbatore",
+        "fee_range": "1500000-2000000"
+      },
+      {
+        "college_name": "Great Lakes Institute of Management",
+        "degree": "MBA/Management",
+        "location": "Chennai",
+        "fee_range": "3500000-5000000"
+      },
+      {
+        "college_name": "SRM Institute of Hotel Management",
+        "degree": "Hotel Management",
+        "location": "Chennai",
+        "fee_range": "1200000-1600000"
+      }
+    ]
+  },
+  "management_colleges": []
+}
