@@ -1147,6 +1147,14 @@ async function showApp() {
 // ── NAVIGATION ────────────────────────────────────────────────
 function navigateTo(page) {
   checkAccessControl();
+  
+  // NEW: Validate subscription status before rendering page
+  if (window.SubscriptionEnforcement && typeof window.SubscriptionEnforcement.validateSubscriptionStatus === 'function') {
+    window.SubscriptionEnforcement.validateSubscriptionStatus().catch(err => {
+      console.error('⚠️  Subscription validation error:', err);
+    });
+  }
+  
   state.page = page;
   $$('.nav-tab').forEach(t => {
     t.classList.toggle('active', t.dataset.page === page);
@@ -1173,12 +1181,32 @@ function destroyCharts() {
 }
 
 // ── PLAN LOGIC ────────────────────────────────────────────────
+// NEW: Integrated with subscription enforcement system
 function getPlan() {
+  // Check new subscription system first (from server)
+  if (window.SubscriptionEnforcement && window.SubscriptionEnforcement.getCurrentSubscription) {
+    const currentSub = window.SubscriptionEnforcement.getCurrentSubscription();
+    if (currentSub && currentSub.subscription) {
+      return currentSub.subscription.plan_type || 'free';
+    }
+  }
+  
+  // Fallback to old localStorage system for backward compatibility
   const s = Store.settings();
   return s.plan || 'free';
 }
 
 function getPlanExpiryTime() {
+  // Check new subscription system first (server-verified)
+  if (window.SubscriptionEnforcement && window.SubscriptionEnforcement.getCurrentSubscription) {
+    const currentSub = window.SubscriptionEnforcement.getCurrentSubscription();
+    if (currentSub && currentSub.subscription && currentSub.subscription.expiry_time) {
+      const expiryDate = new Date(currentSub.subscription.expiry_time);
+      return expiryDate.getTime();
+    }
+  }
+  
+  // Fallback to old localStorage system
   const s = Store.settings();
   if (!s.paymentDate || !s.plan || s.plan === 'free') return 0;
 
@@ -1190,6 +1218,8 @@ function getPlanExpiryTime() {
     durationMs = 90 * 24 * 60 * 60 * 1000;
   } else if (s.plan === 'yearly') {
     durationMs = 365 * 24 * 60 * 60 * 1000;
+  } else if (s.plan === 'oneday') {
+    durationMs = 24 * 60 * 60 * 1000;
   }
   return paymentTime + durationMs;
 }
@@ -1201,6 +1231,18 @@ function getPlanExpiry() {
 }
 
 function isPlanActive() {
+  // Check new subscription system first (server-verified, most reliable)
+  if (window.SubscriptionEnforcement && window.SubscriptionEnforcement.getCurrentSubscription) {
+    const currentSub = window.SubscriptionEnforcement.getCurrentSubscription();
+    if (currentSub && currentSub.subscription) {
+      // Plan is active if it's NOT expired and NOT free
+      const isNotFree = currentSub.subscription.plan_type !== 'free';
+      const isNotExpired = !currentSub.subscription.is_expired;
+      return isNotFree && isNotExpired;
+    }
+  }
+  
+  // Fallback to old system for backward compatibility
   const plan = getPlan();
   if (plan === 'free') return false;
   const expiryTime = getPlanExpiryTime();
@@ -4998,6 +5040,16 @@ document.addEventListener('DOMContentLoaded', () => {
     RazorpayPayment.init();
   } else {
     console.warn('⚠️ BOOT: RazorpayPayment not found');
+  }
+
+  // NEW: Initialize subscription enforcement system
+  if (window.SubscriptionEnforcement && typeof window.SubscriptionEnforcement.initialize === 'function') {
+    console.log('🔐 BOOT: Initializing subscription enforcement...');
+    window.SubscriptionEnforcement.initialize().catch(err => {
+      console.error('⚠️  Subscription enforcement init error:', err);
+    });
+  } else {
+    console.warn('⚠️ BOOT: SubscriptionEnforcement not loaded - features may be limited');
   }
 
   // Initialize chatbot
