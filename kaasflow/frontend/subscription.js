@@ -198,16 +198,18 @@
       const limit = this.getClientLimit();
       const plan = this.getCurrentPlan();
       
-      // STRICT: Free plan cannot exceed 20 clients
-      if (plan.id === 'free' && currentClientCount >= 20) {
-        return false;
+      // STRICT: Only paid plans grant unlimited clients
+      // Free tier and expired subscriptions are limited to 20
+      if (plan.id === 'free') {
+        return currentClientCount < 20;
       }
       
-      // Check if expired
-      if (this.isSubscriptionExpired() && currentClientCount >= 20) {
-        return false;
+      // Expired subscription reverts to free tier limit
+      if (this.isSubscriptionExpired()) {
+        return currentClientCount < 20;
       }
       
+      // Paid/active subscriptions allow unlimited clients
       return currentClientCount < limit;
     }
 
@@ -238,10 +240,14 @@
         type: 'subscription'
       };
 
-      // Calculate expiry date
+      // Calculate exact expiry date: add duration days to exact current time
       const startDate = new Date();
       const expiryDate = new Date(startDate);
+      
+      // Add exact days to expiry (accounting for time of day)
       expiryDate.setDate(expiryDate.getDate() + plan.duration);
+      // Set to end of day (23:59:59) for clarity
+      expiryDate.setHours(23, 59, 59, 999);
 
       sub.planId = plan.id;
       sub.startDate = startDate.toISOString();
@@ -395,10 +401,13 @@
         },
 
         onSuccess: (response) => {
-          // Calculate expiry date
+          // Calculate EXACT expiry date: add duration days to current time
           const durationDays = plan.duration || 30;
           const startDate = new Date();
-          const expiryDate = new Date(startDate.getTime() + (durationDays * 24 * 60 * 60 * 1000));
+          const expiryDate = new Date(startDate);
+          expiryDate.setDate(expiryDate.getDate() + durationDays);
+          // Set to end of day for clarity
+          expiryDate.setHours(23, 59, 59, 999);
 
           // IMPORTANT: Store subscription linked to current user's phone/email
           const subscriptionKey = `kf_subscription_${userIdentifier}`;
@@ -477,10 +486,8 @@
             window.KF.refreshCurrentPage();
           }
           
-          // Reload page to reflect changes
-          setTimeout(() => {
-            window.location.reload();
-          }, 2000);
+          // DO NOT auto-reload - let user click to refresh
+          // Only reload if user explicitly navigates or clicks a refresh button
         },
         onError: (err) => {
           console.error('Payment error:', err);
@@ -511,11 +518,80 @@
     checkExpiry() {
       const stats = this.manager.getStats();
       
+      // CRITICAL: If expired, show blocking modal
       if (stats.isExpired) {
-        this.showToast('warning', 'Your subscription has expired. Upgrade to continue adding clients.');
-      } else if (stats.daysRemaining && stats.daysRemaining <= 7) {
+        this.showExpiryModal();
+        return;
+      }
+      
+      // Warn if expiring soon
+      if (stats.daysRemaining && stats.daysRemaining <= 7 && stats.daysRemaining > 0) {
         this.showToast('info', `Your subscription expires in ${stats.daysRemaining} days`);
       }
+    }
+
+    showExpiryModal() {
+      // Check if modal already exists
+      let expiryModal = document.getElementById('subscriptionExpiryModal');
+      
+      if (!expiryModal) {
+        expiryModal = document.createElement('div');
+        expiryModal.id = 'subscriptionExpiryModal';
+        expiryModal.className = 'modal fade';
+        expiryModal.setAttribute('tabindex', '-1');
+        expiryModal.setAttribute('data-bs-backdrop', 'static');
+        expiryModal.setAttribute('data-bs-keyboard', 'false');
+        expiryModal.setAttribute('aria-labelledby', 'expiryModalLabel');
+        expiryModal.setAttribute('aria-hidden', 'true');
+        
+        expiryModal.innerHTML = `
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content kf-modal-content" style="border: 2px solid var(--kf-danger);">
+              <div class="modal-header" style="border-bottom: 1px solid var(--kf-divider);">
+                <h5 class="modal-title" id="expiryModalLabel" style="color: var(--kf-danger);">
+                  <i class="fa-solid fa-triangle-exclamation me-2"></i>Subscription Expired
+                </h5>
+              </div>
+              <div class="modal-body text-center py-4">
+                <div style="font-size: 3rem; color: var(--kf-danger); margin-bottom: 1rem;">
+                  <i class="fa-solid fa-calendar-xmark"></i>
+                </div>
+                <h4 style="margin-bottom: 1rem; color: var(--kf-text);">Your subscription has expired</h4>
+                <p style="color: var(--kf-text-muted); margin-bottom: 1.5rem; font-size: 0.95rem;">
+                  Your premium plan has ended. You can still access your data, but you're limited to <strong>20 clients</strong> as per the free plan.
+                </p>
+                <div style="background: rgba(255, 68, 68, 0.08); border-left: 4px solid var(--kf-danger); padding: 1rem; border-radius: 8px; text-align: left; margin-bottom: 1.5rem; color: var(--kf-text-muted); font-size: 0.85rem;">
+                  <strong>To continue:</strong>
+                  <ul style="margin: 0.5rem 0 0 1.2rem; padding: 0;">
+                    <li>Upgrade to a paid plan for unlimited clients</li>
+                    <li>Use the free plan with up to 20 clients</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="modal-footer" style="border-top: 1px solid var(--kf-divider);">
+                <button type="button" class="btn-kf-outline" data-bs-dismiss="modal" style="border: 1px solid var(--kf-card-border);">
+                  Continue with Free Plan
+                </button>
+                <button type="button" class="btn-kf-primary" id="btn-renew-subscription" style="background: var(--gradient-btn-primary); font-weight: 700;">
+                  <i class="fa-solid fa-crown me-2"></i>Renew Subscription
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+        
+        document.body.appendChild(expiryModal);
+        
+        // Add event listener for renew button
+        expiryModal.querySelector('#btn-renew-subscription').addEventListener('click', () => {
+          const bsModal = bootstrap.Modal.getInstance(expiryModal);
+          if (bsModal) bsModal.hide();
+          this.showUpgradeModal();
+        });
+      }
+      
+      const bsModal = bootstrap.Modal.getOrCreateInstance(expiryModal);
+      bsModal.show();
     }
 
     showUpgradePrompt(currentClientCount) {
@@ -665,7 +741,10 @@
         // Directly activate the plan in local storage and settings for backup VPA payments
         const durationDays = plan.duration || 30;
         const startDate = new Date();
-        const expiryDate = new Date(startDate.getTime() + (durationDays * 24 * 60 * 60 * 1000));
+        const expiryDate = new Date(startDate);
+        expiryDate.setDate(expiryDate.getDate() + durationDays);
+        // Set to end of day for clarity
+        expiryDate.setHours(23, 59, 59, 999);
 
         // 1. Update subscription manager state
         const sub = this.manager.getCurrentSubscription() || {
@@ -793,8 +872,15 @@
                     <strong>${formattedDate}</strong>
                   </div>
                 </div>
-                <button type="button" class="btn-kf-primary w-100 mt-3" data-bs-dismiss="modal">
-                  <i class="fa-solid fa-check me-2"></i>Start Adding Clients
+                <div class="alert alert-info mt-3" style="background: rgba(0, 128, 200, 0.08); border: 1px solid var(--blue-mid); border-radius: 8px; color: var(--kf-text-muted); font-size: 0.85rem;">
+                  <i class="fa-solid fa-info-circle me-2"></i>
+                  <small>Your subscription is now active. Close this and the app will update automatically.</small>
+                </div>
+                <button type="button" class="btn-kf-primary w-100 mt-3" data-bs-dismiss="modal" onclick="window.KFSubscription.ui.manager.syncFromSettings(); if(window.KF && window.KF.refreshCurrentPage) window.KF.refreshCurrentPage();">
+                  <i class="fa-solid fa-check me-2"></i>Continue Using App
+                </button>
+                <button type="button" class="btn-kf-outline w-100 mt-2" onclick="window.location.reload();">
+                  <i class="fa-solid fa-rotate-right me-2"></i>Refresh Page
                 </button>
               </div>
             </div>

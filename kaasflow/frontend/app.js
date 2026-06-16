@@ -159,7 +159,12 @@ const T = {
     supabaseUrl: 'Supabase Project URL',
     supabaseAnonKey: 'Supabase Anon Key',
     fixedMonthlyPayment: 'Fixed Monthly Payment',
-    trialsUsed: 'Trial Clients Used'
+    trialsUsed: 'Trial Clients Used',
+    loanCategory: 'Loan Type',
+    loanWithInterest: 'Amount with Interest',
+    loanWithoutInterest: 'Amount Only',
+    selectLoanCategory: 'Select loan type',
+    loanTypeInfo: 'Choose loan type: with or without interest'
   },
   ta: {
     home: 'முகப்பு', clients: 'வாடிக்கையாளர்கள்',
@@ -275,7 +280,12 @@ const T = {
     supabaseUrl: 'Supabase திட்ட URL',
     supabaseAnonKey: 'Supabase அனாநுரூப விசை',
     fixedMonthlyPayment: 'நிலையான மாதாந்திர கட்டணம்',
-    trialsUsed: 'சோதனை வாடிக்கையாளர்கள் பயன்படுத்தப்பட்டுள்ளனர்'
+    trialsUsed: 'சோதனை வாடிக்கையாளர்கள் பயன்படுத்தப்பட்டுள்ளனர்',
+    loanCategory: 'கடன் வகை',
+    loanWithInterest: 'வட்டி கொண்ட தொகை',
+    loanWithoutInterest: 'தொகை மட்டும்',
+    selectLoanCategory: 'கடன் வகையைத் தேர்ந்தெடுக்கவும்',
+    loanTypeInfo: 'கடன் வகையைத் தேர்ந்தெடுக்கவும்: வட்டி கொண்ட அல்லது இல்லாத'
   }
 };
 
@@ -1771,9 +1781,10 @@ function openClientProfile(clientId) {
     <div class="section-title"><i class="fa-solid fa-money-bill-wave"></i>Loans (${clientLoans.length})</div>
     ${clientLoans.length === 0 ? '<p class="text-muted-kf fs-sm">No loans yet.</p>' : clientLoans.map(l => {
     const stats = calcLoanStats(l);
+    const categoryLabel = l.category === 'without_interest' ? '[No Interest]' : '[With Interest]';
     return `<div class="loan-card ${stats.isOverdue ? 'overdue' : l.status === 'completed' ? 'completed' : ''}" style="margin-bottom:.625rem">
         <div class="loan-card-header">
-          <div>${fmtCur(l.principal)}${l.duration ? ` · ${l.duration}mo` : ''}</div>
+          <div><span style="font-weight:700">${fmtCur(l.principal)}</span> <span style="font-size:0.8rem; color:var(--text-muted);">${categoryLabel}</span>${l.duration ? ` · ${l.duration}mo` : ''}</div>
           <span class="badge-kf ${stats.isOverdue ? 'badge-overdue' : l.status === 'completed' ? 'badge-completed' : 'badge-active'}">${stats.isOverdue ? 'OVERDUE' : l.status.toUpperCase()}</span>
         </div>
         <div class="loan-card-grid">
@@ -1879,13 +1890,15 @@ function renderLoansList(loans, clients) {
     const client = clients.find(c => c.id === l.clientId);
     const statusClass = stats.isOverdue ? 'overdue' : l.status === 'completed' ? 'completed' : l.status === 'closed' ? 'closed' : '';
     const loanIdColor = l.status === 'closed' ? 'color: #ff4444; font-weight: 700;' : '';
+    const categoryLabel = l.category === 'without_interest' ? '(No Interest)' : '(With Interest)';
+    const loanCode = l.category === 'without_interest' ? 'LN-' : 'LI-';
     
     return `
     <div class="loan-card ${statusClass}" data-ocid="loans.item.${i + 1}" data-loan-id="${l.id}">
       <div class="loan-card-header">
-        <div class="loan-card-name" style="display:flex; align-items:center; gap:0.5rem;">
-          <span>${client ? client.name : 'Unknown'}</span>
-          <span style="font-size:0.75rem; ${loanIdColor}">[${l.id.substring(0, 8)}]</span>
+        <div class="loan-card-name" style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+          <span>${client ? client.name : 'Unknown'} <span style="font-size:0.8rem; color:var(--text-muted); font-weight:500;">${categoryLabel}</span></span>
+          <span style="font-size:0.75rem; ${loanIdColor}">[${loanCode}${l.id.substring(0, 6)}]</span>
         </div>
         <span class="badge-kf ${stats.isOverdue ? 'badge-overdue' : l.status === 'completed' ? 'badge-completed' : l.status === 'closed' ? 'badge-completed' : 'badge-active'}">
           ${stats.isOverdue ? 'OVERDUE' : l.status === 'closed' ? 'CLOSED' : l.status.toUpperCase()}
@@ -1947,6 +1960,7 @@ function openLoanInfo(loanId) {
     <div class="kf-card" style="padding:1rem; margin-bottom:1rem; background:rgba(0,0,0,0.02); box-shadow:none;">
       <div class="emi-preview-row"><span>Client</span><strong style="color:var(--color-primary);">${client ? client.name : 'Unknown'}</strong></div>
       <div class="emi-preview-row"><span>Phone</span><strong>${client ? client.phone : 'N/A'}</strong></div>
+      <div class="emi-preview-row"><span>Loan Type</span><strong style="font-weight:700; color:var(--green-light);">${loan.category === 'without_interest' ? 'Amount Only' : 'Amount with Interest'}</strong></div>
       <div class="emi-preview-row"><span>Start Date</span><strong>${fmtDate(loan.startDate)}</strong></div>
     </div>
 
@@ -2043,6 +2057,7 @@ function openLoanModal(clientId = null, loanId = null, loanMode = 'traditional')
     const l = Store.loans().find(x => x.id === loanId);
     if (l) {
       select.value = l.clientId;
+      $('#loan-category').value = l.category || 'with_interest';
       
       if (l.interestType === 'total-amount-mode') {
         $('#loan-mode').value = 'total-amount-with-interest';
@@ -2083,6 +2098,7 @@ function openLoanModal(clientId = null, loanId = null, loanMode = 'traditional')
     }
   } else {
     $('#loan-form').reset();
+    $('#loan-category').value = '';
     if (loanMode === 'total-amount-with-interest') {
       showTotalAmount();
     } else {
@@ -2228,10 +2244,12 @@ function renderCollectionList(loans, clients, todayStr) {
     const paidForThisInst = Math.max(0, stats.totalPaid - (currentInstCount * stats.emi));
     const isPartiallyPaid = paidForThisInst > 0.0001;
     const amountToCollect = isPartiallyPaid ? (stats.emi - paidForThisInst) : stats.emi;
+    const categoryLabel = loan.category === 'without_interest' ? '[No Interest]' : '[With Interest]';
+    const loanCode = loan.category === 'without_interest' ? 'LN-' : 'LI-';
     return `
     <div class="collection-item ${isOverdue ? 'overdue' : ''}" data-ocid="collection.item.${i + 1}">
       <div class="collection-item-header">
-        <div class="collection-item-name">${client ? client.name : 'Unknown'}</div>
+        <div class="collection-item-name">${client ? client.name : 'Unknown'} <span style="font-size:0.75rem; color:var(--text-muted); font-weight:500;">${categoryLabel}</span><br><span style="font-size:0.75rem; color:var(--text-muted);">${loanCode}${loan.id.substring(0, 6)}</span></div>
         <span class="badge-kf ${isOverdue ? 'badge-overdue' : 'badge-pending'}">${isOverdue ? `${stats.daysOverdue}d OVERDUE` : 'DUE'}</span>
       </div>
       <div class="collection-item-meta">
@@ -3027,17 +3045,36 @@ create table if not exists payments (
   $('#btn-clear-data').addEventListener('click', () => {
     state.deleteCallback = () => {
       requirePinToProceed('Clear Data', () => {
+        // PRESERVE PIN before clearing
+        const settings = JSON.parse(localStorage.getItem('kf_settings') || '{}');
+        const appPinHash = settings.appPinHash; // Preserve hashed PIN
+        const appPin = settings.appPin; // Legacy PIN (if any)
+        
+        // Clear specific data
         localStorage.removeItem(LS.clients);
         localStorage.removeItem(LS.loans);
         localStorage.removeItem(LS.payments);
         localStorage.removeItem(LS.recycleBin);
+        
+        // Clear all user data except PIN
+        const clearedSettings = {};
+        
+        // Restore PIN in settings
+        if (appPinHash) {
+          clearedSettings.appPinHash = appPinHash;
+        }
+        if (appPin) {
+          clearedSettings.appPin = appPin;
+        }
+        
+        localStorage.setItem('kf_settings', JSON.stringify(clearedSettings));
+        
         if (window.KFSync) KFSync.backup(true);
-        clearAllUserData();
-        showToast('All data cleared!', 'info');
+        showToast('✅ All data cleared! Your PIN remains intact for security.', 'success');
         navigateTo('home');
       });
     };
-    $('#confirm-delete-msg').textContent = 'Are you sure you want to delete ALL clients, loans and payment data? This cannot be undone.';
+    $('#confirm-delete-msg').textContent = 'Are you sure you want to delete ALL clients, loans and payment data? Your PIN will be preserved for security.';
     $('#confirm-delete-btn').textContent = 'Clear Data';
     const titleEl = $('#confirmDeleteModal .modal-title');
     if (titleEl) titleEl.textContent = 'Confirm Clear Data';
@@ -4430,13 +4467,17 @@ function bindGlobal() {
     const clientId = $('#loan-client-select').value;
     const loanMode = $('#loan-mode').value;
     const type = $('#loan-type').value;
+    const category = $('#loan-category').value;
     const startDate = $('#loan-start-date').value || today();
 
     if (!clientId) {
       showToast('Select a client', 'error'); return;
     }
+    if (!category) {
+      showToast('Select a loan type', 'error'); return;
+    }
 
-    let loanData = { clientId, type, startDate, loanMode };
+    let loanData = { clientId, type, startDate, loanMode, category };
 
     if (loanMode === 'total-amount-with-interest') {
       const totalAmount = parseFloat($('#loan-total-amount').value);
