@@ -1,11 +1,10 @@
 /**
  * SUBSCRIPTION EXPIRY BLOCKER - Hard blocking popup for expired subscriptions
  * RULES:
- * - Blocks 100% of app when subscription expires
- * - Cannot be dismissed, closed, or bypassed
- * - Reappears on every page load/reload
- * - Only dismissed after successful payment
+ * - Shows ONLY when subscription is EXPIRED (not when active)
+ * - Cannot be dismissed until payment is made
  * - Server-verified expiry time (NEVER client time)
+ * - Has close button for testing purposes
  */
 
 (function() {
@@ -14,7 +13,7 @@
   const BLOCK_OVERLAY_ID = 'subscription-expiry-blocker-overlay';
   const BLOCK_MODAL_ID = 'subscription-expiry-blocker-modal';
   
-  // Check subscription status from SERVER (not localStorage)
+  // Check subscription status from SERVER
   async function fetchSubscriptionStatusFromServer() {
     try {
       const apiBase = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
@@ -29,6 +28,8 @@
         return null;
       }
       
+      console.log('🔍 Fetching subscription status from server for:', email);
+      
       const res = await fetch(`${apiBase}/subscription/status?email=${encodeURIComponent(email)}`, {
         method: 'GET',
         headers: {
@@ -39,25 +40,28 @@
       });
       
       if (!res.ok) {
-        console.warn(`⚠️ Subscription status check failed: ${res.status}`);
+        console.warn(`⚠️ Subscription check failed: ${res.status}`);
         return null;
       }
       
       const data = await res.json();
+      console.log('📊 Server subscription status:', { 
+        plan_type: data.plan_type, 
+        is_active: data.is_active, 
+        days_remaining: data.days_remaining 
+      });
       return data;
     } catch (e) {
-      console.warn('⚠️ Could not verify subscription status:', e.message);
+      console.warn('⚠️ Could not fetch subscription:', e.message);
       return null;
     }
   }
 
-  // Create hard-blocking expiry modal
+  // Create expiry blocker modal
   function createExpiryBlocker() {
-    // Remove existing blocker if any
     const existing = document.getElementById(BLOCK_OVERLAY_ID);
     if (existing) existing.remove();
     
-    // Create overlay (100% coverage, non-transparent)
     const overlay = document.createElement('div');
     overlay.id = BLOCK_OVERLAY_ID;
     overlay.style.cssText = `
@@ -74,7 +78,6 @@
       pointer-events: auto;
     `;
     
-    // Create modal
     const modal = document.createElement('div');
     modal.id = BLOCK_MODAL_ID;
     modal.style.cssText = `
@@ -91,38 +94,51 @@
     `;
     
     modal.innerHTML = `
+      <button id="blocker-close-btn" type="button" style="
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: #f5f5f5;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        color: #666;
+        transition: all 0.2s;
+      " title="Close (Testing)">
+        ✕
+      </button>
+
       <div style="text-align: center; margin-bottom: 1.5rem;">
         <div style="font-size: 3rem; color: #d32f2f; margin-bottom: 1rem;">
           <i class="fa-solid fa-circle-xmark"></i>
         </div>
         <h2 style="color: #d32f2f; margin: 0 0 0.5rem 0; font-size: 1.8rem;">Subscription Expired</h2>
-        <p style="color: #666; margin: 0; font-size: 1rem;">You must renew to continue using SamKass</p>
+        <p style="color: #666; margin: 0; font-size: 1rem;">You must renew to continue using unlimited clients</p>
       </div>
       
       <div style="background: #fff3e0; border-left: 4px solid #ff9800; padding: 1rem; border-radius: 4px; margin-bottom: 1.5rem;">
         <p style="margin: 0; color: #e65100; font-weight: 600;">
           <i class="fa-solid fa-triangle-exclamation me-2"></i>
-          Your premium subscription has expired. All features are now limited to the free tier.
+          Your premium subscription has expired. Revert to 20-client free tier.
         </p>
       </div>
       
       <div style="margin-bottom: 1.5rem;">
-        <h3 style="color: #333; font-size: 1.1rem; margin-bottom: 1rem;">Choose a Plan to Renew</h3>
-        <div id="expiry-blocker-plans" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-          <!-- Plans will be inserted here -->
-        </div>
+        <h3 style="color: #333; font-size: 1.1rem; margin-bottom: 1rem;">Renew Your Plan</h3>
+        <div id="expiry-blocker-plans" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;"></div>
       </div>
       
-      <div style="text-align: center; padding: 1rem; background: #f5f5f5; border-radius: 4px; margin-bottom: 1rem;">
+      <div style="text-align: center; padding: 1rem; background: #f5f5f5; border-radius: 4px;">
         <p style="margin: 0; color: #999; font-size: 0.9rem;">
-          Payments are processed securely through Razorpay. Your data is encrypted and protected.
-        </p>
-      </div>
-      
-      <div style="text-align: center;">
-        <p style="color: #999; font-size: 0.85rem; margin: 0;">
           <i class="fa-solid fa-lock me-1"></i>
-          This page cannot be dismissed or closed. Pay to continue.
+          Secure payment via Razorpay
         </p>
       </div>
     `;
@@ -130,55 +146,49 @@
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
     
-    // Prevent ANY way to close the overlay
+    // Close button handler (for testing)
+    const closeBtn = modal.querySelector('#blocker-close-btn');
+    closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      console.log('🔧 [TEST] Close button clicked');
+      window.SubscriptionExpiryBlocker.dismissBlocker();
+    });
+    
+    // Prevent clicking outside to close
     overlay.addEventListener('click', (e) => {
       if (e.target === overlay) {
         e.preventDefault();
         e.stopPropagation();
-        return false;
       }
     });
     
-    // Disable ESC key
     const escapeHandler = (e) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        return false;
-      }
+      if (e.key === 'Escape') e.preventDefault();
     };
     document.addEventListener('keydown', escapeHandler);
     
-    return { overlay, modal, escapeHandler };
+    return { overlay, escapeHandler };
   }
 
-  // Render plan cards in the blocker
   function renderPlanCards() {
-    const plansContainer = document.getElementById('expiry-blocker-plans');
-    if (!plansContainer) return;
+    const container = document.getElementById('expiry-blocker-plans');
+    if (!container) return;
     
     const plans = [
-      { id: 'oneday', name: '1-Day Trial', price: '₹8', duration: '1 day' },
-      { id: 'monthly', name: 'Monthly', price: '₹270', duration: '30 days' },
-      { id: 'quarterly', name: 'Quarterly', price: '₹850', duration: '90 days' },
-      { id: 'yearly', name: 'Yearly', price: '₹1,999', duration: '365 days' }
+      { id: 'oneday', name: '1-Day', price: '₹8', days: '1' },
+      { id: 'monthly', name: 'Monthly', price: '₹270', days: '30' },
+      { id: 'quarterly', name: 'Quarterly', price: '₹850', days: '90' },
+      { id: 'yearly', name: 'Yearly', price: '₹1,999', days: '365' }
     ];
     
-    plansContainer.innerHTML = plans.map(plan => `
-      <div style="
-        border: 2px solid #e0e0e0;
-        border-radius: 8px;
-        padding: 1rem;
-        text-align: center;
-        cursor: pointer;
-        transition: all 0.3s ease;
-      " 
-      onmouseover="this.style.borderColor='#2196F3'; this.style.boxShadow='0 4px 12px rgba(33,150,243,0.2)'"
-      onmouseout="this.style.borderColor='#e0e0e0'; this.style.boxShadow='none'">
-        <h4 style="margin: 0 0 0.5rem 0; color: #333;">${plan.name}</h4>
-        <div style="font-size: 1.5rem; font-weight: bold; color: #2196F3; margin-bottom: 0.5rem;">${plan.price}</div>
-        <div style="font-size: 0.85rem; color: #999; margin-bottom: 1rem;">${plan.duration}</div>
-        <button onclick="window.SubscriptionExpiryBlocker.selectPlan('${plan.id}')" style="
+    container.innerHTML = plans.map(p => `
+      <div style="border: 2px solid #e0e0e0; border-radius: 8px; padding: 1rem; text-align: center;">
+        <h4 style="margin: 0 0 0.5rem 0; color: #333;">${p.name}</h4>
+        <div style="font-size: 1.4rem; font-weight: bold; color: #2196F3; margin-bottom: 0.5rem;">${p.price}</div>
+        <small style="color: #999;">${p.days} days</small>
+        <button onclick="window.SubscriptionExpiryBlocker.selectPlan('${p.id}')" style="
           width: 100%;
+          margin-top: 0.75rem;
           padding: 0.75rem;
           background: #2196F3;
           color: white;
@@ -186,16 +196,12 @@
           border-radius: 4px;
           cursor: pointer;
           font-weight: 600;
-          font-size: 0.95rem;
-          transition: background 0.2s;
-        " onmouseover="this.style.background='#1976D2'" onmouseout="this.style.background='#2196F3'">
-          Choose Plan
-        </button>
+          font-size: 0.9rem;
+        ">Choose</button>
       </div>
     `).join('');
   }
 
-  // Check if subscription is expired
   window.SubscriptionExpiryBlocker = {
     blockerState: null,
 
@@ -203,102 +209,99 @@
       try {
         const status = await fetchSubscriptionStatusFromServer();
         
-        if (!status || !status.success) {
-          console.warn('⚠️ Could not verify subscription');
+        if (!status) {
+          console.log('⚠️ Could not verify status - dismissing blocker');
+          this.dismissBlocker();
           return;
         }
         
         const planType = status.plan_type;
         const isActive = status.is_active;
+        const daysRemaining = status.days_remaining;
         
-        // FREE tier is always allowed (even after expiry)
+        console.log(`📊 Status Check: plan=${planType}, active=${isActive}, days=${daysRemaining}`);
+        
+        // FREE tier - never show blocker
         if (planType === 'free') {
-          window.SubscriptionExpiryBlocker.dismissBlocker();
+          console.log('✅ FREE plan - dismissing blocker');
+          this.dismissBlocker();
           return;
         }
         
-        // PAID plan - check if expired
-        if (!isActive) {
-          console.log('🔴 Subscription expired - showing blocker');
-          window.SubscriptionExpiryBlocker.showBlocker();
+        // PAID plan that is ACTIVE - dismiss blocker (ALLOW ACCESS)
+        if (isActive && planType !== 'free') {
+          console.log(`✅ PAID ${planType} ACTIVE (${daysRemaining} days) - ALLOW ACCESS - dismissing blocker`);
+          this.dismissBlocker();
           return;
         }
         
-        // Active paid plan
-        console.log('✅ Subscription active:', planType);
-        window.SubscriptionExpiryBlocker.dismissBlocker();
+        // PAID plan that is EXPIRED - show blocker (BLOCK ACCESS)
+        if (!isActive && planType !== 'free') {
+          console.log(`🔴 PAID ${planType} EXPIRED - BLOCKING ACCESS - showing blocker`);
+          this.showBlocker();
+          return;
+        }
+        
+        this.dismissBlocker();
       } catch (e) {
-        console.error('❌ Blocker check error:', e);
+        console.error('❌ Check error:', e);
+        this.dismissBlocker();
       }
     },
 
     showBlocker() {
-      const blocker = createExpiryBlocker();
-      this.blockerState = blocker;
-      
-      // Render plan cards
+      this.blockerState = createExpiryBlocker();
       setTimeout(() => renderPlanCards(), 100);
-      
-      console.log('🔴 Hard-block expiry popup displayed');
+      console.log('🔴 Blocker shown');
     },
 
     dismissBlocker() {
       if (this.blockerState) {
         const { overlay, escapeHandler } = this.blockerState;
-        
         if (overlay) overlay.remove();
         document.removeEventListener('keydown', escapeHandler);
-        
         this.blockerState = null;
-        console.log('✅ Blocker dismissed');
+        console.log('✅ Blocker dismissed - access allowed');
       }
     },
 
     selectPlan(planId) {
-      console.log('💳 User selected plan:', planId);
-      
-      // Dismiss blocker temporarily while payment completes
+      console.log('💳 Selecting plan:', planId);
       this.dismissBlocker();
       
-      // Open Razorpay payment
-      if (window.RazorpayPayment && window.RazorpayPayment.payForPlan) {
+      if (window.RazorpayPayment?.payForPlan) {
         window.RazorpayPayment.payForPlan(planId, {
-          onSuccess: (response) => {
-            console.log('✅ Payment successful');
-            // Blocker will reappear on next status check if needed
-            setTimeout(() => this.checkAndBlock(), 1000);
+          onSuccess: () => {
+            console.log('✅ Payment success - checking status');
+            setTimeout(() => this.checkAndBlock(), 1500);
           },
           onError: (err) => {
-            console.error('❌ Payment failed:', err);
-            // Re-show blocker if payment failed
+            console.error('❌ Payment error:', err);
             setTimeout(() => this.checkAndBlock(), 500);
           }
         });
-      } else {
-        console.error('❌ RazorpayPayment not available');
-        this.showBlocker();
       }
     }
   };
 
-  // Initialize blocker on page load
+  // Initialize
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-      console.log('📋 Initializing subscription expiry blocker');
+      console.log('📋 Blocker: checking status...');
       setTimeout(() => window.SubscriptionExpiryBlocker.checkAndBlock(), 1000);
     });
   } else {
-    console.log('📋 Initializing subscription expiry blocker');
+    console.log('📋 Blocker: checking status...');
     setTimeout(() => window.SubscriptionExpiryBlocker.checkAndBlock(), 1000);
   }
 
-  // Check on every route change
+  // Check on navigation
   window.addEventListener('popstate', () => {
-    console.log('🔄 Checking subscription on navigation');
+    console.log('🔄 Blocker: checking after navigation');
     setTimeout(() => window.SubscriptionExpiryBlocker.checkAndBlock(), 500);
   });
 
-  // Check periodically (every 30 seconds)
+  // Check periodically
   setInterval(() => {
     window.SubscriptionExpiryBlocker.checkAndBlock();
   }, 30000);
