@@ -1208,6 +1208,13 @@ function isPlanActive() {
 }
 
 function canAddClient() {
+  // Use the subscription manager for accurate plan status
+  if (window.KFSubscription && window.KFSubscription.manager) {
+    const currentCount = Store.clients().length;
+    return window.KFSubscription.manager.canAddClient(currentCount);
+  }
+  
+  // Fallback to old logic if subscription manager not ready
   if (isPlanActive()) return true;
   return Store.clients().length < 20;
 }
@@ -1661,7 +1668,12 @@ function renderClients(container) {
 
   $('#btn-add-client').addEventListener('click', () => {
     if (!canAddClient()) {
-      bootstrap.Modal.getOrCreateInstance($('#upgradeModal')).show();
+      // Show upgrade modal - this will persist until user makes payment
+      if (window.KFSubscription && window.KFSubscription.ui) {
+        window.KFSubscription.ui.showUpgradeModal();
+      } else {
+        bootstrap.Modal.getOrCreateInstance($('#upgradeModal')).show();
+      }
     } else {
       openClientModal();
     }
