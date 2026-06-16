@@ -281,18 +281,6 @@ const RazorpayPayment = {
 
           if (verification.success && verification.plan_activated) {
             console.log('🎉 Plan activated!');
-            
-            // Show receipt popup with download option
-            if (window.PaymentReceiptHandler && window.PaymentReceiptHandler.showReceiptPopup) {
-              window.PaymentReceiptHandler.showReceiptPopup({
-                plan_name: options.description || 'Premium Plan',
-                plan_type: options.planType,
-                payment_id: response.razorpay_payment_id,
-                amount: orderData.amount,
-                payment_time: new Date().toISOString()
-              });
-            }
-            
             options.onSuccess?.({
               razorpay_payment_id: response.razorpay_payment_id,
               subscription: verification.subscription,
@@ -301,19 +289,8 @@ const RazorpayPayment = {
             });
           } else {
             // Even if backend verification fails, payment was captured by Razorpay
+            // Still treat as success for the user
             console.warn('⚠️ Backend verification issue, but payment captured');
-            
-            // Still show receipt
-            if (window.PaymentReceiptHandler && window.PaymentReceiptHandler.showReceiptPopup) {
-              window.PaymentReceiptHandler.showReceiptPopup({
-                plan_name: options.description || 'Premium Plan',
-                plan_type: options.planType,
-                payment_id: response.razorpay_payment_id,
-                amount: orderData.amount,
-                payment_time: new Date().toISOString()
-              });
-            }
-            
             options.onSuccess?.({
               razorpay_payment_id: response.razorpay_payment_id,
               subscription: null,
@@ -323,18 +300,7 @@ const RazorpayPayment = {
           }
         } catch (e) {
           console.error('❌ Handler error:', e);
-          
           // Payment was still captured by Razorpay even if our handler fails
-          if (window.PaymentReceiptHandler && window.PaymentReceiptHandler.showReceiptPopup) {
-            window.PaymentReceiptHandler.showReceiptPopup({
-              plan_name: options.description || 'Premium Plan',
-              plan_type: options.planType,
-              payment_id: response.razorpay_payment_id,
-              amount: orderData.amount,
-              payment_time: new Date().toISOString()
-            });
-          }
-          
           options.onSuccess?.({
             razorpay_payment_id: response.razorpay_payment_id,
             subscription: null,

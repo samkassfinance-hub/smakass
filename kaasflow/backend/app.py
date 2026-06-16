@@ -34,7 +34,7 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
 from auth.routes import auth_bp
 from razorpay_integration import payment_routes
 from routes.whatsapp_routes import whatsapp_bp
-from subscription_routes import register_subscription_routes
+from routes.subscription_routes import subscription_bp
 
 import os
 from supabase import create_client, Client
@@ -56,11 +56,11 @@ if SUPABASE_URL and SUPABASE_KEY:
 app.register_blueprint(auth_bp, url_prefix='/api')
 app.register_blueprint(auth_bp, url_prefix='/auth', name='auth_prefix')
 
+# Register subscription routes
+app.register_blueprint(subscription_bp, url_prefix='/api')
+
 # Register payment routes
 payment_routes(app)
-
-# Register subscription routes
-register_subscription_routes(app)
 
 # Register WhatsApp routes
 app.register_blueprint(whatsapp_bp, url_prefix='/api')

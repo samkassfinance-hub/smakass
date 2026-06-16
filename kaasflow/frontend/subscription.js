@@ -488,11 +488,6 @@
           
           // DO NOT auto-reload - let user click to refresh
           // Only reload if user explicitly navigates or clicks a refresh button
-          
-          // Trigger subscription change event for other components
-          if (window.onSubscriptionChange) {
-            window.onSubscriptionChange();
-          }
         },
         onError: (err) => {
           console.error('Payment error:', err);
@@ -881,7 +876,7 @@
                   <i class="fa-solid fa-info-circle me-2"></i>
                   <small>Your subscription is now active. Close this and the app will update automatically.</small>
                 </div>
-                <button type="button" class="btn-kf-primary w-100 mt-3" data-bs-dismiss="modal" onclick="if(window.onSubscriptionChange) window.onSubscriptionChange(); window.KFSubscription.manager.syncFromSettings(); if(window.KF && window.KF.refreshCurrentPage) window.KF.refreshCurrentPage();">
+                <button type="button" class="btn-kf-primary w-100 mt-3" data-bs-dismiss="modal" onclick="window.KFSubscription.ui.manager.syncFromSettings(); if(window.KF && window.KF.refreshCurrentPage) window.KF.refreshCurrentPage();">
                   <i class="fa-solid fa-check me-2"></i>Continue Using App
                 </button>
                 <button type="button" class="btn-kf-outline w-100 mt-2" onclick="window.location.reload();">
