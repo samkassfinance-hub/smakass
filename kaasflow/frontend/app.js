@@ -498,9 +498,21 @@ const Store = {
   settings: () => Store.getObj('settings'),
   session: () => Store.getObj('session'),
   saveClients: v => {
-    if (!isPlanActive() && v.length > 20) {
+    // Check if plan is active using subscription manager
+    let planActive = false;
+    if (window.KFSubscription && window.KFSubscription.manager) {
+      const sub = window.KFSubscription.manager.getCurrentSubscription();
+      planActive = !window.KFSubscription.manager.isSubscriptionExpired() && sub.planId !== 'free';
+    } else {
+      // Fallback to old logic
+      planActive = isPlanActive();
+    }
+
+    // Only block if free plan AND trying to add more than 20 clients
+    if (!planActive && v.length > 20) {
       const existing = Store.get('clients') || [];
       if (v.length > existing.length && existing.length >= 20) {
+        console.warn('⚠️ Free plan limit: Cannot add more than 20 clients');
         return; // Absolute firewall: do not allow saving more than the limit on free tier
       }
     }
@@ -1633,20 +1645,32 @@ function renderClients(container) {
   const clients = Store.clients();
   const loans = Store.loans();
 
-  const plan = getPlan();
-  const isFree = plan === 'free' || !isPlanActive();
-  const clientsCount = clients.length;
-  const s = Store.settings();
-  const limit = FREE_CLIENT_LIMIT + (s.extraClients || 0);
-
-  const usageIndicator = isFree ? `<div style="font-size: 0.85rem; color: ${clientsCount >= limit ? 'var(--kf-danger)' : 'var(--kf-text-muted)'}; font-weight: 600; margin-top: 4px;"><i class="fa-solid fa-chart-pie me-1"></i>${clientsCount} / ${limit} Trial Clients Used</div>` : '';
+  // Get subscription info
+  let subscriptionInfo = '';
+  if (window.KFSubscription && window.KFSubscription.manager) {
+    const stats = window.KFSubscription.manager.getStats();
+    const plan = window.KFSubscription.manager.getCurrentPlan();
+    
+    if (plan.id !== 'free') {
+      // Show subscription active with expiry
+      if (stats.isExpired) {
+        subscriptionInfo = `<div style="font-size: 0.85rem; color: var(--kf-danger); font-weight: 600; margin-top: 4px;"><i class="fa-solid fa-crown me-1" style="color: var(--kf-danger);"></i>Subscription Expired - Upgrade to add more</div>`;
+      } else {
+        subscriptionInfo = `<div style="font-size: 0.85rem; color: var(--color-success); font-weight: 600; margin-top: 4px;"><i class="fa-solid fa-crown me-1"></i>${stats.planName} - ${stats.daysRemaining} days left</div>`;
+      }
+    } else {
+      // Free plan - show usage
+      const clientsCount = clients.length;
+      subscriptionInfo = `<div style="font-size: 0.85rem; color: ${clientsCount >= 20 ? 'var(--kf-danger)' : 'var(--kf-text-muted)'}; font-weight: 600; margin-top: 4px;"><i class="fa-solid fa-chart-pie me-1"></i>${clientsCount} / 20 Free Clients Used</div>`;
+    }
+  }
 
   container.innerHTML = `
     <div class="page-section" data-ocid="clients.page">
       <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
         <div>
           <div class="page-title mb-0"><i class="fa-solid fa-users"></i>${t('clients')}</div>
-          ${usageIndicator}
+          ${subscriptionInfo}
         </div>
         <button class="btn-kf-primary mt-1" id="btn-add-client" data-ocid="clients.add_button" style="white-space: nowrap;">
           <i class="fa-solid fa-plus me-1"></i>${t('addClient')}
@@ -4458,18 +4482,35 @@ function bindGlobal() {
         clients[idx] = { ...clients[idx], name, phone, address: $('#client-address').value.trim(), idNum: $('#client-id-num').value.trim(), occupation: $('#client-occupation').value.trim() };
       }
     } else {
+      // Check if can add new client
       if (!canAddClient()) {
         const modal = bootstrap.Modal.getInstance($('#clientModal'));
         if (modal) modal.hide();
-        bootstrap.Modal.getOrCreateInstance($('#upgradeModal')).show();
+        
+        // Show upgrade modal with plan info
+        if (window.KFSubscription && window.KFSubscription.ui) {
+          window.KFSubscription.ui.showUpgradePrompt(clients.length);
+        } else {
+          bootstrap.Modal.getOrCreateInstance($('#upgradeModal')).show();
+        }
+        showToast('Upgrade to add more clients', 'info');
         return;
       }
       const newClient = { id: uid(), name, phone, address: $('#client-address').value.trim(), idNum: $('#client-id-num').value.trim(), occupation: $('#client-occupation').value.trim(), createdAt: today() };
       clients.push(newClient);
     }
+    
+    // Save clients - will use subscription manager for validation
     Store.saveClients(clients);
-    bootstrap.Modal.getInstance($('#clientModal'))?.hide();
-    showToast(editId ? 'Client updated!' : 'Client added!', 'success');
+    
+    // Verify save was successful
+    if (Store.clients().length === clients.length) {
+      bootstrap.Modal.getInstance($('#clientModal'))?.hide();
+      showToast(editId ? 'Client updated!' : 'Client added!', 'success');
+    } else {
+      console.error('❌ Client save failed - subscription limit or storage issue');
+      showToast('Could not save client. Check if limit reached.', 'error');
+    }
     if (state.page === 'clients') navigateTo('clients');
   });
 
