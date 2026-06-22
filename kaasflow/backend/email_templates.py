@@ -6,17 +6,20 @@ Professional HTML emails with founder's message
 def get_welcome_email_html(user_name):
     """
     Generate welcome email with founder's message
+    Optimized to avoid spam filters
     """
     return f"""
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Welcome to SamKass Finance Manager</title>
     <style>
-        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; }}
-        .container {{ max-width: 600px; margin: 0 auto; background: #fff; }}
-        .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px 20px; text-align: center; }}
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }}
+        .container {{ max-width: 600px; margin: 0 auto; background: #ffffff; }}
+        .header {{ background: #667eea; color: white; padding: 30px 20px; text-align: center; }}
         .header h1 {{ margin: 0; font-size: 28px; font-weight: 600; }}
         .header p {{ margin: 5px 0 0 0; font-size: 14px; opacity: 0.9; }}
         .content {{ padding: 30px 20px; }}

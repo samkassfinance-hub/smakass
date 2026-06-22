@@ -13,11 +13,11 @@ from .rate_limiter import check_rate_limit, record_failed_attempt, clear_attempt
 
 # Import enhanced email service
 try:
-    from auth_email_service import email_service
-    USE_NEW_EMAIL_SERVICE = True
+    from email_service_improved import email_service_improved
+    USE_IMPROVED_EMAIL_SERVICE = True
 except ImportError:
-    USE_NEW_EMAIL_SERVICE = False
-    email_service = None
+    USE_IMPROVED_EMAIL_SERVICE = False
+    email_service_improved = None
 
 auth_bp = Blueprint('pro_auth', __name__)
 
@@ -284,17 +284,19 @@ def register():
     conn.close()
     
     try:
-        # Use new email service if available
-        if USE_NEW_EMAIL_SERVICE and email_service:
-            result = email_service.send_welcome_email(email, name)
+        # Use improved email service to avoid spam
+        if USE_IMPROVED_EMAIL_SERVICE and email_service_improved:
+            result = email_service_improved.send_welcome_email_improved(email, name)
             if result["success"]:
-                print(f"✅ Welcome email sent to {email}")
+                print(f"✅ Welcome email sent to {email} (ID: {result['email_id']})")
             else:
                 print(f"⚠️  Welcome email failed: {result.get('error')}")
         else:
+            # Fallback to old method
             send_welcome_email(email, name)
     except Exception as e:
         print(f"Error sending welcome email: {e}")
+        # Don't fail registration if email fails
         
     return create_auth_response(user)
 
@@ -441,9 +443,9 @@ def send_forgot_pin_otp():
         'expires_at': datetime.datetime.now() + datetime.timedelta(minutes=10)
     }
     
-    # Try to send OTP email using new service first
-    if USE_NEW_EMAIL_SERVICE and email_service:
-        result = email_service.send_otp_email(email, otp)
+    # Try improved email service first (avoids spam)
+    if USE_IMPROVED_EMAIL_SERVICE and email_service_improved:
+        result = email_service_improved.send_otp_email_improved(email, otp)
         if result["success"]:
             print(f"✅ OTP email sent to {email} (Email ID: {result['email_id']})")
         else:
