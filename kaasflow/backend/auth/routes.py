@@ -11,13 +11,13 @@ from .password_handler import hash_password, verify_password
 from .magic_link import generate_magic_link_token, verify_magic_link_token
 from .rate_limiter import check_rate_limit, record_failed_attempt, clear_attempts
 
-# Import enhanced email service
+# Import advanced email service
 try:
-    from email_service_improved import email_service_improved
-    USE_IMPROVED_EMAIL_SERVICE = True
+    from email_service_advanced import email_service_advanced
+    USE_ADVANCED_EMAIL_SERVICE = True
 except ImportError:
-    USE_IMPROVED_EMAIL_SERVICE = False
-    email_service_improved = None
+    USE_ADVANCED_EMAIL_SERVICE = False
+    email_service_advanced = None
 
 auth_bp = Blueprint('pro_auth', __name__)
 
@@ -196,33 +196,44 @@ def send_email(to_email, subject, body):
         return False
 
 def send_welcome_email(email, name):
-    name_str = name if name else "Valued Member"
-    subject = "Welcome to SamKass! 🎉"
-    body = f"""
-    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff; color: #1e293b;">
-        <div style="text-align: center; margin-bottom: 24px;">
-            <h1 style="color: #10b981; margin: 0; font-size: 28px;">Welcome to SamKass! 🚀</h1>
-            <p style="color: #64748b; font-size: 16px; margin-top: 8px;">Your Finance & Loan Management Workspace is Ready</p>
+    """Send welcome email using advanced service"""
+    if USE_ADVANCED_EMAIL_SERVICE and email_service_advanced:
+        result = email_service_advanced.send_welcome_email(email, name)
+        if result.get("success"):
+            print(f"✅ Welcome email sent to {email} (ID: {result.get('email_id')})")
+            return True
+        else:
+            print(f"⚠️  Welcome email failed: {result.get('error')}")
+            return False
+    else:
+        # Fallback to old method
+        name_str = name if name else "Valued Member"
+        subject = "Welcome to SamKass! 🎉"
+        body = f"""
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff; color: #1e293b;">
+            <div style="text-align: center; margin-bottom: 24px;">
+                <h1 style="color: #10b981; margin: 0; font-size: 28px;">Welcome to SamKass! 🚀</h1>
+                <p style="color: #64748b; font-size: 16px; margin-top: 8px;">Your Finance & Loan Management Workspace is Ready</p>
+            </div>
+            <p>Hello <strong>{name_str}</strong>,</p>
+            <p>Thank you for registering at SamKass! We're excited to help you manage your ledgers, client profiles, interest tracking, and payments seamlessly.</p>
+            <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981;">
+                <h3 style="margin-top: 0; color: #0f172a;">Getting Started Tips:</h3>
+                <ul style="padding-left: 20px; margin-bottom: 0;">
+                    <li>Add your first client under the <strong>Clients</strong> tab.</li>
+                    <li>Create a loan ledger to track payments and interest automatically.</li>
+                    <li>Go to <strong>Settings</strong> to customize your app preferences.</li>
+                </ul>
+            </div>
+            <p>If you ever need help or have any suggestions, feel free to reach out to us!</p>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
+            <p style="font-size: 14px; color: #64748b; text-align: center; margin-bottom: 0;">
+                This is an automated welcome email. Welcome aboard!<br>
+                <strong>— The SamKass Team</strong>
+            </p>
         </div>
-        <p>Hello <strong>{name_str}</strong>,</p>
-        <p>Thank you for registering at SamKass! We're excited to help you manage your ledgers, client profiles, interest tracking, and payments seamlessly.</p>
-        <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981;">
-            <h3 style="margin-top: 0; color: #0f172a;">Getting Started Tips:</h3>
-            <ul style="padding-left: 20px; margin-bottom: 0;">
-                <li>Add your first client under the <strong>Clients</strong> tab.</li>
-                <li>Create a loan ledger to track payments and interest automatically.</li>
-                <li>Go to <strong>Settings</strong> to customize your app preferences.</li>
-            </ul>
-        </div>
-        <p>If you ever need help or have any suggestions, feel free to reach out to us!</p>
-        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
-        <p style="font-size: 14px; color: #64748b; text-align: center; margin-bottom: 0;">
-            This is an automated welcome email. Welcome aboard!<br>
-            <strong>— The SamKass Team</strong>
-        </p>
-    </div>
-    """
-    return send_email(email, subject, body)
+        """
+        return send_email(email, subject, body)
 
 @auth_bp.route('/google', methods=['POST'])
 def google_auth():
@@ -284,11 +295,11 @@ def register():
     conn.close()
     
     try:
-        # Use improved email service to avoid spam
-        if USE_IMPROVED_EMAIL_SERVICE and email_service_improved:
-            result = email_service_improved.send_welcome_email_improved(email, name)
-            if result["success"]:
-                print(f"✅ Welcome email sent to {email} (ID: {result['email_id']})")
+        # Use advanced email service (custom domain + Resend fallback)
+        if USE_ADVANCED_EMAIL_SERVICE and email_service_advanced:
+            result = email_service_advanced.send_welcome_email(email, name)
+            if result.get("success"):
+                print(f"✅ Welcome email sent to {email} (ID: {result.get('email_id')})")
             else:
                 print(f"⚠️  Welcome email failed: {result.get('error')}")
         else:
@@ -347,29 +358,35 @@ def forgot_password_send_otp():
         'expires_at': datetime.datetime.now() + datetime.timedelta(minutes=10)
     }
     
-    subject = "Reset your SamKass Password 🔒"
-    body = f"""
-    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff; color: #1e293b;">
-        <div style="text-align: center; margin-bottom: 24px;">
-            <h1 style="color: #10b981; margin: 0; font-size: 28px;">Password Reset Request</h1>
-            <p style="color: #64748b; font-size: 16px; margin-top: 8px;">Your verification code</p>
-        </div>
-        <p>Hello,</p>
-        <p>We received a request to reset your SamKass account password. Use the OTP below to proceed:</p>
-        <div style="text-align: center; margin: 30px 0;">
-            <div style="background-color: #f1f5f9; border: 2px dashed #cbd5e1; color: #334155; padding: 15px; font-size: 32px; font-weight: bold; letter-spacing: 5px; border-radius: 8px; display: inline-block;">
-                {otp}
+    # Use advanced email service
+    if USE_ADVANCED_EMAIL_SERVICE and email_service_advanced:
+        result = email_service_advanced.send_password_reset_otp(email, otp)
+        print(f"Password reset OTP sent to {email}")
+    else:
+        # Fallback to old method
+        subject = "Reset your SamKass Password 🔒"
+        body = f"""
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff; color: #1e293b;">
+            <div style="text-align: center; margin-bottom: 24px;">
+                <h1 style="color: #10b981; margin: 0; font-size: 28px;">Password Reset Request</h1>
+                <p style="color: #64748b; font-size: 16px; margin-top: 8px;">Your verification code</p>
             </div>
+            <p>Hello,</p>
+            <p>We received a request to reset your SamKass account password. Use the OTP below to proceed:</p>
+            <div style="text-align: center; margin: 30px 0;">
+                <div style="background-color: #f1f5f9; border: 2px dashed #cbd5e1; color: #334155; padding: 15px; font-size: 32px; font-weight: bold; letter-spacing: 5px; border-radius: 8px; display: inline-block;">
+                    {otp}
+                </div>
+            </div>
+            <p style="font-size: 14px; color: #64748b;">This OTP will expire in 10 minutes. If you did not request this, you can safely ignore this email.</p>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
+            <p style="font-size: 14px; color: #64748b; text-align: center; margin-bottom: 0;">
+                <strong>— The SamKass Team</strong>
+            </p>
         </div>
-        <p style="font-size: 14px; color: #64748b;">This OTP will expire in 10 minutes. If you did not request this, you can safely ignore this email.</p>
-        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
-        <p style="font-size: 14px; color: #64748b; text-align: center; margin-bottom: 0;">
-            <strong>— The SamKass Team</strong>
-        </p>
-    </div>
-    """
-    
-    email_sent = send_email(email, subject, body)
+        """
+        
+        email_sent = send_email(email, subject, body)
     
     # Always return success to user (security best practice)
     return jsonify({'success': True, 'message': 'OTP sent to your email. Check your inbox and spam folder.'})
@@ -443,15 +460,12 @@ def send_forgot_pin_otp():
         'expires_at': datetime.datetime.now() + datetime.timedelta(minutes=10)
     }
     
-    # Try improved email service first (avoids spam)
-    if USE_IMPROVED_EMAIL_SERVICE and email_service_improved:
-        result = email_service_improved.send_otp_email_improved(email, otp)
-        if result["success"]:
-            print(f"✅ OTP email sent to {email} (Email ID: {result['email_id']})")
-        else:
-            print(f"⚠️  OTP email failed: {result.get('error')}")
+    # Use advanced email service (custom domain + Resend fallback)
+    if USE_ADVANCED_EMAIL_SERVICE and email_service_advanced:
+        result = email_service_advanced.send_pin_reset_otp(email, otp)
+        print(f"PIN reset OTP sent to {email}")
     else:
-        # Fallback to old email method
+        # Fallback to old method
         subject = "Reset your SamKass Security PIN 🔒"
         body = f"""
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff; color: #1e293b;">

@@ -36,23 +36,13 @@ from razorpay_integration import payment_routes
 from routes.whatsapp_routes import whatsapp_bp
 from routes.subscription_routes import subscription_bp
 
-import os
-from supabase import create_client, Client
 from auth.jwt_handler import decode_token
 from flask import request, jsonify
+from supabase_client import supabase_service, SupabaseManager
 
-# Initialize Supabase Client
-SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY") or os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
-
-supabase: Client = None
-if SUPABASE_URL and SUPABASE_KEY:
-    try:
-        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-        print("Supabase client initialized successfully.")
-    except Exception as e:
-        print(f"Warning: Failed to initialize Supabase client: {e}")
-        supabase = None
+# Initialize Supabase Manager
+sb_manager = SupabaseManager()
+supabase = sb_manager.client
 app.register_blueprint(auth_bp, url_prefix='/api')
 app.register_blueprint(auth_bp, url_prefix='/auth', name='auth_prefix')
 

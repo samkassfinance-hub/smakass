@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Complete Test for Email Integration
-Tests welcome emails, OTP emails, and auth flow
+Test Email Integration
+Tests welcome email, password reset OTP, and PIN reset OTP
 """
 
 import os
@@ -10,164 +10,217 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-print("\n" + "=" * 90)
-print("🧪 SAMKASS EMAIL INTEGRATION TEST SUITE")
-print("=" * 90)
+from email_service_advanced import email_service_advanced
 
-# ============================================================================
-# TEST 1: Check Environment Variables
-# ============================================================================
 
-print("\n📋 TEST 1: CHECKING ENVIRONMENT VARIABLES")
-print("-" * 90)
-
-resend_key = os.getenv("RESEND_API_KEY", "")
-resend_email = os.getenv("RESEND_FROM_EMAIL", "")
-supabase_url = os.getenv("SUPABASE_URL", "")
-
-print(f"  RESEND_API_KEY: {'✅ SET' if resend_key else '❌ MISSING'}")
-print(f"  RESEND_FROM_EMAIL: {'✅ SET' if resend_email else '❌ MISSING'} ({resend_email})")
-print(f"  SUPABASE_URL: {'✅ SET' if supabase_url else '❌ MISSING'}")
-
-if not resend_key or not resend_email:
-    print("\n❌ Missing required environment variables!")
-    sys.exit(1)
-
-# ============================================================================
-# TEST 2: Test Email Service
-# ============================================================================
-
-print("\n📧 TEST 2: TESTING EMAIL SERVICE")
-print("-" * 90)
-
-try:
-    from auth_email_service import email_service
-    print("  ✅ Email service imported successfully")
+def test_configuration():
+    """Test email service configuration"""
+    print("\n" + "="*80)
+    print("🔍 CONFIGURATION CHECK")
+    print("="*80)
     
-    # Test welcome email
-    print("\n  Sending test WELCOME email...")
-    welcome_result = email_service.send_welcome_email(
-        user_email="mohaneni80@gmail.com",
-        user_name="Mohanakannan S"
-    )
+    print(f"\n📧 Custom Domain Configuration:")
+    print(f"   Domain: {email_service_advanced.custom_domain}")
+    print(f"   From Email: {email_service_advanced.mail_from_email}")
+    print(f"   Support Email: {email_service_advanced.mail_support_email}")
+    print(f"   Domain ID: {email_service_advanced.mail_domain_id}")
+    print(f"   Region: {email_service_advanced.mail_region}")
     
-    if welcome_result["success"]:
-        print(f"    ✅ Welcome email sent! ID: {welcome_result['email_id']}")
-        welcome_passed = True
+    print(f"\n🔑 API Keys:")
+    if email_service_advanced.resend_api_key:
+        masked_key = f"{email_service_advanced.resend_api_key[:10]}...{email_service_advanced.resend_api_key[-5:]}"
+        print(f"   Resend API Key: {masked_key}")
     else:
-        print(f"    ❌ Welcome email failed: {welcome_result['error']}")
-        welcome_passed = False
+        print(f"   Resend API Key: ❌ NOT SET")
     
-    # Test OTP email
-    print("\n  Sending test OTP email...")
-    otp_result = email_service.send_otp_email(
-        user_email="mohaneni80@gmail.com",
-        otp_code="123456"
-    )
-    
-    if otp_result["success"]:
-        print(f"    ✅ OTP email sent! ID: {otp_result['email_id']}")
-        otp_passed = True
+    if email_service_advanced.mail_domain_id:
+        print(f"   ✅ Custom domain configured")
     else:
-        print(f"    ❌ OTP email failed: {otp_result['error']}")
-        otp_passed = False
+        print(f"   ⚠️  Custom domain not configured (will use Resend only)")
     
-except ImportError as e:
-    print(f"  ❌ Failed to import email service: {e}")
-    welcome_passed = False
-    otp_passed = False
-except Exception as e:
-    print(f"  ❌ Error testing email service: {e}")
-    welcome_passed = False
-    otp_passed = False
+    print("\n" + "="*80)
 
-# ============================================================================
-# TEST 3: Test Auth Integration
-# ============================================================================
 
-print("\n🔐 TEST 3: TESTING AUTH INTEGRATION")
-print("-" * 90)
+def test_welcome_email():
+    """Test welcome email"""
+    print("\n" + "="*80)
+    print("🧪 TEST 1: WELCOME EMAIL")
+    print("="*80)
+    
+    user_email = "mohaneni80@gmail.com"
+    user_name = "Mohanakannan S"
+    
+    print(f"\n📨 Sending welcome email...")
+    print(f"   To: {user_email}")
+    print(f"   Name: {user_name}")
+    
+    result = email_service_advanced.send_welcome_email(user_email, user_name)
+    
+    print(f"\n📊 Result:")
+    print(f"   Success: {result.get('success', False)}")
+    print(f"   Provider: {result.get('provider', 'N/A')}")
+    print(f"   Email ID: {result.get('email_id', 'N/A')}")
+    if result.get('error'):
+        print(f"   Error: {result.get('error')}")
+    
+    return result.get('success', False)
 
-try:
-    from auth.routes import auth_bp
-    print("  ✅ Auth routes imported successfully")
-    print("  ✅ Auth routes have email integration")
-    auth_passed = True
-except ImportError as e:
-    print(f"  ❌ Failed to import auth routes: {e}")
-    auth_passed = False
-except Exception as e:
-    print(f"  ❌ Error with auth routes: {e}")
-    auth_passed = False
 
-# ============================================================================
-# TEST 4: Email Configuration Summary
-# ============================================================================
+def test_password_reset_otp():
+    """Test password reset OTP email"""
+    print("\n" + "="*80)
+    print("🧪 TEST 2: PASSWORD RESET OTP EMAIL")
+    print("="*80)
+    
+    user_email = "mohaneni80@gmail.com"
+    otp_code = "123456"
+    
+    print(f"\n📨 Sending password reset OTP...")
+    print(f"   To: {user_email}")
+    print(f"   OTP: {otp_code}")
+    
+    result = email_service_advanced.send_password_reset_otp(user_email, otp_code)
+    
+    print(f"\n📊 Result:")
+    print(f"   Success: {result.get('success', False)}")
+    print(f"   Provider: {result.get('provider', 'N/A')}")
+    print(f"   Email ID: {result.get('email_id', 'N/A')}")
+    if result.get('error'):
+        print(f"   Error: {result.get('error')}")
+    
+    return result.get('success', False)
 
-print("\n⚙️  TEST 4: EMAIL CONFIGURATION SUMMARY")
-print("-" * 90)
 
-print(f"""
-  Domain: samkass.site
-  From Email: {resend_email}
-  API Provider: Resend
-  
-  Email Types Supported:
-  ✅ Welcome Email (on signup)
-  ✅ OTP Email (on forgot PIN)
-  ✅ Password Reset Email (on forgot password)
-  
-  Integration Points:
-  ✅ POST /register → Sends welcome email
-  ✅ POST /forgot-pin/send-otp → Sends OTP email
-""")
+def test_pin_reset_otp():
+    """Test PIN reset OTP email"""
+    print("\n" + "="*80)
+    print("🧪 TEST 3: PIN RESET OTP EMAIL")
+    print("="*80)
+    
+    user_email = "mohaneni80@gmail.com"
+    otp_code = "654321"
+    
+    print(f"\n📨 Sending PIN reset OTP...")
+    print(f"   To: {user_email}")
+    print(f"   OTP: {otp_code}")
+    
+    result = email_service_advanced.send_pin_reset_otp(user_email, otp_code)
+    
+    print(f"\n📊 Result:")
+    print(f"   Success: {result.get('success', False)}")
+    print(f"   Provider: {result.get('provider', 'N/A')}")
+    print(f"   Email ID: {result.get('email_id', 'N/A')}")
+    if result.get('error'):
+        print(f"   Error: {result.get('error')}")
+    
+    return result.get('success', False)
 
-# ============================================================================
-# FINAL RESULTS
-# ============================================================================
 
-print("\n" + "=" * 90)
-print("📊 TEST RESULTS SUMMARY")
-print("=" * 90)
+def print_summary(results):
+    """Print test summary"""
+    print("\n" + "="*80)
+    print("📊 TEST SUMMARY")
+    print("="*80)
+    
+    test_names = ["Welcome Email", "Password Reset OTP", "PIN Reset OTP"]
+    
+    for i, (name, result) in enumerate(zip(test_names, results), 1):
+        status = "✅ PASSED" if result else "❌ FAILED"
+        print(f"{i}. {name}: {status}")
+    
+    passed = sum(results)
+    total = len(results)
+    percentage = (passed / total) * 100 if total > 0 else 0
+    
+    print(f"\n📈 Overall: {passed}/{total} passed ({percentage:.0f}%)")
+    
+    print("\n" + "="*80)
 
-tests = {
-    "Environment Variables": True,  # Already checked above
-    "Email Service": welcome_passed and otp_passed,
-    "Welcome Email": welcome_passed,
-    "OTP Email": otp_passed,
-    "Auth Integration": auth_passed,
-}
 
-for test_name, passed in tests.items():
-    status = "✅ PASSED" if passed else "❌ FAILED"
-    print(f"  {status} - {test_name}")
+def print_email_log():
+    """Print email log"""
+    log = email_service_advanced.get_email_log()
+    
+    if not log:
+        print("\n📋 No emails sent yet.")
+        return
+    
+    print("\n" + "="*80)
+    print("📧 EMAIL LOG")
+    print("="*80)
+    
+    for i, email in enumerate(log, 1):
+        print(f"\n{i}. Email Record")
+        print(f"   To: {email.get('to', 'N/A')}")
+        print(f"   Provider: {email.get('provider', 'N/A')}")
+        print(f"   Email ID: {email.get('email_id', 'N/A')}")
+        print(f"   Time: {email.get('timestamp', 'N/A')}")
+    
+    print("\n" + "="*80)
 
-all_passed = all(tests.values())
 
-print("=" * 90)
-if all_passed:
-    print("\n✅ ALL TESTS PASSED!")
+def main():
+    """Run all tests"""
+    print("\n" + "█"*80)
+    print("█" + " "*78 + "█")
+    print("█" + "  ADVANCED EMAIL SERVICE - INTEGRATION TEST".center(78) + "█")
+    print("█" + " "*78 + "█")
+    print("█"*80)
+    
+    # Check configuration
+    test_configuration()
+    
+    # Run tests
+    print("\n🚀 Starting tests...\n")
+    
+    results = []
+    results.append(test_welcome_email())
+    results.append(test_password_reset_otp())
+    results.append(test_pin_reset_otp())
+    
+    # Print summary
+    print_summary(results)
+    
+    # Print email log
+    print_email_log()
+    
+    # Print next steps
+    print("\n" + "="*80)
+    print("📌 NEXT STEPS")
+    print("="*80)
     print("""
-Your email integration is ready for production:
+1. Check your email at: mohaneni80@gmail.com
+2. Look for these emails:
+   • Welcome email (subject: "🚀 Welcome to SamKass!")
+   • Password reset email (subject: "🔒 Your Password Reset Code")
+   • PIN reset email (subject: "🔐 Your Security PIN Reset Code")
 
-🚀 NEXT STEPS:
-1. Users signing up will receive welcome email from welcome@samkass.site
-2. Forgot PIN requests will send OTP via email
-3. Check mohaneni80@gmail.com inbox for test emails
-4. Monitor Resend dashboard for email delivery status
+3. Verify emails contain:
+   • Correct domain (samkass.site if custom domain configured)
+   • Correct sender address
+   • Proper formatting and styling
+   • Correct OTP codes (123456, 654321)
 
-📧 TEST EMAILS SENT TO: mohaneni80@gmail.com
-   Check inbox and spam folder
+4. Check spam/junk folder if emails not in inbox
+
+5. For issues, check:
+   • .env file has RESEND_API_KEY
+   • .env file has MAIL_DOMAIN settings
+   • API key has sufficient permissions
+   • Domain is verified in Resend
 """)
-else:
-    print("\n⚠️  SOME TESTS FAILED")
-    print("""
-Troubleshooting:
-1. Check .env file has correct credentials
-2. Verify RESEND_API_KEY is not expired
-3. Ensure RESEND_FROM_EMAIL is verified in Resend
-4. Check internet connection
-5. Review Resend API documentation
-""")
+    print("="*80)
+    
+    # Return exit code
+    return 0 if all(results) else 1
 
-print("=" * 90 + "\n")
+
+if __name__ == "__main__":
+    try:
+        exit_code = main()
+        sys.exit(exit_code)
+    except Exception as e:
+        print(f"\n❌ Fatal error: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
