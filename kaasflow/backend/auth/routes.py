@@ -11,11 +11,27 @@ from .password_handler import hash_password, verify_password
 from .magic_link import generate_magic_link_token, verify_magic_link_token
 from .rate_limiter import check_rate_limit, record_failed_attempt, clear_attempts
 
-# Import advanced email service
+# Import simple email sender (most reliable)
+try:
+    from simple_email_sender import simple_email_sender
+    USE_SIMPLE_EMAIL = True
+    print("✅ Simple email sender loaded successfully")
+except ImportError as e:
+    print(f"⚠️  Failed to import simple email sender: {e}")
+    USE_SIMPLE_EMAIL = False
+    simple_email_sender = None
+
+# Import advanced email service (backup)
 try:
     from email_service_advanced import email_service_advanced
     USE_ADVANCED_EMAIL_SERVICE = True
-except ImportError:
+    print("✅ Advanced email service loaded successfully")
+except ImportError as e:
+    print(f"⚠️  Failed to import advanced email service: {e}")
+    USE_ADVANCED_EMAIL_SERVICE = False
+    email_service_advanced = None
+except Exception as e:
+    print(f"❌ Error loading advanced email service: {e}")
     USE_ADVANCED_EMAIL_SERVICE = False
     email_service_advanced = None
 
@@ -295,18 +311,27 @@ def register():
     conn.close()
     
     try:
-        # Use advanced email service (custom domain + Resend fallback)
-        if USE_ADVANCED_EMAIL_SERVICE and email_service_advanced:
+        # Use simple email sender (most reliable)
+        if USE_SIMPLE_EMAIL and simple_email_sender:
+            result = simple_email_sender.send_welcome_email(email, name)
+            if result.get("success"):
+                print(f"✅ Welcome email sent to {email}")
+            else:
+                print(f"⚠️  Welcome email failed: {result.get('error')}")
+        # Fallback to advanced service
+        elif USE_ADVANCED_EMAIL_SERVICE and email_service_advanced:
             result = email_service_advanced.send_welcome_email(email, name)
             if result.get("success"):
                 print(f"✅ Welcome email sent to {email} (ID: {result.get('email_id')})")
             else:
                 print(f"⚠️  Welcome email failed: {result.get('error')}")
+        # Final fallback to old send_email
         else:
-            # Fallback to old method
             send_welcome_email(email, name)
     except Exception as e:
-        print(f"Error sending welcome email: {e}")
+        print(f"❌ Error sending welcome email: {e}")
+        import traceback
+        traceback.print_exc()
         # Don't fail registration if email fails
         
     return create_auth_response(user)
@@ -358,12 +383,16 @@ def forgot_password_send_otp():
         'expires_at': datetime.datetime.now() + datetime.timedelta(minutes=10)
     }
     
-    # Use advanced email service
-    if USE_ADVANCED_EMAIL_SERVICE and email_service_advanced:
+    # Use simple email sender (most reliable)
+    if USE_SIMPLE_EMAIL and simple_email_sender:
+        result = simple_email_sender.send_password_reset_otp(email, otp)
+        print(f"✅ Password reset OTP sent to {email}")
+    # Fallback to advanced service
+    elif USE_ADVANCED_EMAIL_SERVICE and email_service_advanced:
         result = email_service_advanced.send_password_reset_otp(email, otp)
         print(f"Password reset OTP sent to {email}")
+    # Final fallback
     else:
-        # Fallback to old method
         subject = "Reset your SamKass Password 🔒"
         body = f"""
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff; color: #1e293b;">
@@ -460,12 +489,16 @@ def send_forgot_pin_otp():
         'expires_at': datetime.datetime.now() + datetime.timedelta(minutes=10)
     }
     
-    # Use advanced email service (custom domain + Resend fallback)
-    if USE_ADVANCED_EMAIL_SERVICE and email_service_advanced:
+    # Use simple email sender (most reliable)
+    if USE_SIMPLE_EMAIL and simple_email_sender:
+        result = simple_email_sender.send_pin_reset_otp(email, otp)
+        print(f"✅ PIN reset OTP sent to {email}")
+    # Fallback to advanced service
+    elif USE_ADVANCED_EMAIL_SERVICE and email_service_advanced:
         result = email_service_advanced.send_pin_reset_otp(email, otp)
         print(f"PIN reset OTP sent to {email}")
+    # Final fallback
     else:
-        # Fallback to old method
         subject = "Reset your SamKass Security PIN 🔒"
         body = f"""
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff; color: #1e293b;">
