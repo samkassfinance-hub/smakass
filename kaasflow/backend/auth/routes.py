@@ -13,10 +13,11 @@ from .rate_limiter import check_rate_limit, record_failed_attempt, clear_attempt
 
 # Import enhanced email service
 try:
-    from email_service import send_email_via_resend, send_welcome_email, send_otp_email, send_pin_reset_email
+    from auth_email_service import email_service
     USE_NEW_EMAIL_SERVICE = True
 except ImportError:
     USE_NEW_EMAIL_SERVICE = False
+    email_service = None
 
 auth_bp = Blueprint('pro_auth', __name__)
 
@@ -283,7 +284,15 @@ def register():
     conn.close()
     
     try:
-        send_welcome_email(email, name)
+        # Use new email service if available
+        if USE_NEW_EMAIL_SERVICE and email_service:
+            result = email_service.send_welcome_email(email, name)
+            if result["success"]:
+                print(f"✅ Welcome email sent to {email}")
+            else:
+                print(f"⚠️  Welcome email failed: {result.get('error')}")
+        else:
+            send_welcome_email(email, name)
     except Exception as e:
         print(f"Error sending welcome email: {e}")
         
@@ -432,29 +441,38 @@ def send_forgot_pin_otp():
         'expires_at': datetime.datetime.now() + datetime.timedelta(minutes=10)
     }
     
-    subject = "Reset your SamKass Security PIN 🔒"
-    body = f"""
-    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff; color: #1e293b;">
-        <div style="text-align: center; margin-bottom: 24px;">
-            <h1 style="color: #10b981; margin: 0; font-size: 28px;">Security PIN Reset</h1>
-            <p style="color: #64748b; font-size: 16px; margin-top: 8px;">Your verification code</p>
-        </div>
-        <p>Hello,</p>
-        <p>We received a request to reset the Security PIN for your SamKass account. Use the OTP below to proceed with the reset:</p>
-        <div style="text-align: center; margin: 30px 0;">
-            <div style="background-color: #f1f5f9; border: 2px dashed #cbd5e1; color: #334155; padding: 15px; font-size: 32px; font-weight: bold; letter-spacing: 5px; border-radius: 8px; display: inline-block;">
-                {otp}
+    # Try to send OTP email using new service first
+    if USE_NEW_EMAIL_SERVICE and email_service:
+        result = email_service.send_otp_email(email, otp)
+        if result["success"]:
+            print(f"✅ OTP email sent to {email} (Email ID: {result['email_id']})")
+        else:
+            print(f"⚠️  OTP email failed: {result.get('error')}")
+    else:
+        # Fallback to old email method
+        subject = "Reset your SamKass Security PIN 🔒"
+        body = f"""
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff; color: #1e293b;">
+            <div style="text-align: center; margin-bottom: 24px;">
+                <h1 style="color: #10b981; margin: 0; font-size: 28px;">Security PIN Reset</h1>
+                <p style="color: #64748b; font-size: 16px; margin-top: 8px;">Your verification code</p>
             </div>
+            <p>Hello,</p>
+            <p>We received a request to reset the Security PIN for your SamKass account. Use the OTP below to proceed with the reset:</p>
+            <div style="text-align: center; margin: 30px 0;">
+                <div style="background-color: #f1f5f9; border: 2px dashed #cbd5e1; color: #334155; padding: 15px; font-size: 32px; font-weight: bold; letter-spacing: 5px; border-radius: 8px; display: inline-block;">
+                    {otp}
+                </div>
+            </div>
+            <p style="font-size: 14px; color: #64748b;">This OTP will expire in 10 minutes. If you did not request this, you can safely ignore this email.</p>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
+            <p style="font-size: 14px; color: #64748b; text-align: center; margin-bottom: 0;">
+                <strong>— The SamKass Team</strong>
+            </p>
         </div>
-        <p style="font-size: 14px; color: #64748b;">This OTP will expire in 10 minutes. If you did not request this, you can safely ignore this email.</p>
-        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
-        <p style="font-size: 14px; color: #64748b; text-align: center; margin-bottom: 0;">
-            <strong>— The SamKass Team</strong>
-        </p>
-    </div>
-    """
-    
-    email_sent = send_email(email, subject, body)
+        """
+        
+        email_sent = send_email(email, subject, body)
     
     # Always return success (security best practice)
     return jsonify({'success': True, 'message': 'OTP sent to your email. Check your inbox and spam folder.'})
