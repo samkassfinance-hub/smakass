@@ -26,13 +26,15 @@ class SupabaseManager:
         """Initialize Supabase client with error handling"""
         try:
             url = os.environ.get("SUPABASE_URL")
-            key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_ANON_KEY")
+            # Priority: SERVICE_ROLE_KEY > ANON_KEY (for backend operations)
+            key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_ANON_KEY") or os.environ.get("SUPABASE_KEY")
             
             if not url or not key:
-                raise ValueError("Missing SUPABASE_URL or SUPABASE_KEY in environment variables")
+                raise ValueError("Missing SUPABASE_URL or API key in environment variables")
             
             self._client = create_client(url, key)
-            print("✅ Supabase client initialized successfully")
+            key_type = "SERVICE_ROLE" if "service" in (os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or "") else "ANON"
+            print(f"✅ Supabase client initialized successfully ({key_type} key)")
         except Exception as e:
             print(f"❌ Failed to initialize Supabase client: {e}")
             self._client = None
