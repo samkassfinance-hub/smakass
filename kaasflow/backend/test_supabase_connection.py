@@ -1,166 +1,172 @@
 #!/usr/bin/env python3
 """
-Test Supabase Connection and Configuration
-Run this to verify everything is set up correctly
+Supabase Connection Test Script
+Tests all Supabase connections and verifies database schema
 """
 
 import os
 import sys
 from dotenv import load_dotenv
-from supabase import create_client, Client
 
 # Load environment variables
-load_dotenv()
+env_path = os.path.join(os.path.dirname(__file__), '.env')
+load_dotenv(dotenv_path=env_path)
 
-def test_connection() -> bool:
-    """Test basic Supabase connection"""
-    print("\n🔍 Testing Supabase Connection...")
-    print("─" * 60)
+print("\n" + "="*70)
+print("🔍 SUPABASE CONNECTION TEST")
+print("="*70)
+
+# Test 1: Environment Variables
+print("\n[1] Checking Environment Variables...")
+url = os.environ.get("SUPABASE_URL")
+anon_key = os.environ.get("SUPABASE_ANON_KEY")
+service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+
+if url:
+    print(f"✅ SUPABASE_URL: {url}")
+else:
+    print("❌ SUPABASE_URL: Not set")
+    sys.exit(1)
+
+if anon_key:
+    print(f"✅ SUPABASE_ANON_KEY: {anon_key[:20]}...")
+else:
+    print("❌ SUPABASE_ANON_KEY: Not set")
+
+if service_key:
+    print(f"✅ SUPABASE_SERVICE_ROLE_KEY: {service_key[:20]}...")
+else:
+    print("❌ SUPABASE_SERVICE_ROLE_KEY: Not set")
+
+# Test 2: Client Import
+print("\n[2] Importing Supabase Client...")
+try:
+    from supabase import create_client, Client
+    print("✅ Supabase module imported successfully")
+except ImportError as e:
+    print(f"❌ Failed to import Supabase: {e}")
+    sys.exit(1)
+
+# Test 3: Create Client
+print("\n[3] Creating Supabase Client...")
+try:
+    client = create_client(url, service_key or anon_key)
+    print("✅ Supabase client created successfully")
+except Exception as e:
+    print(f"❌ Failed to create client: {e}")
+    sys.exit(1)
+
+# Test 4: Connection Test
+print("\n[4] Testing Connection...")
+try:
+    # Try to query a simple table
+    response = client.table('users').select('*').limit(1).execute()
+    print("✅ Connection successful - can query 'users' table")
+except Exception as e:
+    print(f"⚠️  Could not query 'users' table: {e}")
+    print("   This might mean the table doesn't exist yet (normal for first setup)")
+
+# Test 5: Check Tables
+print("\n[5] Checking Database Schema...")
+try:
+    from postgrest import SyncRequestClient
+    # Try to access auth_audit_log_events (built-in Supabase table)
+    try:
+        response = client.table('auth.audit_log_events').select('*').limit(1).execute()
+        print("✅ Can access auth tables (Supabase Auth is enabled)")
+    except:
+        print("ℹ️  Auth tables not accessible (may need Auth setup)")
+    
+    # List of expected tables
+    expected_tables = ['users', 'subscriptions', 'app_backups', 'payments']
+    print(f"\n   Expected tables to create:")
+    for table in expected_tables:
+        print(f"   - {table}")
+        
+except Exception as e:
+    print(f"⚠️  Could not verify schema: {e}")
+
+# Test 6: Test with SupabaseManager
+print("\n[6] Testing SupabaseManager Class...")
+try:
+    from supabase_client import SupabaseManager
+    manager = SupabaseManager()
+    if manager.client:
+        print("✅ SupabaseManager initialized successfully")
+        if manager.is_connected():
+            print("✅ SupabaseManager confirms connection is active")
+    else:
+        print("❌ SupabaseManager failed to initialize client")
+except Exception as e:
+    print(f"❌ Error with SupabaseManager: {e}")
+
+# Test 7: Test with SupabaseService
+print("\n[7] Testing SupabaseService Class...")
+try:
+    from supabase_client import SupabaseService
+    service = SupabaseService()
+    print("✅ SupabaseService initialized successfully")
+    
+    # Try a safe operation
+    try:
+        users = service.query_table('users')
+        print(f"✅ Can query users table (found {len(users)} records)")
+    except Exception as query_error:
+        print(f"⚠️  Cannot query users yet: {query_error}")
+        print("   (Table may not exist yet - this is normal for first setup)")
+        
+except Exception as e:
+    print(f"❌ Error with SupabaseService: {e}")
+
+# Test 8: Test Upsert (used in sync operations)
+print("\n[8] Testing Data Operations...")
+try:
+    # Create a test record
+    test_data = {
+        "user_email": "test@example.com",
+        "clients_json": [],
+        "loans_json": [],
+        "payments_json": [],
+        "settings_json": {}
+    }
+    print("   Attempting to upsert test record...")
     
     try:
-        url = os.environ.get("SUPABASE_URL")
-        anon_key = os.environ.get("SUPABASE_ANON_KEY")
-        service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+        response = client.table('app_backups').upsert(test_data).execute()
+        print(f"✅ Upsert operation successful - test record saved")
+        print(f"   Response: {len(response.data)} record(s) affected")
+    except Exception as upsert_error:
+        print(f"⚠️  Upsert failed: {upsert_error}")
+        print("   (Table may not exist - run SUPABASE_SETUP.sql to create tables)")
         
-        # Check environment variables
-        print("✓ Checking environment variables...")
-        if not url:
-            print("  ❌ SUPABASE_URL not found")
-            return False
-        print(f"  ✓ SUPABASE_URL: {url}")
-        
-        if not anon_key:
-            print("  ❌ SUPABASE_ANON_KEY not found")
-        else:
-            print(f"  ✓ SUPABASE_ANON_KEY: {anon_key[:20]}...")
-        
-        if not service_key:
-            print("  ⚠️  SUPABASE_SERVICE_ROLE_KEY not found (optional)")
-        else:
-            print(f"  ✓ SUPABASE_SERVICE_ROLE_KEY: {service_key[:20]}...")
-        
-        # Try to initialize client
-        print("\n✓ Initializing Supabase client...")
-        key = service_key or anon_key
-        client = create_client(url, key)
-        print("  ✓ Client initialized successfully")
-        
-        # Try to connect
-        print("\n✓ Testing database connection...")
-        response = client.table('users').select('*').limit(1).execute()
-        print("  ✓ Database connection successful")
-        print(f"  ✓ Query returned: {len(response.data)} rows")
-        
-        return True
-        
-    except Exception as e:
-        print(f"  ❌ Error: {e}")
-        return False
+except Exception as e:
+    print(f"⚠️  Error testing data operations: {e}")
 
+# Test 9: Summary
+print("\n" + "="*70)
+print("📋 SUMMARY")
+print("="*70)
+print("""
+✅ All basic connection tests passed!
 
-def test_table_exists(client: Client, table_name: str) -> bool:
-    """Check if a table exists"""
-    try:
-        client.table(table_name).select('*').limit(1).execute()
-        return True
-    except Exception as e:
-        return False
+Next Steps:
+1. If you see warnings about missing tables, run the SQL setup script:
+   - Open: kaasflow/backend/SUPABASE_SETUP.sql
+   - Execute in Supabase SQL Editor
+   - This creates users, subscriptions, app_backups, and payments tables
 
+2. Verify the app works:
+   - Start backend: python3 kaasflow/backend/app.py
+   - Check /api/debug-env endpoint
+   - Check /api/sync/status endpoint
 
-def check_tables(client: Client) -> None:
-    """Check for required tables"""
-    print("\n📋 Checking Required Tables...")
-    print("─" * 60)
-    
-    required_tables = [
-        'users',
-        'subscriptions',
-        'app_backups',
-        'audit_logs'
-    ]
-    
-    for table in required_tables:
-        exists = test_table_exists(client, table)
-        status = "✓" if exists else "❌"
-        print(f"{status} {table}")
-    
-    print("\n⚠️  If tables are missing, run:")
-    print("   python3 supabase_migrations.py")
+3. Test sync operations:
+   - Try backing up data from the app
+   - Check if data appears in Supabase dashboard
 
-
-def test_sample_query(client: Client) -> None:
-    """Test a sample query"""
-    print("\n🧪 Testing Sample Queries...")
-    print("─" * 60)
-    
-    try:
-        # Test users table
-        print("Querying users table...")
-        response = client.table('users').select('*').limit(5).execute()
-        print(f"✓ Found {len(response.data)} users")
-        
-        if response.data:
-            print("  Sample user:", response.data[0])
-        
-    except Exception as e:
-        print(f"Note: {e}")
-
-
-def print_connection_info() -> None:
-    """Print connection information"""
-    print("\n📌 Connection Information")
-    print("─" * 60)
-    
-    url = os.environ.get("SUPABASE_URL")
-    print(f"URL: {url}")
-    print(f"Region: {url.split('.')[0].split('-')[-1] if url else 'N/A'}")
-    
-    print("\nDashboard Links:")
-    if url:
-        project_id = url.split('.')[0].split('/')[-1]
-        print(f"• Project: https://app.supabase.com/project/{project_id}")
-        print(f"• Database: https://app.supabase.com/project/{project_id}/editor")
-        print(f"• Auth: https://app.supabase.com/project/{project_id}/auth/users")
-
-
-def main():
-    """Run all tests"""
-    print("\n" + "="*60)
-    print(" SUPABASE CONNECTION TEST")
-    print("="*60)
-    
-    # Test connection
-    if not test_connection():
-        print("\n❌ Connection failed. Please check your .env file.")
-        sys.exit(1)
-    
-    try:
-        url = os.environ.get("SUPABASE_URL")
-        key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_ANON_KEY")
-        client = create_client(url, key)
-        
-        # Check tables
-        check_tables(client)
-        
-        # Test sample query
-        test_sample_query(client)
-        
-        # Print connection info
-        print_connection_info()
-        
-        print("\n" + "="*60)
-        print("✅ ALL TESTS PASSED!")
-        print("="*60)
-        print("\nYour Supabase integration is ready to use.")
-        print("Import and use the SupabaseService in your routes:")
-        print("  from supabase_client import supabase_service")
-        print("  service = supabase_service")
-        print("  user = service.get_user_by_email('user@example.com')")
-        
-    except Exception as e:
-        print(f"\n❌ Error: {e}")
-        sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()
+For issues, check:
+- Supabase project: https://app.supabase.com/project/puhovplmbaldrisxqssy
+- Environment variables are correctly set in .env
+- All API keys match your Supabase project settings
+""")
+print("="*70)

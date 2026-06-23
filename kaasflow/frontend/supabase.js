@@ -8,7 +8,10 @@ class SupabaseIntegration {
     this.backupInterval = null;
     this.isSyncing = false;
     this.BACKUP_INTERVAL = 5 * 60 * 1000; // 5 minutes
-    this.API_BASE = 'http://localhost:5000/api';
+    
+    // Determine API base URL based on environment
+    const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    this.API_BASE = isDev ? 'http://localhost:5000/api' : window.location.origin + '/api';
   }
 
   /**
