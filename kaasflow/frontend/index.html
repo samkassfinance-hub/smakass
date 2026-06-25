@@ -1906,28 +1906,32 @@
       const videoPlaceholder = document.getElementById('video-placeholder');
 
       if (logoBubbleContainer) {
-        makeDraggable(logoBubbleContainer, async function () {
+        makeDraggable(logoBubbleContainer, async function (e) {
+          // Don't trigger install if clicking on PIN inputs or any focused form element
+          if (e.target && (e.target.classList.contains('pin-digit-input') || 
+              e.target.closest('input') || 
+              e.target.closest('textarea') ||
+              e.target.closest('select') ||
+              document.activeElement?.classList.contains('pin-digit-input'))) {
+            return;
+          }
+          
           // Directly trigger native PWA install prompt (no custom modal)
-          if (deferredPrompt) {
+          if (window.deferredPrompt) {
             try {
               // Show native browser install prompt
-              await deferredPrompt.prompt();
-              const { outcome } = await deferredPrompt.userChoice;
+              await window.deferredPrompt.prompt();
+              const { outcome } = await window.deferredPrompt.userChoice;
               console.log(`User response to install prompt: ${outcome}`);
               if (outcome === 'accepted') {
                 console.log('✅ User accepted the install prompt');
               } else {
                 console.log('❌ User dismissed the install prompt');
               }
-              deferredPrompt = null;
+              window.deferredPrompt = null;
             } catch (err) {
               console.error('Install prompt error:', err);
-              // Fallback if native prompt fails
-              alert('To install:\n\n• Chrome/Edge: Click menu (⋮) > Install app\n• Safari: Tap share (↗) > Add to Home Screen\n• Firefox: Tap menu (⋮) > Install');
             }
-          } else {
-            // Native prompt not available, show instructions
-            alert('To install:\n\n• Chrome/Edge: Click menu (⋮) > Install app\n• Safari: Tap share (↗) > Add to Home Screen\n• Firefox: Tap menu (⋮) > Install');
           }
         });
       }
@@ -1950,12 +1954,10 @@
 
       if (pwaInstallBtn) {
         pwaInstallBtn.addEventListener('click', async function () {
-          if (deferredPrompt) {
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
-            deferredPrompt = null;
-          } else {
-            alert('To install:\n\n• Chrome/Edge: Click menu (⋮) > Install app\n• Safari: Tap share (↗) > Add to Home Screen\n• Firefox: Tap menu (⋮) > Install');
+          if (window.deferredPrompt) {
+            window.deferredPrompt.prompt();
+            const { outcome } = await window.deferredPrompt.userChoice;
+            window.deferredPrompt = null;
           }
           pwaModal.style.display = 'none';
         });
