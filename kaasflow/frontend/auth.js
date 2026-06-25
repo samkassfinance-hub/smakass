@@ -126,10 +126,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const rememberMe = document.getElementById('remember-me').checked;
 
         try {
+            // Check if this is first login for this user
+            const existingEmail = getCurrentSessionEmail();
+            const isFirstLogin = !existingEmail || existingEmail.toLowerCase() !== email.toLowerCase();
+
             const response = await fetch(`${API_BASE}/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password, remember_me: rememberMe })
+                body: JSON.stringify({ 
+                    email, 
+                    password, 
+                    remember_me: rememberMe,
+                    is_first_login: isFirstLogin
+                })
             });
 
             const data = await response.json();
