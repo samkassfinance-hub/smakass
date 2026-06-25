@@ -218,42 +218,16 @@ async function handleCredentialResponse(response) {
 }
 
 // Install Bubble Logic — PWA Install Prompt
-let deferredPrompt;
+// IMPORTANT: We don't prevent the beforeinstallprompt event globally
+// This ensures the install prompt only appears when explicitly triggered by button clicks
+// and NOT when users interact with form inputs like PIN boxes
 
-// Listen for beforeinstallprompt event
+window.deferredPrompt = null;
+
+// Listen for beforeinstallprompt event but let browser handle it naturally
 window.addEventListener('beforeinstallprompt', (event) => {
-    event.preventDefault();
-    deferredPrompt = event;
-});
-
-// Show bubble by default on page load
-document.addEventListener('DOMContentLoaded', () => {
-    const installBubble = document.getElementById('installBubble');
-    
-    if (installBubble) {
-        // Always show the bubble
-        installBubble.style.display = 'flex';
-        
-        // Click handler to trigger install
-        installBubble.addEventListener('click', async (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    deferredPrompt = null;
-                }
-            }
-        });
-    }
-});
-
-// Hide bubble after app is installed
-window.addEventListener('appinstalled', () => {
-    const installBubble = document.getElementById('installBubble');
-    if (installBubble) {
-        installBubble.style.display = 'none';
-    }
+    // Store the event for manual trigger only (Install App button click)
+    window.deferredPrompt = event;
+    // Do NOT call event.preventDefault() here - this allows the browser's natural flow
+    console.log('✅ PWA: beforeinstallprompt ready (stored for manual trigger)');
 });

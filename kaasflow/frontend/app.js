@@ -5001,12 +5001,8 @@ window.closeContactOnOverlay = function (e) {
 }
 
 // ── PWA INSTALL HANDLER (Must be before DOMContentLoaded) ────────
-window.deferredPrompt = null;
-window.addEventListener('beforeinstallprompt', (e) => {
-  console.log('✅ PWA: beforeinstallprompt event captured');
-  e.preventDefault();
-  window.deferredPrompt = e;
-});
+// Note: The beforeinstallprompt event is already captured in auth.js
+// This just handles the UI button click
 
 window.addEventListener('appinstalled', () => {
   console.log('✅ PWA: App installed successfully');
