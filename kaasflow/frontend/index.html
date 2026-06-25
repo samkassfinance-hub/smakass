@@ -1909,14 +1909,14 @@
         makeDraggable(logoBubbleContainer, async function (e) {
           // Don't trigger install if clicking on PIN inputs or any focused form element
           if (e.target && (e.target.classList.contains('pin-digit-input') || 
-              e.target.closest('input') || 
+              e.target.closest('input:not(.pin-digit-input)') || 
               e.target.closest('textarea') ||
               e.target.closest('select') ||
               document.activeElement?.classList.contains('pin-digit-input'))) {
             return;
           }
           
-          // Directly trigger native PWA install prompt (no custom modal)
+          // Directly trigger native PWA install prompt
           if (window.deferredPrompt) {
             try {
               // Show native browser install prompt
