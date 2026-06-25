@@ -1088,16 +1088,44 @@ async function showApp() {
 
   updatePlanBanner();
   checkAccessControl();
-  
-  // CHECK SUBSCRIPTION EXPIRY - Show blocking modal if expired
-  if (window.KFSubscription && window.KFSubscription.ui) {
-    window.KFSubscription.ui.checkExpiry();
+
+  // Try to restore cloud data quickly (max 2 seconds wait)
+  if (window.KFSync) {
+    const syncTimeout = new Promise(resolve => {
+      setTimeout(() => {
+        console.warn('⚠️  Cloud sync timeout - rendering with local data');
+        resolve(null);
+      }, 2000);
+    });
+
+    const syncPromise = KFSync.restore().catch(err => {
+      console.warn('Failed to sync cloud data:', err);
+      return null;
+    });
+
+    await Promise.race([syncPromise, syncTimeout]);
   }
 
-  // Render immediately with local data for zero-delay UX
-  navigateTo(state.page || 'dashboard');
+  // NOW render with data (local or cloud-merged)
+  navigateTo(state.page || 'home');
 
-  // Asynchronously query the backend subscription status
+  // Check subscription status AFTER rendering (non-blocking)
+  setTimeout(() => {
+    if (window.SubscriptionEnforcement && typeof window.SubscriptionEnforcement.validateSubscriptionStatus === 'function') {
+      window.SubscriptionEnforcement.validateSubscriptionStatus().catch(err => {
+        console.warn('⚠️  Subscription validation error (non-blocking):', err);
+      });
+    }
+  }, 500);
+
+  // CHECK SUBSCRIPTION EXPIRY - Show blocking modal if expired (after rendering)
+  setTimeout(() => {
+    if (window.KFSubscription && window.KFSubscription.ui) {
+      window.KFSubscription.ui.checkExpiry();
+    }
+  }, 600);
+
+  // Asynchronously query the backend subscription status (non-blocking)
   if (window.RazorpayPayment) {
     window.RazorpayPayment.checkSubscriptionStatus().then(status => {
       if (status && status.active) {
@@ -1122,23 +1150,19 @@ async function showApp() {
     }).catch(e => console.warn("Failed to check subscription status:", e));
   }
 
-  // Seamlessly sync with cloud in the background and soft-refresh if needed
-  if (window.KFSync) {
-    KFSync.restore().then(() => {
-      navigateTo(state.page || 'dashboard');
-    });
-
-    // BACKGROUND REAL-TIME SYNC: Poll for cloud updates every 30 seconds
-    if (window._kfRealtimeSync) clearInterval(window._kfRealtimeSync);
-    window._kfRealtimeSync = setInterval(async () => {
-      // Sync only if app is visible and no modal is open to prevent UI flickering during input
-      const isModalOpen = document.body.classList.contains('modal-open');
-      if (isLoggedIn() && document.visibilityState === 'visible' && !isModalOpen) {
-        const res = await KFSync.restore();
-        if (res) navigateTo(state.page); // Refresh current view with fresh cloud data
+  // BACKGROUND REAL-TIME SYNC: Poll for cloud updates every 30 seconds
+  if (window._kfRealtimeSync) clearInterval(window._kfRealtimeSync);
+  window._kfRealtimeSync = setInterval(async () => {
+    // Sync only if app is visible and no modal is open to prevent UI flickering during input
+    const isModalOpen = document.body.classList.contains('modal-open');
+    if (isLoggedIn() && document.visibilityState === 'visible' && !isModalOpen) {
+      const res = await KFSync.restore();
+      // Only refresh if user is not actively interacting
+      if (res && document.activeElement === document.body && state.page) {
+        navigateTo(state.page);
       }
-    }, 30000);
-  }
+    }
+  }, 30000);
 
   // Fire today's payment notifications when app becomes visible
   fireTodayNotifications();
@@ -1147,13 +1171,6 @@ async function showApp() {
 // ── NAVIGATION ────────────────────────────────────────────────
 function navigateTo(page) {
   checkAccessControl();
-  
-  // NEW: Validate subscription status before rendering page
-  if (window.SubscriptionEnforcement && typeof window.SubscriptionEnforcement.validateSubscriptionStatus === 'function') {
-    window.SubscriptionEnforcement.validateSubscriptionStatus().catch(err => {
-      console.error('⚠️  Subscription validation error:', err);
-    });
-  }
   
   state.page = page;
   $$('.nav-tab').forEach(t => {
@@ -1172,7 +1189,26 @@ function navigateTo(page) {
     profile: renderProfile,
     settings: renderSettings,
   };
-  if (pages[page]) pages[page](content);
+  
+  try {
+    if (pages[page]) pages[page](content);
+  } catch (err) {
+    console.error('❌ Error rendering page:', page, err);
+    content.innerHTML = `<div class="alert alert-danger m-4">
+      <i class="fa-solid fa-exclamation-circle me-2"></i>
+      Error loading page. Please refresh and try again.
+    </div>`;
+  }
+
+  // Validate subscription status AFTER rendering (don't block rendering)
+  if (window.SubscriptionEnforcement && typeof window.SubscriptionEnforcement.validateSubscriptionStatus === 'function') {
+    // Use setTimeout to ensure rendering completes first
+    setTimeout(() => {
+      window.SubscriptionEnforcement.validateSubscriptionStatus().catch(err => {
+        console.warn('⚠️  Subscription validation error (non-blocking):', err);
+      });
+    }, 100);
+  }
 }
 
 function destroyCharts() {
@@ -2542,11 +2578,15 @@ function renderProfile(container) {
 }
 
 function renderSettings(container) {
-  if (window.KFSubscription) {
-    window.KFSubscription.syncFromSettings();
-    if (window.KFSubscription.ui) {
+  try {
+    if (window.KFSubscription && typeof window.KFSubscription.syncFromSettings === 'function') {
+      window.KFSubscription.syncFromSettings();
+    }
+    if (window.KFSubscription && window.KFSubscription.ui && typeof window.KFSubscription.ui.updateUpgradeModal === 'function') {
       window.KFSubscription.ui.updateUpgradeModal();
     }
+  } catch (err) {
+    console.error('⚠️  Error syncing subscription settings:', err);
   }
 
   const plan = getPlan();

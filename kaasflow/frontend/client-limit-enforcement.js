@@ -349,7 +349,7 @@ function renderSettingsPage() {
         
         <div class="settings-row">
           <div class="settings-row-label">
-;            <i class="fa-brands fa-whatsapp" style="color:#25D366; margin-right:8px; font-size:1.1rem;"></i>
+            <i class="fa-brands fa-whatsapp" style="color:#25D366; margin-right:8px; font-size:1.1rem;"></i>
             WhatsApp Reminders
           </div>
           ${plan.features.whatsappReminders ? 
