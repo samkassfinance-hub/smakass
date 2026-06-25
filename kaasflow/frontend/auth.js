@@ -218,36 +218,40 @@ async function handleCredentialResponse(response) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// PWA INSTALL PROMPT - GLOBAL SETUP
-// Captures beforeinstallprompt and provides fallback
+// PWA INSTALL PROMPT - GLOBAL SETUP (RUNS AT PAGE START)
+// This captures the beforeinstallprompt event immediately
 // ═══════════════════════════════════════════════════════════════
 
+// Initialize globally BEFORE anything else
 window.deferredPrompt = null;
 window.pwaDeferredPromptCaptured = false;
 
-// PRIMARY: Listen for beforeinstallprompt
-window.addEventListener('beforeinstallprompt', function(event) {
-    console.log('✅ beforeinstallprompt EVENT FIRED');
+// Add listener at the very top level
+window.addEventListener('beforeinstallprompt', function captureInstallPrompt(event) {
+    console.log('✅✅✅ beforeinstallprompt EVENT FIRED ✅✅✅');
+    console.log('Event:', event);
+    
+    // MUST prevent default behavior
     event.preventDefault();
+    
+    // Store globally
     window.deferredPrompt = event;
     window.pwaDeferredPromptCaptured = true;
-    console.log('✅ deferredPrompt CAPTURED and ready');
+    
+    console.log('✅ CAPTURED: window.deferredPrompt is now SET');
+    console.log('Ready for manual trigger via .prompt()');
 });
 
-// FALLBACK: If beforeinstallprompt doesn't fire, create a manual trigger
-// This will work on browsers that support PWA but don't fire the event
-document.addEventListener('DOMContentLoaded', function() {
-    // Check if we're on a PWA-capable browser but event didn't fire
-    if (!window.deferredPrompt && 'serviceWorker' in navigator) {
-        console.log('⚠️ beforeinstallprompt not fired, but PWA is supported');
-        console.log('Will enable manual install when button is clicked');
-    }
-});
-
-// appinstalled event
+// Also listen for appinstalled event
 window.addEventListener('appinstalled', function() {
-    console.log('✅ APP INSTALLED');
+    console.log('✅ APP INSTALLED EVENT - User installed the app!');
     window.deferredPrompt = null;
 });
+
+// Debug: Log if beforeinstallprompt is supported
+console.log('🔍 PWA Debug Info:');
+console.log('   beforeinstallprompt supported:', 'beforeinstallprompt' in window);
+console.log('   Service Worker support:', 'serviceWorker' in navigator);
+console.log('   Ready to capture install prompt');
 
 // ═══════════════════════════════════════════════════════════════

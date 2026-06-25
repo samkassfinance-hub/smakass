@@ -3210,47 +3210,51 @@ create table if not exists payments (
     }
 
     installBtn.addEventListener('click', async () => {
-      console.log('🔘 Install button clicked');
-      console.log('deferredPrompt:', window.deferredPrompt);
+      console.log('🔘🔘🔘 INSTALL BUTTON CLICKED 🔘🔘🔘');
+      console.log('window.deferredPrompt value:', window.deferredPrompt);
       console.log('pwaDeferredPromptCaptured:', window.pwaDeferredPromptCaptured);
 
-      // If we have the deferred prompt, use it
-      if (window.deferredPrompt) {
-        try {
-          console.log('✅ Using captured deferredPrompt');
-          await window.deferredPrompt.prompt();
-          const { outcome } = await window.deferredPrompt.userChoice;
-          
-          if (outcome === 'accepted') {
-            console.log('✅ User accepted install');
-            installBtn.innerHTML = '<i class="fa-solid fa-check me-2"></i>App Installed';
-            installBtn.disabled = true;
-            installBtn.style.opacity = '0.6';
-          }
-          window.deferredPrompt = null;
-        } catch (err) {
-          console.error('Error:', err);
-        }
+      // Check if we have the deferred prompt
+      if (!window.deferredPrompt) {
+        console.error('❌ deferredPrompt is NULL');
+        console.error('beforeinstallprompt event was NOT captured');
+        console.error('The browser may not support PWA install or it was already installed');
+        
+        // Show what we know
+        console.log('Debugging Info:');
+        console.log('- pwaDeferredPromptCaptured:', window.pwaDeferredPromptCaptured);
+        console.log('- beforeinstallprompt in window:', 'beforeinstallprompt' in window);
+        
+        // Don't show toast - the user will see this in console
         return;
       }
 
-      // FALLBACK: Try to trigger install via navigator
-      if ('serviceWorker' in navigator && 'BeforeInstallPromptEvent' in window) {
-        console.log('Using navigator-based install');
-        try {
-          // Try to create and trigger install
-          if (navigator.serviceWorker.controller) {
-            showToast('Check your browser menu for "Install app" option', 'info');
-          }
-        } catch (err) {
-          console.error('Error:', err);
-        }
-        return;
-      }
+      try {
+        console.log('✅ Showing PWA install dialog...');
+        console.log('Calling deferredPrompt.prompt()');
+        
+        // Show the native browser install prompt dialog
+        await window.deferredPrompt.prompt();
+        
+        // Get user's choice
+        const { outcome } = await window.deferredPrompt.userChoice;
+        console.log('👤 User chose:', outcome);
 
-      // If nothing works
-      console.warn('PWA install not available');
-      showToast('Install not available on this browser', 'info');
+        if (outcome === 'accepted') {
+          console.log('✅✅✅ USER ACCEPTED - APP INSTALLING ✅✅✅');
+          installBtn.innerHTML = '<i class="fa-solid fa-check me-2"></i>App Installed';
+          installBtn.disabled = true;
+          installBtn.style.opacity = '0.6';
+        } else {
+          console.log('❌ User dismissed/cancelled install');
+        }
+        
+        // Reset
+        window.deferredPrompt = null;
+      } catch (err) {
+        console.error('❌ Error during install prompt:', err);
+        console.error('Error details:', err.message);
+      }
     });
   }, 100);
 }

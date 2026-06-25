@@ -1907,7 +1907,7 @@
 
       if (logoBubbleContainer) {
         makeDraggable(logoBubbleContainer, async function (e) {
-          // Don't trigger install if clicking on PIN inputs or form elements
+          // Don't trigger install if clicking on PIN inputs or any focused form element
           if (e.target && (e.target.classList.contains('pin-digit-input') || 
               e.target.closest('input:not(.pin-digit-input)') || 
               e.target.closest('textarea') ||
@@ -1917,24 +1917,29 @@
           }
           
           console.log('🔘 Logo bubble clicked');
-          console.log('deferredPrompt:', window.deferredPrompt);
+          console.log('📦 deferredPrompt:', window.deferredPrompt);
           
-          // If we have the deferred prompt, use it
+          // Trigger native PWA install prompt
           if (window.deferredPrompt) {
             try {
-              console.log('Triggering install prompt');
+              console.log('🎯 Calling deferredPrompt.prompt()');
               await window.deferredPrompt.prompt();
               const { outcome } = await window.deferredPrompt.userChoice;
+              console.log(`👤 User response: ${outcome}`);
               
               if (outcome === 'accepted') {
-                console.log('User accepted install');
+                console.log('✅ User accepted install');
+              } else {
+                console.log('❌ User dismissed install');
               }
+              
+              // Reset after use
               window.deferredPrompt = null;
             } catch (err) {
-              console.error('Error:', err);
+              console.error('❌ Install prompt error:', err);
             }
           } else {
-            console.log('deferredPrompt not available');
+            console.warn('⚠️  deferredPrompt not available');
           }
         });
       }
