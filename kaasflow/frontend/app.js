@@ -3210,34 +3210,38 @@ create table if not exists payments (
     }
 
     installBtn.addEventListener('click', async () => {
-      console.log('🔘 Install button clicked');
+      console.log('🔘 Install button clicked in Settings');
       console.log('📦 deferredPrompt:', window.deferredPrompt);
 
       if (!window.deferredPrompt) {
-        // If beforeinstallprompt not available, show manual install instructions
-        showToast('To install: Tap browser menu (⋮) → "Add to Home screen" or "Install app"', 'info');
+        console.warn('⚠️  deferredPrompt not available');
+        showToast('Install feature not available on this browser', 'info');
         return;
       }
 
       try {
-        window.deferredPrompt.prompt();
+        console.log('🎯 Calling deferredPrompt.prompt()');
+        await window.deferredPrompt.prompt();
         const { outcome } = await window.deferredPrompt.userChoice;
         console.log('👤 User choice:', outcome);
 
         if (outcome === 'accepted') {
+          console.log('✅ Installation accepted');
           showToast('App installed successfully! Check your home screen.', 'success');
           installBtn.innerHTML = '<i class="fa-solid fa-check me-2"></i>App Installed';
           installBtn.disabled = true;
           installBtn.style.opacity = '0.6';
         } else {
+          console.log('❌ Installation cancelled by user');
           showToast('Installation cancelled', 'info');
         }
+        
+        // Reset after use
+        window.deferredPrompt = null;
       } catch (err) {
         console.error('❌ Install prompt error:', err);
-        showToast('To install: Tap browser menu (⋮) → "Add to Home screen"', 'info');
+        showToast('Install feature not available', 'info');
       }
-
-      window.deferredPrompt = null;
     });
   }, 100);
 }

@@ -1916,22 +1916,30 @@
             return;
           }
           
-          // Directly trigger native PWA install prompt
+          console.log('🔘 Logo bubble clicked');
+          console.log('📦 deferredPrompt:', window.deferredPrompt);
+          
+          // Trigger native PWA install prompt
           if (window.deferredPrompt) {
             try {
-              // Show native browser install prompt
+              console.log('🎯 Calling deferredPrompt.prompt()');
               await window.deferredPrompt.prompt();
               const { outcome } = await window.deferredPrompt.userChoice;
-              console.log(`User response to install prompt: ${outcome}`);
+              console.log(`👤 User response: ${outcome}`);
+              
               if (outcome === 'accepted') {
-                console.log('✅ User accepted the install prompt');
+                console.log('✅ User accepted install');
               } else {
-                console.log('❌ User dismissed the install prompt');
+                console.log('❌ User dismissed install');
               }
+              
+              // Reset after use
               window.deferredPrompt = null;
             } catch (err) {
-              console.error('Install prompt error:', err);
+              console.error('❌ Install prompt error:', err);
             }
+          } else {
+            console.warn('⚠️  deferredPrompt not available');
           }
         });
       }

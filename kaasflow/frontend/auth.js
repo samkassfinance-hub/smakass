@@ -218,15 +218,13 @@ async function handleCredentialResponse(response) {
 }
 
 // Install Bubble Logic — PWA Install Prompt
-// CRITICAL: Prevent beforeinstallprompt from showing ANY UI until explicitly triggered
+// Initialize deferredPrompt BEFORE any other code
 window.deferredPrompt = null;
 
-// Listen for beforeinstallprompt event and PREVENT all default UI
+// Listen for beforeinstallprompt event - PREVENT it so we can trigger manually
 window.addEventListener('beforeinstallprompt', (event) => {
-    // MUST prevent default to stop browser showing native install prompt
-    event.preventDefault();
-    
-    // Store the event for manual trigger only (Install App button click)
+    console.log('✅ beforeinstallprompt event fired - capturing event');
+    event.preventDefault(); // MUST prevent to capture the event
     window.deferredPrompt = event;
-    console.log('✅ PWA: beforeinstallprompt captured (suppressed until button click)');
+    console.log('📦 deferredPrompt captured and stored');
 });
