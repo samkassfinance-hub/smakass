@@ -1907,7 +1907,7 @@
 
       if (logoBubbleContainer) {
         makeDraggable(logoBubbleContainer, async function (e) {
-          // Don't trigger install if clicking on PIN inputs or any focused form element
+          // Don't trigger install if clicking on PIN inputs or form elements
           if (e.target && (e.target.classList.contains('pin-digit-input') || 
               e.target.closest('input:not(.pin-digit-input)') || 
               e.target.closest('textarea') ||
@@ -1917,29 +1917,24 @@
           }
           
           console.log('🔘 Logo bubble clicked');
-          console.log('📦 deferredPrompt:', window.deferredPrompt);
+          console.log('deferredPrompt:', window.deferredPrompt);
           
-          // Trigger native PWA install prompt
+          // If we have the deferred prompt, use it
           if (window.deferredPrompt) {
             try {
-              console.log('🎯 Calling deferredPrompt.prompt()');
+              console.log('Triggering install prompt');
               await window.deferredPrompt.prompt();
               const { outcome } = await window.deferredPrompt.userChoice;
-              console.log(`👤 User response: ${outcome}`);
               
               if (outcome === 'accepted') {
-                console.log('✅ User accepted install');
-              } else {
-                console.log('❌ User dismissed install');
+                console.log('User accepted install');
               }
-              
-              // Reset after use
               window.deferredPrompt = null;
             } catch (err) {
-              console.error('❌ Install prompt error:', err);
+              console.error('Error:', err);
             }
           } else {
-            console.warn('⚠️  deferredPrompt not available');
+            console.log('deferredPrompt not available');
           }
         });
       }
@@ -3492,8 +3487,23 @@
   <!-- Supabase JS SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <!-- App Script - MUST LOAD FIRST -->
+  <!-- SERVICE WORKER REGISTRATION (must be before app.js) -->
+  <script>
+    // Register service worker for PWA support
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('✅ Service Worker registered'))
+          .catch(err => console.warn('⚠️ Service Worker registration failed:', err));
+      });
+    }
+  </script>
+
+  <!-- APP SCRIPT -->
   <script src="app.js?v=18"></script>
+  
+  <!-- AUTH SCRIPT (PWA Install Prompt) -->
+  <script src="auth.js?v=1"></script>
 
   <!-- Feature Scripts - Load after app.js -->
   <script src="supabase_sync.js?v=3" defer></script>

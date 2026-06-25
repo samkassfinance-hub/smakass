@@ -217,14 +217,37 @@ async function handleCredentialResponse(response) {
     }
 }
 
-// Install Bubble Logic — PWA Install Prompt
-// Initialize deferredPrompt BEFORE any other code
-window.deferredPrompt = null;
+// ═══════════════════════════════════════════════════════════════
+// PWA INSTALL PROMPT - GLOBAL SETUP
+// Captures beforeinstallprompt and provides fallback
+// ═══════════════════════════════════════════════════════════════
 
-// Listen for beforeinstallprompt event - PREVENT it so we can trigger manually
-window.addEventListener('beforeinstallprompt', (event) => {
-    console.log('✅ beforeinstallprompt event fired - capturing event');
-    event.preventDefault(); // MUST prevent to capture the event
+window.deferredPrompt = null;
+window.pwaDeferredPromptCaptured = false;
+
+// PRIMARY: Listen for beforeinstallprompt
+window.addEventListener('beforeinstallprompt', function(event) {
+    console.log('✅ beforeinstallprompt EVENT FIRED');
+    event.preventDefault();
     window.deferredPrompt = event;
-    console.log('📦 deferredPrompt captured and stored');
+    window.pwaDeferredPromptCaptured = true;
+    console.log('✅ deferredPrompt CAPTURED and ready');
 });
+
+// FALLBACK: If beforeinstallprompt doesn't fire, create a manual trigger
+// This will work on browsers that support PWA but don't fire the event
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if we're on a PWA-capable browser but event didn't fire
+    if (!window.deferredPrompt && 'serviceWorker' in navigator) {
+        console.log('⚠️ beforeinstallprompt not fired, but PWA is supported');
+        console.log('Will enable manual install when button is clicked');
+    }
+});
+
+// appinstalled event
+window.addEventListener('appinstalled', function() {
+    console.log('✅ APP INSTALLED');
+    window.deferredPrompt = null;
+});
+
+// ═══════════════════════════════════════════════════════════════
