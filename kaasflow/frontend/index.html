@@ -1916,30 +1916,11 @@
             return;
           }
           
-          console.log('🔘 Logo bubble clicked');
-          console.log('📦 deferredPrompt:', window.deferredPrompt);
-          
-          // Trigger native PWA install prompt
-          if (window.deferredPrompt) {
-            try {
-              console.log('🎯 Calling deferredPrompt.prompt()');
-              await window.deferredPrompt.prompt();
-              const { outcome } = await window.deferredPrompt.userChoice;
-              console.log(`👤 User response: ${outcome}`);
-              
-              if (outcome === 'accepted') {
-                console.log('✅ User accepted install');
-              } else {
-                console.log('❌ User dismissed install');
-              }
-              
-              // Reset after use
-              window.deferredPrompt = null;
-            } catch (err) {
-              console.error('❌ Install prompt error:', err);
-            }
+          // Use the centralized PWA install handler
+          if (window.PWAInstall) {
+            await window.PWAInstall.handleInstallClick();
           } else {
-            console.warn('⚠️  deferredPrompt not available');
+            console.warn('PWA install module not loaded yet');
           }
         });
       }
@@ -3503,6 +3484,9 @@
       });
     }
   </script>
+
+  <!-- PWA INSTALL HANDLER (must load before app.js) -->
+  <script src="pwa-install.js?v=1"></script>
 
   <!-- APP SCRIPT -->
   <script src="app.js?v=18"></script>

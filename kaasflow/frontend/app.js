@@ -2739,7 +2739,7 @@ function renderSettings(container) {
       <div class="kf-card pro-card mt-3" data-ocid="settings.install_app_card">
         <div class="section-title"><i class="fa-solid fa-mobile-screen-button"></i>Install Application</div>
         <p class="text-muted-kf fs-sm mb-3">Install SamKass on your device for quick access and offline functionality.</p>
-        <button class="btn-kf-primary w-100" style="min-height:52px; font-weight: 700; font-size: 1rem;" id="btn-install-app" data-ocid="settings.install_app_button">
+        <button class="btn-kf-primary w-100" style="min-height:52px; font-weight: 700; font-size: 1rem;" id="btn-install-app" data-pwa-install-btn data-ocid="settings.install_app_button">
           <i class="fa-solid fa-download me-2"></i>Install App
         </button>
       </div>
