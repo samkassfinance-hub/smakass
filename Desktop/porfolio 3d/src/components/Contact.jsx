@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import React, { useRef, useState } from "react";
+import { motion, useScroll, useTransform } from "framer-motion";
 
 const Contact = () => {
   const ref = useRef(null);
@@ -8,12 +8,32 @@ const Contact = () => {
     offset: ["start end", "end start"]
   });
   
-  // Parallax translation for the big text
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    message: ""
+  });
+
   const y = useTransform(scrollYProgress, [0, 1], ["-20%", "30%"]);
+
+  const handleChange = (e) => {
+    const { id, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [id]: value
+    }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const subject = encodeURIComponent("Message from Portfolio");
+    const body = encodeURIComponent(`Name: ${formData.firstName} ${formData.lastName}\nEmail: ${formData.email}\n\nMessage:\n${formData.message}`);
+    window.location.href = `mailto:mohansampath098@gmail.com?subject=${subject}&body=${body}`;
+  };
 
   return (
     <section ref={ref} id="contact" className="bg-[#0a0a0a] w-full min-h-screen relative overflow-hidden flex items-end pt-32 pb-0 md:pb-0 border-t border-gray-900">
-      {/* Huge Background Text */}
       <motion.div 
         style={{ y }}
         className="absolute top-0 left-0 w-full h-full flex flex-col justify-start items-center overflow-hidden pointer-events-none z-0 pt-16 md:pt-12"
@@ -26,37 +46,25 @@ const Contact = () => {
         </h1>
       </motion.div>
 
-      {/* Form Card Overlay */}
       <div className="relative z-10 w-full flex justify-end items-end">
         <div 
           data-aos="fade-up"
           className="bg-[#ff2a2a] w-full md:w-[85%] lg:w-[75%] p-8 md:p-16 text-white flex flex-col justify-between"
         >
-          <div className="mb-8">
-            <h3 className="text-2xl font-bold mb-4">Get in Touch</h3>
-            <p className="text-white/90 font-semibold mb-6">
-              I'm open to collaborations, internships, and IT opportunities. Feel free to reach out!
-            </p>
-            <div className="space-y-2 font-semibold text-white/80">
-              <p>📧 <a href="mailto:mohansampath098@gmail.com" className="hover:text-white underline">mohansampath098@gmail.com</a></p>
-              <p>📱 <a href="tel:+917904987242" className="hover:text-white underline">+91 79049 87242</a></p>
-              <p>📍 Coimbatore, Tamil Nadu, India</p>
-            </div>
-          </div>
-
           <div className="text-xs font-bold tracking-[0.2em] mb-12 md:mb-20 uppercase opacity-90">
-            Send a Message
+            Get In Touch
           </div>
 
-          <form className="flex flex-col gap-12 md:gap-16 w-full">
+          <form className="flex flex-col gap-12 md:gap-16 w-full" onSubmit={handleSubmit}>
             <div className="flex flex-col md:flex-row gap-12 md:gap-20 w-full">
-              {/* Left Column */}
               <div className="flex-1 flex flex-col gap-10">
                 <div className="relative">
                   <input 
                     type="text" 
                     id="firstName" 
                     placeholder="First Name" 
+                    value={formData.firstName}
+                    onChange={handleChange}
                     className="w-full bg-transparent border-b border-white/40 pb-3 text-lg focus:outline-none focus:border-white transition-colors placeholder-white font-medium rounded-none"
                   />
                 </div>
@@ -65,6 +73,8 @@ const Contact = () => {
                     type="text" 
                     id="lastName" 
                     placeholder="Last Name" 
+                    value={formData.lastName}
+                    onChange={handleChange}
                     className="w-full bg-transparent border-b border-white/40 pb-3 text-lg focus:outline-none focus:border-white transition-colors placeholder-white font-medium rounded-none"
                   />
                 </div>
@@ -73,46 +83,54 @@ const Contact = () => {
                     type="email" 
                     id="email" 
                     placeholder="Email" 
+                    value={formData.email}
+                    onChange={handleChange}
                     className="w-full bg-transparent border-b border-white/40 pb-3 text-lg focus:outline-none focus:border-white transition-colors placeholder-white font-medium rounded-none"
+                    required
                   />
                 </div>
               </div>
 
-              {/* Right Column */}
               <div className="flex-1 flex flex-col">
                 <div className="relative h-full flex flex-col">
                   <textarea 
                     id="message" 
                     placeholder="Type your message here" 
+                    value={formData.message}
+                    onChange={handleChange}
                     className="w-full h-full min-h-[120px] bg-transparent border-b border-white/40 pb-3 text-lg focus:outline-none focus:border-white transition-colors placeholder-white font-medium resize-none rounded-none"
                   ></textarea>
                 </div>
               </div>
             </div>
 
-            {/* Bottom Section */}
             <div className="flex flex-col md:flex-row gap-12 mt-4">
-              {/* Left text */}
-              <div className="flex-1 flex items-start gap-4 text-sm font-medium text-white/90">
-                <input 
-                  type="checkbox" 
-                  id="permission" 
-                  className="mt-1 w-4 h-4 rounded-sm border-white/40 bg-transparent text-white focus:ring-white focus:ring-offset-0 focus:ring-offset-transparent cursor-pointer" 
-                  style={{ accentColor: "white" }}
-                />
-                <label htmlFor="permission" className="cursor-pointer max-w-[280px] leading-snug">
-                  I give permission to contact me at this email address.
-                </label>
+              <div className="flex-1 flex flex-col gap-4 text-sm font-medium text-white/90">
+                <p className="font-bold">Contact Details:</p>
+                <a href="mailto:mohansampath098@gmail.com" className="hover:text-white transition-colors underline">
+                  mohansampath098@gmail.com
+                </a>
+                <a href="tel:+917904987242" className="hover:text-white transition-colors underline">
+                  +91 79049 87242
+                </a>
+                <p>Coimbatore, Tamil Nadu, India</p>
+                <div className="flex gap-4 mt-4">
+                  <a href="https://linkedin.com/in/mohanakannan098" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors underline">
+                    LinkedIn
+                  </a>
+                  <a href="https://github.com/mohansampath098-ai" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors underline">
+                    GitHub
+                  </a>
+                </div>
               </div>
 
-              {/* Right text & button */}
               <div className="flex-1 flex flex-col gap-8 text-xs text-white/70 font-medium">
                 <p className="leading-relaxed max-w-[400px]">
-                  This site is protected by reCAPTCHA and the Google <a href="#" className="underline hover:text-white transition-colors">Privacy Policy</a> and <a href="#" className="underline hover:text-white transition-colors">Terms of Service</a> apply.
+                  Feel free to reach out for collaborations or any inquiries about my projects and experience.
                 </p>
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-6">
                   <p className="max-w-[250px] leading-relaxed">
-                    For information on how to unsubscribe, please review our <a href="#" className="underline hover:text-white transition-colors">privacy policy</a>.
+                    I will get back to you as soon as possible!
                   </p>
                   
                   <button 

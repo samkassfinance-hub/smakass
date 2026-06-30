@@ -35,35 +35,3 @@ body {
   90% { transform: translateY(-15px); opacity: 1; }
   100% { transform: translateY(0); opacity: 1; }
 }
-
-
-/* Hide Gemini and other branding logos */
-[class*="gemini"],
-[id*="gemini"],
-[class*="watermark"],
-[id*="watermark"],
-svg[class*="gemini"],
-img[class*="gemini"],
-.google-logo,
-.gemini-logo,
-[data-testid*="gemini"],
-[data-testid*="watermark"],
-iframe[src*="gemini"],
-iframe[src*="google"],
-script[src*="gemini"],
-div[class*="gemini-watermark"],
-div[class*="branding"] {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  width: 0 !important;
-  height: 0 !important;
-}
-
-/* Ensure video player is clean */
-video::after,
-.video-watermark,
-.player-watermark,
-.watermark-overlay {
-  display: none !important;
-}

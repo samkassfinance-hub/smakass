@@ -41,21 +41,27 @@ const About = () => {
         <div data-aos="fade-left" data-aos-delay="200" className="flex-1 text-white mt-8 md:mt-0 relative z-20">
           
           <h2 className="text-4xl md:text-5xl font-black text-black mb-4">Hello!</h2>
-          <p className="text-lg font-bold mb-12 leading-relaxed max-w-3xl text-red-50">
-            Hi, my name is <span className="text-black text-xl font-black mx-1 tracking-wide uppercase">Mohanakannan</span>, a passionate full-stack developer and the founder of <span className="text-black text-xl font-black mx-1 tracking-wide uppercase">Samkass Finance Manager</span>. I'm an engineering student based in <span className="text-black text-lg font-black">Coimbatore, India</span>, dedicated to crafting clean, functional, and highly scalable web applications and SaaS solutions.
+          <p className="text-lg font-bold mb-6 leading-relaxed max-w-3xl text-red-50">
+            Hi, I'm <span className="text-black text-xl font-black mx-1 tracking-wide uppercase">MOHANAKANNAN S</span>, a passionate 1st-year B.E. student in Electrical and Electronics Engineering at Karpagam Institute of Technology, Coimbatore.
           </p>
 
-          <div className="mb-6">
-            <h3 className="text-black font-bold mb-3 text-lg">Key Highlights:</h3>
-            <ul className="text-red-50 space-y-2 font-semibold">
-              <li>✓ Founded Samkass Finance Manager (Web App & PWA)</li>
-              <li>✓ 8.0 CGPA - 1st Year B.E. in Electrical & Electronics Engineering</li>
-              <li>✓ 14+ Technical Certifications</li>
-              <li>✓ 3 Live Deployed Projects</li>
-            </ul>
+          <p className="text-base font-semibold mb-8 leading-relaxed max-w-3xl text-red-50">
+            Driven by a strong passion for IT and aspiring to become a Game Developer, I specialize in Frontend Development, Full Stack Development, and AI integration. I'm proficient in C, C++, Python, Web Technologies (HTML5, CSS3, JavaScript), and Cloud Platforms (AWS). Currently, I'm an active member of the AWS Club and have earned 14+ professional certifications in programming, cloud computing, and networking.
+          </p>
+
+          <div className="mb-8">
+            <h3 className="text-xl font-black text-black mb-4">Technical Skills</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <span className="bg-black text-white px-3 py-2 rounded-lg text-sm font-bold">Frontend Development</span>
+              <span className="bg-black text-white px-3 py-2 rounded-lg text-sm font-bold">Full Stack</span>
+              <span className="bg-black text-white px-3 py-2 rounded-lg text-sm font-bold">Game Development</span>
+              <span className="bg-black text-white px-3 py-2 rounded-lg text-sm font-bold">AI & ML</span>
+              <span className="bg-black text-white px-3 py-2 rounded-lg text-sm font-bold">Cloud Computing</span>
+              <span className="bg-black text-white px-3 py-2 rounded-lg text-sm font-bold">DevOps</span>
+            </div>
           </div>
 
-          {/* Horizontal Skills Row (Transparent & Large) */}
+          {/* Horizontal Skills Row */}
           <div className="flex items-center gap-10 mt-8">
             <img 
               data-aos="zoom-in" data-aos-delay="300"

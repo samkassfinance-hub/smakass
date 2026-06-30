@@ -1,14 +1,10 @@
 import React, { useRef, useEffect, useState } from 'react';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
-// Adjusted import path for the video
-import heroVideo from '../assets/hero video/1000086985 (1).mp4';
 
 const Hero = () => {
   const videoRef = useRef(null);
-  const sectionRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(true);
-  const [showPauseButton, setShowPauseButton] = useState(false);
 
   useEffect(() => {
     AOS.init({
@@ -16,51 +12,28 @@ const Hero = () => {
       once: true,
       easing: 'ease-out'
     });
-  }, []);
-
-  // Start video after preloader finishes
-  useEffect(() => {
-    const timer = setTimeout(() => {
+    
+    // Auto-play video with audio immediately on load
+    const playVideoWithAudio = async () => {
       if (videoRef.current) {
-        videoRef.current.currentTime = 0;
-        videoRef.current.play().catch(error => {
-          console.log('Autoplay failed:', error);
-        });
-        setIsPlaying(true);
-        setShowPauseButton(true);
-      }
-    }, 3000);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Pause/Resume video when user scrolls in/out of hero section
-  useEffect(() => {
-    const handleScroll = () => {
-      if (sectionRef.current && videoRef.current) {
-        const sectionRect = sectionRef.current.getBoundingClientRect();
-        const isInView = sectionRect.top < window.innerHeight && sectionRect.bottom > 0;
-        
-        if (isInView) {
-          // Section is in view - resume playing
-          if (videoRef.current.paused) {
-            videoRef.current.play().catch(error => {
-              console.log('Resume failed:', error);
-            });
-            setIsPlaying(true);
-          }
-        } else {
-          // Section is out of view - pause playing
-          if (!videoRef.current.paused) {
-            videoRef.current.pause();
-            setIsPlaying(false);
-          }
+        try {
+          // Ensure video is not muted and volume is at max
+          videoRef.current.muted = false;
+          videoRef.current.volume = 1;
+          videoRef.current.playbackRate = 1;
+          
+          // Play the video
+          await videoRef.current.play();
+          setIsPlaying(true);
+        } catch (error) {
+          console.log('Autoplay with audio blocked by browser policy');
         }
       }
     };
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    // Small delay to ensure DOM is ready
+    const timer = setTimeout(playVideoWithAudio, 300);
+    return () => clearTimeout(timer);
   }, []);
 
   const toggleVideo = (e) => {
@@ -76,16 +49,30 @@ const Hero = () => {
     }
   };
 
+  const handlePlayPause = () => {
+    if (videoRef.current) {
+      setIsPlaying(!videoRef.current.paused);
+    }
+  };
+
   return (
-    <section ref={sectionRef} className="relative w-full h-screen overflow-hidden bg-black">
-      {/* Background Video */}
+    <section className="relative w-full h-screen overflow-hidden bg-black">
+      {/* Background Video - Optimized for performance */}
       <video
         ref={videoRef}
         loop
+        autoPlay
+        muted={false}
         playsInline
+        preload="auto"
+        onPlay={handlePlayPause}
+        onPause={handlePlayPause}
+        onLoadStart={() => console.log('Video loading')}
+        onCanPlay={() => console.log('Video ready to play')}
         className="absolute top-0 left-0 w-full h-full object-cover z-0"
+        style={{ WebkitPlaysinline: 'webkit-playsinline' }}
       >
-        <source src={heroVideo} type="video/mp4" />
+        <source src="/hero.mp4" type="video/mp4" />
         Your browser does not support the video tag.
       </video>
 
@@ -99,7 +86,7 @@ const Hero = () => {
             data-aos="fade-up"
             className="text-white text-3xl md:text-5xl font-bold mb-4 tracking-tight"
           >
-            I am the Founder of <br /> <span className="text-transparent [-webkit-text-stroke:1.5px_black]">Samkass & Full Stack Developer</span>
+            Hi, I'm a <br /> <span className="text-transparent [-webkit-text-stroke:1.5px_black]">Full Stack Developer</span>
           </h1>
 
           {/* Subheading */}
@@ -108,7 +95,7 @@ const Hero = () => {
             data-aos-delay="200"
             className="text-white text-sm md:text-lg font-semibold mb-8 max-w-md drop-shadow-md"
           >
-            Building practical SaaS solutions, web applications, and browser games. Experienced in React, Node.js, AI tools, and cloud technologies.
+            I build fast, scalable and modern web applications using React, Node.js and Tailwind CSS.
           </p>
 
           {/* Buttons */}
@@ -129,32 +116,30 @@ const Hero = () => {
           </div>
         </div>
 
-        {/* Right Side: Pause Button - Only show after preloader */}
-        {showPauseButton && (
-          <div 
-            data-aos="zoom-in"
-            data-aos-delay="600"
-            className="mt-8 md:mt-0 flex flex-row md:flex-col items-center gap-2 md:gap-3 cursor-pointer group self-start md:self-auto"
-            onClick={toggleVideo}
-          >
-            <div className="w-12 h-12 md:w-20 md:h-20 rounded-full border border-white/30 bg-black/20 backdrop-blur-md flex justify-center items-center group-hover:scale-110 group-hover:bg-[#ff2a2a] transition-all duration-500 shadow-[0_0_30px_rgba(255,255,255,0.1)] group-hover:shadow-[0_0_40px_rgba(255,42,42,0.6)]">
-              {isPlaying ? (
-                // Pause Icon
-                <svg className="w-5 h-5 md:w-8 md:h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-                </svg>
-              ) : (
-                // Play Icon
-                <svg className="w-5 h-5 md:w-8 md:h-8 text-white ml-0.5 md:ml-1" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              )}
-            </div>
-            <span className="text-white text-[10px] md:text-xs font-bold tracking-widest uppercase opacity-70 group-hover:opacity-100 transition-opacity">
-              {isPlaying ? "Pause" : "Play"}
-            </span>
+        {/* Right Side: Play/Pause Button */}
+        <div 
+          data-aos="zoom-in"
+          data-aos-delay="600"
+          className="mt-8 md:mt-0 flex flex-row md:flex-col items-center gap-2 md:gap-3 cursor-pointer group self-start md:self-auto"
+          onClick={toggleVideo}
+        >
+          <div className="w-12 h-12 md:w-20 md:h-20 rounded-full border border-white/30 bg-black/20 backdrop-blur-md flex justify-center items-center group-hover:scale-110 group-hover:bg-[#ff2a2a] transition-all duration-500 shadow-[0_0_30px_rgba(255,255,255,0.1)] group-hover:shadow-[0_0_40px_rgba(255,42,42,0.6)]">
+            {isPlaying ? (
+              // Pause Icon
+              <svg className="w-5 h-5 md:w-8 md:h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+              </svg>
+            ) : (
+              // Play Icon
+              <svg className="w-5 h-5 md:w-8 md:h-8 text-white ml-0.5 md:ml-1" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            )}
           </div>
-        )}
+          <span className="text-white text-[10px] md:text-xs font-bold tracking-widest uppercase opacity-70 group-hover:opacity-100 transition-opacity">
+            {isPlaying ? "PAUSE" : "RESUME"}
+          </span>
+        </div>
       </div>
 
       {/* Scroll Indicator */}

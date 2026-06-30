@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple Razorpay Test</title>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+    button {
+      padding: 15px 30px;
+      font-size: 16px;
+      background: #7ed321;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 10px;
+    }
+    button:hover { background: #6bc01a; }
+    .log { margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <h1>🔥 Simple Razorpay Test</h1>
+  <p>Click button to test Razorpay popup directly</p>
+  
+  <button onclick="testDirect()">Test Direct Razorpay (₹270)</button>
+  <button onclick="testWithBackend()">Test With Backend (₹270)</button>
+  
+  <div class="log" id="log"></div>
+
+  <script>
+    const KEY_ID = 'rzp_live_SuharfZYrJBbHj';
+    const API_BASE = 'http://127.0.0.1:5000/api';
+    
+    function log(msg) {
+      document.getElementById('log').innerHTML += `<div>${new Date().toLocaleTimeString()}: ${msg}</div>`;
+    }
+    
+    // Test 1: Direct Razorpay without backend
+    function testDirect() {
+      log('🚀 Testing direct Razorpay...');
+      log('Razorpay SDK loaded: ' + (typeof Razorpay !== 'undefined'));
+      
+      if (typeof Razorpay === 'undefined') {
+        log('❌ ERROR: Razorpay SDK not loaded!');
+        alert('Razorpay SDK not loaded! Check internet connection.');
+        return;
+      }
+      
+      const options = {
+        key: KEY_ID,
+        amount: 27000, // ₹270 in paise
+        currency: 'INR',
+        name: 'SamKass Test',
+        description: 'Monthly Plan Test',
+        handler: function(response) {
+          log('✅ Payment successful!');
+          log('Payment ID: ' + response.razorpay_payment_id);
+          alert('Payment successful! ID: ' + response.razorpay_payment_id);
+        },
+        prefill: {
+          name: 'Test User',
+          email: 'test@example.com',
+          contact: '9999999999'
+        },
+        theme: {
+          color: '#7ed321'
+        },
+        modal: {
+          ondismiss: function() {
+            log('⚠️ Payment cancelled');
+          }
+        }
+      };
+      
+      try {
+        log('Creating Razorpay instance...');
+        const rzp = new Razorpay(options);
+        log('Opening checkout...');
+        rzp.open();
+        log('✅ Checkout opened!');
+      } catch (error) {
+        log('❌ ERROR: ' + error.message);
+        alert('Error: ' + error.message);
+      }
+    }
+    
+    // Test 2: With backend order creation
+    async function testWithBackend() {
+      log('🚀 Testing with backend...');
+      
+      try {
+        // Create order
+        log('Creating order via backend...');
+        const res = await fetch(`${API_BASE}/payment/create-order`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-User-Email': 'test@example.com'
+          },
+          body: JSON.stringify({
+            amount: 270,
+            plan_type: 'monthly',
+            email: 'test@example.com'
+          })
+        });
+        
+        const data = await res.json();
+        log('Order response: ' + JSON.stringify(data));
+        
+        if (!data.success) {
+          log('❌ Order creation failed: ' + data.error);
+          alert('Order creation failed: ' + data.error);
+          return;
+        }
+        
+        log('✅ Order created: ' + data.order.id);
+        
+        // Open Razorpay
+        const options = {
+          key: KEY_ID,
+          amount: data.order.amount,
+          currency: data.order.currency,
+          name: 'SamKass',
+          description: 'Monthly Plan',
+          order_id: data.order.id,
+          handler: async function(response) {
+            log('✅ Payment successful!');
+            log('Verifying payment...');
+            
+            // Verify payment
+            const verifyRes = await fetch(`${API_BASE}/payment/verify`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-User-Email': 'test@example.com'
+              },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                plan_type: 'monthly',
+                email: 'test@example.com'
+              })
+            });
+            
+            const verifyData = await verifyRes.json();
+            log('Verification: ' + JSON.stringify(verifyData));
+            
+            if (verifyData.success) {
+              log('🎉 Payment verified and plan activated!');
+              alert('Success! Plan activated: ' + verifyData.message);
+            } else {
+              log('❌ Verification failed');
+              alert('Verification failed');
+            }
+          },
+          prefill: {
+            name: 'Test User',
+            email: 'test@example.com',
+            contact: '9999999999'
+          },
+          theme: {
+            color: '#7ed321'
+          },
+          modal: {
+            ondismiss: function() {
+              log('⚠️ Payment cancelled');
+            }
+          }
+        };
+        
+        const rzp = new Razorpay(options);
+        rzp.open();
+        log('✅ Checkout opened!');
+        
+      } catch (error) {
+        log('❌ ERROR: ' + error.message);
+        alert('Error: ' + error.message);
+      }
+    }
+    
+    // Check on load
+    window.addEventListener('load', () => {
+      log('Page loaded');
+      log('Razorpay SDK: ' + (typeof Razorpay !== 'undefined' ? '✅ Loaded' : '❌ Not loaded'));
+      log('Key ID: ' + KEY_ID);
+    });
+  </script>
+</body>
+</html>
