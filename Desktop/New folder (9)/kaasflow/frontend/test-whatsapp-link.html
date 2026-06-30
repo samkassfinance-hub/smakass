@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test WhatsApp Settings Link</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-box {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #7ed321;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button {
+            padding: 12px 24px;
+            background: #7ed321;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #6bb01a;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-box">
+        <h1>🧪 WhatsApp Settings - Link Test</h1>
+        <p>This page helps you test the WhatsApp settings integration.</p>
+
+        <h3>Step 1: Check User Authentication</h3>
+        <div id="auth-status"></div>
+        <pre id="auth-data"></pre>
+
+        <h3>Step 2: Test Navigation</h3>
+        <button onclick="testLink1()">Open WhatsApp Settings (Same Tab)</button>
+        <button onclick="testLink2()">Open WhatsApp Settings (New Tab)</button>
+        <button onclick="testLink3()">Simulate Button Click</button>
+
+        <h3>Step 3: Check localStorage</h3>
+        <button onclick="checkStorage()">Check LocalStorage</button>
+        <pre id="storage-data"></pre>
+
+        <h3>Step 4: Test API Connection</h3>
+        <button onclick="testAPI()">Test Backend API</button>
+        <div id="api-status"></div>
+        <pre id="api-data"></pre>
+    </div>
+
+    <script>
+        // Check authentication
+        function checkAuth() {
+            const sessionStr = localStorage.getItem('kf_session');
+            const userStr = localStorage.getItem('user');
+            const email = localStorage.getItem('userEmail');
+
+            let userId = null;
+            let authData = {};
+
+            if (sessionStr) {
+                try {
+                    const session = JSON.parse(sessionStr);
+                    authData.session = session;
+                    if (session.user) {
+                        userId = session.user.id || session.user.email || session.user.user_id;
+                    }
+                } catch (e) {
+                    authData.sessionError = e.message;
+                }
+            }
+
+            if (userStr) {
+                try {
+                    const user = JSON.parse(userStr);
+                    authData.user = user;
+                    if (!userId) {
+                        userId = user.id || user.email || user.user_id;
+                    }
+                } catch (e) {
+                    authData.userError = e.message;
+                }
+            }
+
+            if (email && !userId) {
+                userId = email;
+                authData.email = email;
+            }
+
+            const authStatus = document.getElementById('auth-status');
+            const authDataEl = document.getElementById('auth-data');
+
+            if (userId) {
+                authStatus.innerHTML = `<div class="status success">✓ User authenticated: ${userId}</div>`;
+            } else {
+                authStatus.innerHTML = `<div class="status error">✗ No user found. Please login first.</div>`;
+            }
+
+            authDataEl.textContent = JSON.stringify(authData, null, 2);
+        }
+
+        // Test link methods
+        function testLink1() {
+            window.location.href = 'whatsapp-settings.html';
+        }
+
+        function testLink2() {
+            window.open('whatsapp-settings.html', '_blank');
+        }
+
+        function testLink3() {
+            console.log('Simulating button click from app.js');
+            window.location.href = 'whatsapp-settings.html';
+        }
+
+        // Check localStorage
+        function checkStorage() {
+            const storageData = {
+                'kf_session': localStorage.getItem('kf_session'),
+                'user': localStorage.getItem('user'),
+                'userEmail': localStorage.getItem('userEmail'),
+                'allKeys': Object.keys(localStorage)
+            };
+
+            document.getElementById('storage-data').textContent = JSON.stringify(storageData, null, 2);
+        }
+
+        // Test API
+        async function testAPI() {
+            const apiStatus = document.getElementById('api-status');
+            const apiDataEl = document.getElementById('api-data');
+
+            const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                ? 'http://localhost:5000/api'
+                : 'https://kaasflow-backend.vercel.app/api';
+
+            apiStatus.innerHTML = `<div class="status info">Testing API at: ${API_URL}</div>`;
+
+            // Get user ID
+            let userId = 'test-user';
+            const sessionStr = localStorage.getItem('kf_session');
+            if (sessionStr) {
+                try {
+                    const session = JSON.parse(sessionStr);
+                    if (session.user) {
+                        userId = session.user.id || session.user.email || session.user.user_id || 'test-user';
+                    }
+                } catch (e) {}
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/whatsapp/settings?user_id=${encodeURIComponent(userId)}`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    apiStatus.innerHTML = `<div class="status success">✓ API is working! Response code: ${response.status}</div>`;
+                    apiDataEl.textContent = JSON.stringify(data, null, 2);
+                } else {
+                    apiStatus.innerHTML = `<div class="status error">✗ API returned error: ${response.status}</div>`;
+                    apiDataEl.textContent = JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                apiStatus.innerHTML = `<div class="status error">✗ API connection failed: ${error.message}</div>`;
+                apiDataEl.textContent = `Error: ${error.message}\n\nMake sure the backend is running!`;
+            }
+        }
+
+        // Auto-check on load
+        window.addEventListener('DOMContentLoaded', function() {
+            checkAuth();
+        });
+    </script>
+</body>
+</html>

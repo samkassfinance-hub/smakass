@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Payment Key Endpoint</title>
+    <style>
+        body { font-family: monospace; background: #1a1a1a; color: #0f0; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .test { margin: 20px 0; padding: 15px; background: #222; border: 1px solid #0f0; }
+        .pass { color: #0f0; }
+        .fail { color: #f00; }
+        button { padding: 10px 20px; margin: 10px 0; background: #0f0; color: #000; cursor: pointer; }
+        pre { background: #000; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Payment Key Endpoint Test</h1>
+        
+        <div class="test">
+            <h3>Test 1: Check Backend Connection</h3>
+            <button onclick="testBackendConnection()">Test</button>
+            <pre id="result1"></pre>
+        </div>
+        
+        <div class="test">
+            <h3>Test 2: Fetch Payment Key</h3>
+            <button onclick="testPaymentKey()">Test</button>
+            <pre id="result2"></pre>
+        </div>
+        
+        <div class="test">
+            <h3>Test 3: Check for CORS Issues</h3>
+            <button onclick="testCORS()">Test</button>
+            <pre id="result3"></pre>
+        </div>
+        
+        <div class="test">
+            <h3>Test 4: Full Payment Integration</h3>
+            <button onclick="testFullIntegration()">Test</button>
+            <pre id="result4"></pre>
+        </div>
+    </div>
+
+    <script>
+        const apiBase = 'http://127.0.0.1:5000/api';
+        
+        function log(elementId, message, isError = false) {
+            const el = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = isError ? '❌' : '✅';
+            el.innerHTML += `[${timestamp}] ${prefix} ${message}\n`;
+            console.log(message);
+        }
+        
+        function clear(elementId) {
+            document.getElementById(elementId).innerHTML = '';
+        }
+        
+        async function testBackendConnection() {
+            clear('result1');
+            log('result1', 'Attempting to connect to backend...');
+            log('result1', `Backend URL: ${apiBase}`);
+            
+            try {
+                const response = await fetch(`${apiBase}/payment/key`, {
+                    method: 'GET',
+                    signal: AbortSignal.timeout(5000)
+                });
+                
+                log('result1', `Response Status: ${response.status} ${response.statusText}`);
+                log('result1', 'Backend is reachable!');
+                
+            } catch (error) {
+                log('result1', `Connection failed: ${error.message}`, true);
+                log('result1', 'Possible causes:', true);
+                log('result1', '  - Backend not running on http://127.0.0.1:5000', true);
+                log('result1', '  - Firewall blocking connection', true);
+                log('result1', '  - Network issue', true);
+            }
+        }
+        
+        async function testPaymentKey() {
+            clear('result2');
+            log('result2', 'Fetching payment key from backend...');
+            
+            try {
+                const response = await fetch(`${apiBase}/payment/key`, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' },
+                    signal: AbortSignal.timeout(5000)
+                });
+                
+                log('result2', `Response Status: ${response.status}`);
+                
+                if (!response.ok) {
+                    const text = await response.text();
+                    log('result2', `Error Response: ${text}`, true);
+                    return;
+                }
+                
+                const data = await response.json();
+                log('result2', `Response Data: ${JSON.stringify(data)}`);
+                
+                if (data.key) {
+                    log('result2', `✅ KEY FOUND: ${data.key.substring(0, 20)}...`);
+                    if (data.key.startsWith('rzp_test_')) {
+                        log('result2', 'Mode: TEST (Development)');
+                    } else if (data.key.startsWith('rzp_live_')) {
+                        log('result2', 'Mode: LIVE (Production)');
+                    }
+                } else {
+                    log('result2', 'No key in response', true);
+                }
+                
+            } catch (error) {
+                log('result2', `Error: ${error.message}`, true);
+                log('result2', `Error Type: ${error.constructor.name}`, true);
+            }
+        }
+        
+        async function testCORS() {
+            clear('result3');
+            log('result3', 'Testing for CORS issues...');
+            
+            try {
+                const response = await fetch(`${apiBase}/payment/key`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    signal: AbortSignal.timeout(5000)
+                });
+                
+                log('result3', 'CORS headers received:');
+                log('result3', `  Access-Control-Allow-Origin: ${response.headers.get('access-control-allow-origin') || 'Not set'}`);
+                log('result3', `  Access-Control-Allow-Methods: ${response.headers.get('access-control-allow-methods') || 'Not set'}`);
+                log('result3', '✅ No CORS issues detected');
+                
+            } catch (error) {
+                if (error.message.includes('CORS') || error.message.includes('cross-origin')) {
+                    log('result3', 'CORS Error Detected!', true);
+                    log('result3', error.message, true);
+                } else {
+                    log('result3', `Different error: ${error.message}`, true);
+                }
+            }
+        }
+        
+        async function testFullIntegration() {
+            clear('result4');
+            log('result4', 'Running full integration test...');
+            
+            try {
+                // Step 1: Check backend
+                log('result4', '1️⃣  Checking backend connection...');
+                const connTest = await fetch(`${apiBase}/payment/key`, { signal: AbortSignal.timeout(5000) });
+                
+                if (!connTest.ok) {
+                    log('result4', 'Backend not accessible', true);
+                    return;
+                }
+                log('result4', '✅ Backend accessible');
+                
+                // Step 2: Fetch key
+                log('result4', '2️⃣  Fetching Razorpay key...');
+                const keyData = await connTest.json();
+                
+                if (!keyData.key) {
+                    log('result4', 'No key returned', true);
+                    return;
+                }
+                log('result4', `✅ Key fetched: ${keyData.key.substring(0, 20)}...`);
+                
+                // Step 3: Check Razorpay SDK
+                log('result4', '3️⃣  Checking Razorpay SDK...');
+                const script = document.createElement('script');
+                script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+                script.onload = () => {
+                    log('result4', '✅ Razorpay SDK loaded');
+                    log('result4', `✅ window.Razorpay available: ${typeof window.Razorpay !== 'undefined'}`);
+                    log('result4', '🎉 FULL INTEGRATION TEST PASSED');
+                };
+                script.onerror = () => {
+                    log('result4', 'Failed to load Razorpay SDK', true);
+                };
+                document.head.appendChild(script);
+                
+            } catch (error) {
+                log('result4', `Integration test failed: ${error.message}`, true);
+            }
+        }
+        
+        // Auto-run on load
+        window.onload = () => {
+            log('result1', 'Ready for testing. Click buttons above to run tests.');
+        };
+    </script>
+</body>
+</html>
