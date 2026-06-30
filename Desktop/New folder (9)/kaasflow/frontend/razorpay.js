@@ -49,19 +49,16 @@ const RazorpayPayment = {
       return;
     }
 
-    console.log('🔑 Loading Razorpay Key...');
+    console.log('🔑 Loading Razorpay Key from backend...');
 
-    // Set hardcoded key as fallback (will be updated from backend if available)
-    this.keyId = 'rzp_test_T2ccqRvYXx6jzC';
-    console.log('✅ Using Razorpay key: ' + this.keyId.substring(0, 20) + '...');
-
-    // Try to fetch key from backend (optional, for live keys)
+    // Try to fetch key from backend (REQUIRED)
+    let keyFetched = false;
     try {
       const apiBase = this.getApiBase();
-      console.log(`📡 Attempting to fetch key from backend: ${apiBase}/payment/key`);
+      console.log(`📡 Fetching key from backend: ${apiBase}/payment/key`);
       
       const res = await fetch(`${apiBase}/payment/key`, { 
-        signal: AbortSignal.timeout(3000),
+        signal: AbortSignal.timeout(5000),
         method: 'GET',
         headers: { 'Accept': 'application/json' }
       });
@@ -71,12 +68,22 @@ const RazorpayPayment = {
         
         if (data.key && data.key.startsWith('rzp_')) {
           this.keyId = data.key;
-          console.log('✅ Updated key from backend: ' + this.keyId.substring(0, 20) + '...');
+          console.log('✅ Razorpay key loaded from backend: ' + this.keyId.substring(0, 20) + '...');
+          keyFetched = true;
+        } else {
+          console.warn('⚠️  Backend returned invalid key format');
         }
+      } else {
+        console.warn('⚠️  Backend key endpoint returned error:', res.status);
       }
     } catch (e) {
-      console.warn('⚠️  Could not fetch key from backend:', e.message);
-      console.log('✅ Using fallback key: ' + this.keyId.substring(0, 20) + '...');
+      console.error('❌ Failed to fetch key from backend:', e.message);
+    }
+
+    // Only use hardcoded test key if backend fetch fails (fallback only)
+    if (!keyFetched && !this.keyId) {
+      console.warn('⚠️  Using hardcoded test key (backend not responding)');
+      this.keyId = 'rzp_test_T2ccqRvYXx6jzC';
     }
 
     console.log('✅ RazorpayPayment initialized with key:', this.keyId.substring(0, 20) + '...');
