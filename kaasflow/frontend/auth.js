@@ -126,19 +126,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const rememberMe = document.getElementById('remember-me').checked;
 
         try {
-            // Check if this is first login for this user
-            const existingEmail = getCurrentSessionEmail();
-            const isFirstLogin = !existingEmail || existingEmail.toLowerCase() !== email.toLowerCase();
-
             const response = await fetch(`${API_BASE}/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    email, 
-                    password, 
-                    remember_me: rememberMe,
-                    is_first_login: isFirstLogin
-                })
+                body: JSON.stringify({ email, password, remember_me: rememberMe })
             });
 
             const data = await response.json();
@@ -217,8 +208,43 @@ async function handleCredentialResponse(response) {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// NOTE: PWA INSTALL PROMPT handled by pwa-install.js
-// Consolidated approach: Single listener, reliable triggering
-// ═══════════════════════════════════════════════════════════════
+// Install Bubble Logic — PWA Install Prompt
+let deferredPrompt;
 
+// Listen for beforeinstallprompt event
+window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    deferredPrompt = event;
+});
+
+// Show bubble by default on page load
+document.addEventListener('DOMContentLoaded', () => {
+    const installBubble = document.getElementById('installBubble');
+    
+    if (installBubble) {
+        // Always show the bubble
+        installBubble.style.display = 'flex';
+        
+        // Click handler to trigger install
+        installBubble.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    deferredPrompt = null;
+                }
+            }
+        });
+    }
+});
+
+// Hide bubble after app is installed
+window.addEventListener('appinstalled', () => {
+    const installBubble = document.getElementById('installBubble');
+    if (installBubble) {
+        installBubble.style.display = 'none';
+    }
+});
