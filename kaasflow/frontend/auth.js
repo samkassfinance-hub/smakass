@@ -126,19 +126,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const rememberMe = document.getElementById('remember-me').checked;
 
         try {
-            // Check if this is first login for this user
-            const existingEmail = getCurrentSessionEmail();
-            const isFirstLogin = !existingEmail || existingEmail.toLowerCase() !== email.toLowerCase();
-
             const response = await fetch(`${API_BASE}/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    email, 
-                    password, 
-                    remember_me: rememberMe,
-                    is_first_login: isFirstLogin
-                })
+                body: JSON.stringify({ email, password, remember_me: rememberMe })
             });
 
             const data = await response.json();
@@ -217,41 +208,43 @@ async function handleCredentialResponse(response) {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// PWA INSTALL PROMPT - GLOBAL SETUP (RUNS AT PAGE START)
-// This captures the beforeinstallprompt event immediately
-// ═══════════════════════════════════════════════════════════════
+// Install Bubble Logic — PWA Install Prompt
+let deferredPrompt;
 
-// Initialize globally BEFORE anything else
-window.deferredPrompt = null;
-window.pwaDeferredPromptCaptured = false;
-
-// Add listener at the very top level
-window.addEventListener('beforeinstallprompt', function captureInstallPrompt(event) {
-    console.log('✅✅✅ beforeinstallprompt EVENT FIRED ✅✅✅');
-    console.log('Event:', event);
-    
-    // MUST prevent default behavior
+// Listen for beforeinstallprompt event
+window.addEventListener('beforeinstallprompt', (event) => {
     event.preventDefault();
-    
-    // Store globally
-    window.deferredPrompt = event;
-    window.pwaDeferredPromptCaptured = true;
-    
-    console.log('✅ CAPTURED: window.deferredPrompt is now SET');
-    console.log('Ready for manual trigger via .prompt()');
+    deferredPrompt = event;
 });
 
-// Also listen for appinstalled event
-window.addEventListener('appinstalled', function() {
-    console.log('✅ APP INSTALLED EVENT - User installed the app!');
-    window.deferredPrompt = null;
+// Show bubble by default on page load
+document.addEventListener('DOMContentLoaded', () => {
+    const installBubble = document.getElementById('installBubble');
+    
+    if (installBubble) {
+        // Always show the bubble
+        installBubble.style.display = 'flex';
+        
+        // Click handler to trigger install
+        installBubble.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    deferredPrompt = null;
+                }
+            }
+        });
+    }
 });
 
-// Debug: Log if beforeinstallprompt is supported
-console.log('🔍 PWA Debug Info:');
-console.log('   beforeinstallprompt supported:', 'beforeinstallprompt' in window);
-console.log('   Service Worker support:', 'serviceWorker' in navigator);
-console.log('   Ready to capture install prompt');
-
-// ═══════════════════════════════════════════════════════════════
+// Hide bubble after app is installed
+window.addEventListener('appinstalled', () => {
+    const installBubble = document.getElementById('installBubble');
+    if (installBubble) {
+        installBubble.style.display = 'none';
+    }
+});

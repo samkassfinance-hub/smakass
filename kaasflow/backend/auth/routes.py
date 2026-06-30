@@ -11,20 +11,6 @@ from .password_handler import hash_password, verify_password
 from .magic_link import generate_magic_link_token, verify_magic_link_token
 from .rate_limiter import check_rate_limit, record_failed_attempt, clear_attempts
 
-# Import Resend email service (primary)
-try:
-    import sys
-    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-    from email_service_resend import ResendEmailService, send_welcome_email, send_otp_email
-    USE_RESEND_EMAIL = True
-    print("✅ Resend email service loaded successfully")
-except ImportError as e:
-    print(f"⚠️  Failed to import Resend email service: {e}")
-    USE_RESEND_EMAIL = False
-except Exception as e:
-    print(f"❌ Error loading Resend email service: {e}")
-    USE_RESEND_EMAIL = False
-
 # Import simple email sender (most reliable)
 try:
     from simple_email_sender import simple_email_sender
@@ -356,7 +342,6 @@ def login():
     email = data.get('email')
     password = data.get('password')
     remember_me = data.get('remember_me', False)
-    is_first_login = data.get('is_first_login', False)
     
     if not email or not password:
         return jsonify({'error': 'Email and password required'}), 400
@@ -370,18 +355,6 @@ def login():
     
     if user and user['password_hash'] and verify_password(password, user['password_hash']):
         clear_attempts(email)
-        
-        # Send welcome email on first login
-        if is_first_login:
-            try:
-                username = user['full_name'] or email.split('@')[0]
-                if USE_RESEND_EMAIL:
-                    email_result = send_welcome_email(email, username)
-                    print(f"✅ Welcome email sent to {email}: {email_result}")
-            except Exception as e:
-                print(f"⚠️  Failed to send welcome email: {e}")
-                # Don't fail login if email fails
-        
         expiry = timedelta(days=30) if remember_me else timedelta(minutes=15)
         return create_auth_response(user, access_expiry=expiry)
     else:
@@ -516,18 +489,11 @@ def send_forgot_pin_otp():
         'expires_at': datetime.datetime.now() + datetime.timedelta(minutes=10)
     }
     
-    # Use Resend email service (primary)
-    if USE_RESEND_EMAIL:
-        try:
-            result = send_otp_email(email, otp)
-            print(f"✅ PIN reset OTP sent to {email} via Resend")
-        except Exception as e:
-            print(f"⚠️  Resend email failed: {e}")
-    # Use simple email sender (fallback)
-    elif USE_SIMPLE_EMAIL and simple_email_sender:
+    # Use simple email sender (most reliable)
+    if USE_SIMPLE_EMAIL and simple_email_sender:
         result = simple_email_sender.send_pin_reset_otp(email, otp)
         print(f"✅ PIN reset OTP sent to {email}")
-    # Use advanced service (second fallback)
+    # Fallback to advanced service
     elif USE_ADVANCED_EMAIL_SERVICE and email_service_advanced:
         result = email_service_advanced.send_pin_reset_otp(email, otp)
         print(f"PIN reset OTP sent to {email}")

@@ -1512,11 +1512,28 @@ function calcLoanStats(loan) {
 }
 
 function calcNextDue(loan, payments = null) {
-  if (!loan.duration || loan.duration <= 0) return null;
   if (!payments) payments = Store.payments().filter(p => p.loanId === loan.id);
 
   const duration = loan.duration || 0;
   const interestType = loan.interestType || 'percentage';
+  
+  // Handle "Total Amount with Interest" mode - no fixed duration, continues until paid off
+  if (interestType === 'total-amount-mode') {
+    const monthlyDue = loan.interestRate || 0;
+    const totalAmount = loan.principal;
+    const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
+    
+    if (totalPaid >= totalAmount) return null; // Loan is fully paid
+    
+    // Calculate how many months have been completed
+    const monthsCompleted = monthlyDue > 0 ? Math.floor(totalPaid / monthlyDue) : 0;
+    
+    const d = new Date(loan.startDate);
+    d.setMonth(d.getMonth() + monthsCompleted + 1);
+    return d.toISOString().split('T')[0];
+  }
+  
+  if (!duration || duration <= 0) return null;
   
   let emi = 0;
   let totalPayable = 0;
@@ -2140,7 +2157,6 @@ function openLoanModal(clientId = null, loanId = null, loanMode = 'traditional')
     const l = Store.loans().find(x => x.id === loanId);
     if (l) {
       select.value = l.clientId;
-      $('#loan-category').value = l.category || 'with_interest';
       
       if (l.interestType === 'total-amount-mode') {
         $('#loan-mode').value = 'total-amount-with-interest';
@@ -2181,7 +2197,6 @@ function openLoanModal(clientId = null, loanId = null, loanMode = 'traditional')
     }
   } else {
     $('#loan-form').reset();
-    $('#loan-category').value = '';
     if (loanMode === 'total-amount-with-interest') {
       showTotalAmount();
     } else {
@@ -2201,6 +2216,35 @@ function openLoanModal(clientId = null, loanId = null, loanMode = 'traditional')
 }
 
 function updateEMIPreview() {
+  const loanMode = $('#loan-mode').value;
+  
+  // Handle "Total Amount with Interest" mode
+  if (loanMode === 'total-amount-with-interest') {
+    const totalAmount = parseFloat($('#loan-total-amount').value);
+    const monthlyDue = parseFloat($('#loan-monthly-due').value) || 0;
+    
+    if (!totalAmount || totalAmount < 1) {
+      $('#emi-preview').classList.add('d-none');
+      return;
+    }
+    
+    // Calculate months it will take to pay off
+    const months = monthlyDue > 0 ? Math.ceil(totalAmount / monthlyDue) : 0;
+    
+    $('#emi-preview-monthly-interest').textContent = 'Monthly Due';
+    $('#emi-preview-weekly-interest').textContent = fmtCur(monthlyDue / 4.33);
+    $('#emi-preview-amount').textContent = fmtCur(monthlyDue);
+    $('#emi-preview-total').textContent = fmtCur(totalAmount);
+    $('#emi-preview-remaining').textContent = fmtCur(totalAmount);
+    
+    const labelEl = $('#emi-preview-collection-label');
+    if (labelEl) labelEl.textContent = `Monthly Payment (${months} months estimated)`;
+    
+    $('#emi-preview').classList.remove('d-none');
+    return;
+  }
+
+  // Traditional mode
   const p = parseFloat($('#loan-principal').value);
   const r = parseFloat($('#loan-interest').value) || 0;
   const dVal = $('#loan-duration').value;
@@ -2739,7 +2783,7 @@ function renderSettings(container) {
       <div class="kf-card pro-card mt-3" data-ocid="settings.install_app_card">
         <div class="section-title"><i class="fa-solid fa-mobile-screen-button"></i>Install Application</div>
         <p class="text-muted-kf fs-sm mb-3">Install SamKass on your device for quick access and offline functionality.</p>
-        <button class="btn-kf-primary w-100" style="min-height:52px; font-weight: 700; font-size: 1rem;" id="btn-install-app" data-pwa-install-btn data-ocid="settings.install_app_button">
+        <button class="btn-kf-primary w-100" style="min-height:52px; font-weight: 700; font-size: 1rem;" id="btn-install-app" data-ocid="settings.install_app_button">
           <i class="fa-solid fa-download me-2"></i>Install App
         </button>
       </div>
@@ -3210,51 +3254,34 @@ create table if not exists payments (
     }
 
     installBtn.addEventListener('click', async () => {
-      console.log('🔘🔘🔘 INSTALL BUTTON CLICKED 🔘🔘🔘');
-      console.log('window.deferredPrompt value:', window.deferredPrompt);
-      console.log('pwaDeferredPromptCaptured:', window.pwaDeferredPromptCaptured);
+      console.log('🔘 Install button clicked');
+      console.log('📦 deferredPrompt:', window.deferredPrompt);
 
-      // Check if we have the deferred prompt
       if (!window.deferredPrompt) {
-        console.error('❌ deferredPrompt is NULL');
-        console.error('beforeinstallprompt event was NOT captured');
-        console.error('The browser may not support PWA install or it was already installed');
-        
-        // Show what we know
-        console.log('Debugging Info:');
-        console.log('- pwaDeferredPromptCaptured:', window.pwaDeferredPromptCaptured);
-        console.log('- beforeinstallprompt in window:', 'beforeinstallprompt' in window);
-        
-        // Don't show toast - the user will see this in console
+        // If beforeinstallprompt not available, show manual install instructions
+        showToast('To install: Tap browser menu (⋮) → "Add to Home screen" or "Install app"', 'info');
         return;
       }
 
       try {
-        console.log('✅ Showing PWA install dialog...');
-        console.log('Calling deferredPrompt.prompt()');
-        
-        // Show the native browser install prompt dialog
-        await window.deferredPrompt.prompt();
-        
-        // Get user's choice
+        window.deferredPrompt.prompt();
         const { outcome } = await window.deferredPrompt.userChoice;
-        console.log('👤 User chose:', outcome);
+        console.log('👤 User choice:', outcome);
 
         if (outcome === 'accepted') {
-          console.log('✅✅✅ USER ACCEPTED - APP INSTALLING ✅✅✅');
+          showToast('App installed successfully! Check your home screen.', 'success');
           installBtn.innerHTML = '<i class="fa-solid fa-check me-2"></i>App Installed';
           installBtn.disabled = true;
           installBtn.style.opacity = '0.6';
         } else {
-          console.log('❌ User dismissed/cancelled install');
+          showToast('Installation cancelled', 'info');
         }
-        
-        // Reset
-        window.deferredPrompt = null;
       } catch (err) {
-        console.error('❌ Error during install prompt:', err);
-        console.error('Error details:', err.message);
+        console.error('❌ Install prompt error:', err);
+        showToast('To install: Tap browser menu (⋮) → "Add to Home screen"', 'info');
       }
+
+      window.deferredPrompt = null;
     });
   }, 100);
 }
@@ -4571,17 +4598,13 @@ function bindGlobal() {
     const clientId = $('#loan-client-select').value;
     const loanMode = $('#loan-mode').value;
     const type = $('#loan-type').value;
-    const category = $('#loan-category').value;
     const startDate = $('#loan-start-date').value || today();
 
     if (!clientId) {
       showToast('Select a client', 'error'); return;
     }
-    if (!category) {
-      showToast('Select a loan type', 'error'); return;
-    }
 
-    let loanData = { clientId, type, startDate, loanMode, category };
+    let loanData = { clientId, type, startDate, loanMode };
 
     if (loanMode === 'total-amount-with-interest') {
       const totalAmount = parseFloat($('#loan-total-amount').value);
@@ -4656,6 +4679,18 @@ function bindGlobal() {
         updateEMIPreview();
       });
       el.addEventListener('change', updateEMIPreview);
+    }
+  });
+
+  // Total Amount Mode input listeners
+  ['loan-total-amount', 'loan-monthly-due'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('input', (e) => {
+        if (e.target.type === 'number' && e.target.value < 0) {
+          e.target.value = Math.abs(e.target.value);
+        }
+      });
     }
   });
 
@@ -5018,8 +5053,12 @@ window.closeContactOnOverlay = function (e) {
 }
 
 // ── PWA INSTALL HANDLER (Must be before DOMContentLoaded) ────────
-// Note: The beforeinstallprompt event is already captured in auth.js
-// This just handles the UI button click
+window.deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  console.log('✅ PWA: beforeinstallprompt event captured');
+  e.preventDefault();
+  window.deferredPrompt = e;
+});
 
 window.addEventListener('appinstalled', () => {
   console.log('✅ PWA: App installed successfully');

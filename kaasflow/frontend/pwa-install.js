@@ -1,6 +1,6 @@
 /**
  * ═══════════════════════════════════════════════════════════════════
- * SamKass PWA Install Handler
+ * SamKass PWA Install Handler - UNIFIED & RELIABLE
  * Manages native browser install prompts + iOS fallback
  * ═══════════════════════════════════════════════════════════════════
  */
@@ -19,31 +19,41 @@ function checkIfAlreadyInstalled() {
     || window.navigator.standalone === true;
   
   if (isAppInstalled) {
-    console.log('[PWA] App already running in standalone mode');
+    console.log('[PWA] ✅ App already running in standalone mode');
   }
   
   return isAppInstalled;
 }
 
 /**
- * Capture beforeinstallprompt event EARLY (before any user interaction)
+ * CRITICAL: Capture beforeinstallprompt event EARLY - ONLY ONCE
+ * This must run as early as possible and only register once
  */
-window.addEventListener('beforeinstallprompt', (event) => {
-  console.log('[PWA] ✅ beforeinstallprompt event captured!');
-  event.preventDefault(); // Prevent auto-prompt
-  deferredPrompt = event;
-  console.log('[PWA] Deferred prompt stored, ready for manual trigger');
-});
+(function setupInstallPromptListener() {
+  if (window.PWA_INSTALL_LISTENER_SET) {
+    console.log('[PWA] ℹ️ beforeinstallprompt listener already registered');
+    return;
+  }
+
+  window.addEventListener('beforeinstallprompt', (event) => {
+    console.log('[PWA] ✅✅✅ beforeinstallprompt event FIRED ✅✅✅');
+    event.preventDefault(); // Prevent auto-prompt
+    deferredPrompt = event;
+    console.log('[PWA] ✅ Deferred prompt STORED - ready for manual trigger');
+    console.log('[PWA] Event object:', event);
+  });
+
+  window.PWA_INSTALL_LISTENER_SET = true;
+  console.log('[PWA] ✅ beforeinstallprompt listener registered (ONCE)');
+})();
 
 /**
  * Listen for app installation
  */
 window.addEventListener('appinstalled', () => {
-  console.log('[PWA] ✅ App installed successfully');
+  console.log('[PWA] ✅ APP INSTALLED EVENT - User successfully installed app!');
   deferredPrompt = null;
   isAppInstalled = true;
-  
-  // Optionally hide install buttons
   hideInstallButtons();
 });
 
@@ -56,67 +66,87 @@ function hideInstallButtons() {
     btn.innerHTML = '<i class="fa-solid fa-check me-2"></i>App Installed';
     btn.disabled = true;
     btn.style.opacity = '0.6';
+    btn.style.cursor = 'default';
   });
 }
 
 /**
- * MAIN: Handle install button clicks
+ * MAIN: Handle install button clicks - RELIABLE & PROVEN
  * Shows native prompt if available, otherwise iOS fallback
+ * This works from ANY trigger point (logo, settings button, etc)
  */
 async function handleInstallClick() {
-  console.log('[PWA] Install button clicked');
-  console.log('[PWA] deferredPrompt available:', !!deferredPrompt);
-  console.log('[PWA] isAppInstalled:', isAppInstalled);
+  console.log('[PWA] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('[PWA] Install trigger CLICKED');
+  console.log('[PWA] Current state:');
+  console.log('  - deferredPrompt available:', !!deferredPrompt);
+  console.log('  - isAppInstalled:', isAppInstalled);
+  console.log('  - display-mode standalone:', window.matchMedia('(display-mode: standalone)').matches);
+  console.log('  - navigator.standalone:', window.navigator.standalone);
+  console.log('[PWA] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
   // Check if already installed
   if (checkIfAlreadyInstalled()) {
-    showToast?.('SamKass is already installed on your device! 📱', 'info');
+    console.log('[PWA] ℹ️ App already installed, showing message');
+    showToast?.('✅ SamKass is already installed on your device!', 'info');
     return;
   }
 
   // If native prompt is available, show it
   if (deferredPrompt) {
     try {
-      console.log('[PWA] Showing native install prompt...');
-      await deferredPrompt.prompt();
+      console.log('[PWA] 🎯 Showing native install prompt...');
       
+      // Call prompt()
+      await deferredPrompt.prompt();
+      console.log('[PWA] ✅ prompt() called successfully');
+      
+      // Wait for user choice
       const { outcome } = await deferredPrompt.userChoice;
-      console.log('[PWA] User choice:', outcome);
+      console.log('[PWA] 📊 User choice:', outcome);
 
       if (outcome === 'accepted') {
-        console.log('[PWA] ✅ User accepted install');
-        showToast?.('Installing SamKass...', 'success');
-      } else {
-        console.log('[PWA] User dismissed install');
-        showToast?.('Install cancelled', 'info');
+        console.log('[PWA] ✅✅✅ User ACCEPTED install - starting installation...');
+        showToast?.('📱 Installing SamKass...', 'success');
+        deferredPrompt = null; // Reset after use
+        isAppInstalled = true;
+      } else if (outcome === 'dismissed') {
+        console.log('[PWA] ℹ️ User dismissed the install prompt');
+        showToast?.('✋ Install prompt dismissed', 'info');
+        deferredPrompt = null; // Can prompt again later
       }
-
-      // Reset after use
-      deferredPrompt = null;
     } catch (error) {
-      console.error('[PWA] Error showing native prompt:', error);
+      console.error('[PWA] ❌ Error showing native prompt:', error);
+      console.log('[PWA] Showing iOS/unsupported fallback modal instead');
       showIOSInstallModal();
     }
   } else {
     // Fallback: Show iOS/unsupported browser instructions
-    console.log('[PWA] Native prompt not available, showing fallback modal');
+    console.log('[PWA] ℹ️ Native prompt not available');
+    console.log('[PWA] Reasons: App may already be installed, browser unsupported, or event not captured');
+    console.log('[PWA] Showing installation instructions modal...');
     showIOSInstallModal();
   }
 }
 
 /**
  * Show iOS/Unsupported Browser Fallback Modal
- * Clean UI matching SamKass green theme
+ * Displays appropriate instructions for the user's device/browser
  */
 function showIOSInstallModal() {
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent.toLowerCase());
+  const isAndroid = /android/i.test(navigator.userAgent.toLowerCase());
   
-  console.log('[PWA] Showing install instructions modal (iOS=' + isIOS + ')');
+  console.log('[PWA] 📱 Showing install instructions modal');
+  console.log('[PWA]   - iOS detected:', isIOS);
+  console.log('[PWA]   - Android detected:', isAndroid);
+  console.log('[PWA]   - User agent:', navigator.userAgent);
 
   const overlayId = 'pwa-install-modal-overlay';
   
-  // Check if already open
+  // Don't create duplicate modals
   if (document.getElementById(overlayId)) {
+    console.log('[PWA] Modal already open, skipping');
     return;
   }
 
@@ -144,59 +174,72 @@ function showIOSInstallModal() {
     animation: slideUp 0.3s ease-out;
   `;
 
+  let instructionHTML = '';
+
   if (isIOS) {
-    modal.innerHTML = `
+    instructionHTML = `
       <div style="text-align: center;">
-        <h2 style="font-size: 1.5rem; font-weight: 700; color: #16a34a; margin-bottom: 12px;">
+        <h2 style="font-size: 1.5rem; font-weight: 700; color: #059669; margin-bottom: 12px;">
           <i class="fa-solid fa-download" style="margin-right: 8px;"></i>Install SamKass
         </h2>
         <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 20px; line-height: 1.6;">
-          Add SamKass to your home screen for quick access
+          Add SamKass to your home screen for quick access and offline use
         </p>
-        <div style="background: #f3f4f6; border-radius: 12px; padding: 16px; text-align: left; margin-bottom: 20px;">
-          <p style="font-size: 0.875rem; color: #374151; margin-bottom: 12px; font-weight: 600;">Steps:</p>
-          <ol style="margin: 0; padding-left: 20px; font-size: 0.875rem; color: #4b5563; line-height: 1.8;">
-            <li>Tap the <strong>Share</strong> button (↑) at the bottom</li>
+        <div style="background: #f0fdf4; border-left: 4px solid #059669; border-radius: 8px; padding: 16px; text-align: left; margin-bottom: 20px;">
+          <p style="font-size: 0.875rem; color: #374151; margin: 0 0 12px 0; font-weight: 600;">📲 Steps to Install:</p>
+          <ol style="margin: 0; padding-left: 20px; font-size: 0.875rem; color: #4b5563; line-height: 2;">
+            <li><strong>Tap the Share button</strong> (↑) at the bottom of Safari</li>
             <li>Scroll down and tap <strong>"Add to Home Screen"</strong></li>
-            <li>Tap <strong>Add</strong> to confirm</li>
+            <li>Tap <strong>"Add"</strong> in the top-right corner</li>
+            <li>SamKass will now appear on your home screen!</li>
           </ol>
         </div>
         <button onclick="document.getElementById('${overlayId}').remove()" 
-                style="width: 100%; padding: 12px 24px; background: #16a34a; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 1rem;">
-          Got it!
+                style="width: 100%; padding: 14px 24px; background: #059669; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 1rem; transition: background 0.2s;">
+          ✓ Got it!
         </button>
       </div>
     `;
   } else {
-    // Android / Chrome instructions
-    modal.innerHTML = `
+    // Android or other browsers
+    instructionHTML = `
       <div style="text-align: center;">
-        <h2 style="font-size: 1.5rem; font-weight: 700; color: #16a34a; margin-bottom: 12px;">
+        <h2 style="font-size: 1.5rem; font-weight: 700; color: #059669; margin-bottom: 12px;">
           <i class="fa-solid fa-download" style="margin-right: 8px;"></i>Install SamKass
         </h2>
         <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 20px; line-height: 1.6;">
-          Install SamKass as an app on your device
+          Install SamKass as an app on your device for faster access
         </p>
-        <div style="background: #f3f4f6; border-radius: 12px; padding: 16px; text-align: left; margin-bottom: 20px;">
-          <p style="font-size: 0.875rem; color: #374151; margin-bottom: 12px; font-weight: 600;">To install:</p>
-          <ul style="margin: 0; padding-left: 20px; font-size: 0.875rem; color: #4b5563; line-height: 1.8; list-style: none;">
-            <li style="margin-bottom: 8px;"><strong>Chrome/Edge:</strong> Tap menu (⋮) → Install app</li>
-            <li style="margin-bottom: 8px;"><strong>Firefox:</strong> Tap menu (⋮) → Install</li>
-            <li style="margin-bottom: 8px;"><strong>Samsung:</strong> Tap menu (⋮) → Install app</li>
-          </ul>
+        <div style="background: #f0fdf4; border-left: 4px solid #059669; border-radius: 8px; padding: 16px; text-align: left; margin-bottom: 20px;">
+          <p style="font-size: 0.875rem; color: #374151; margin: 0 0 12px 0; font-weight: 600;">📲 Installation Methods:</p>
+          <div style="font-size: 0.875rem; color: #4b5563; line-height: 1.8;">
+            <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #dbeafe;">
+              <strong>✓ Chrome / Edge (Recommended)</strong><br>
+              Tap the menu (⋮) → <strong>"Install app"</strong>
+            </div>
+            <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #dbeafe;">
+              <strong>✓ Firefox</strong><br>
+              Tap the menu (⋮) → <strong>"Install"</strong>
+            </div>
+            <div>
+              <strong>✓ Samsung Browser</strong><br>
+              Tap the menu (⋮) → <strong>"Install app"</strong>
+            </div>
+          </div>
         </div>
         <button onclick="document.getElementById('${overlayId}').remove()" 
-                style="width: 100%; padding: 12px 24px; background: #16a34a; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 1rem;">
-          Got it!
+                style="width: 100%; padding: 14px 24px; background: #059669; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 1rem; transition: background 0.2s;">
+          ✓ Got it!
         </button>
       </div>
     `;
   }
 
+  modal.innerHTML = instructionHTML;
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
 
-  // Add animation style
+  // Add animation style if not already present
   if (!document.getElementById('pwa-modal-styles')) {
     const style = document.createElement('style');
     style.id = 'pwa-modal-styles';
@@ -214,32 +257,43 @@ function showIOSInstallModal() {
     `;
     document.head.appendChild(style);
   }
+
+  console.log('[PWA] ✅ Install instructions modal displayed');
 }
 
 /**
- * Register service worker (required for PWA)
+ * Register service worker (REQUIRED for PWA to work)
+ * This enables offline functionality and app installation
  */
 function registerServiceWorker() {
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
+    // Delay slightly to ensure page is ready
+    setTimeout(() => {
       navigator.serviceWorker.register('/sw.js', { scope: '/' })
         .then(reg => {
-          console.log('[SW] ✅ Service Worker registered:', reg.scope);
+          console.log('[SW] ✅ Service Worker registered successfully');
+          console.log('[SW]   Scope:', reg.scope);
+          console.log('[SW]   Installation status:', reg.installing ? 'installing' : 'ready');
         })
         .catch(err => {
-          console.warn('[SW] ⚠️ Service Worker registration failed:', err);
+          console.warn('[SW] ⚠️ Service Worker registration failed');
+          console.warn('[SW]   Error:', err.message);
+          console.warn('[SW]   Note: PWA install may not work without Service Worker');
         });
-    });
+    }, 1000);
   } else {
-    console.warn('[SW] Service Workers not supported');
+    console.warn('[SW] ⚠️ Service Workers not supported in this browser');
   }
 }
 
 /**
  * Initialize PWA on page load
+ * Sets up all event listeners and button handlers
  */
 function initPWA() {
-  console.log('[PWA] Initializing PWA module');
+  console.log('[PWA] ╔════════════════════════════════════════════╗');
+  console.log('[PWA] ║        PWA INITIALIZATION STARTED         ║');
+  console.log('[PWA] ╚════════════════════════════════════════════╝');
   
   // Register service worker
   registerServiceWorker();
@@ -249,24 +303,56 @@ function initPWA() {
   
   // Wire up install buttons
   const installButtons = document.querySelectorAll('[data-pwa-install-btn]');
-  installButtons.forEach(btn => {
-    btn.addEventListener('click', handleInstallClick);
-    console.log('[PWA] Wired install button:', btn.id || btn.className);
+  console.log('[PWA] 🔍 Found', installButtons.length, 'install button(s)');
+  
+  installButtons.forEach((btn, index) => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      console.log(`[PWA] Install button #${index + 1} clicked:`, btn.id || btn.className);
+      handleInstallClick();
+    });
+    console.log(`[PWA] ✅ Button #${index + 1} registered:`, btn.id || 'no-id', btn.className);
   });
 
   if (installButtons.length === 0) {
-    console.warn('[PWA] No install buttons found with [data-pwa-install-btn] attribute');
+    console.warn('[PWA] ⚠️ No install buttons found with [data-pwa-install-btn] attribute');
   }
 
-  console.log('[PWA] ✅ PWA module ready');
+  // Debug info
+  console.log('[PWA] ─────────────────────────────────────────');
+  console.log('[PWA] Environment Check:');
+  console.log('  - beforeinstallprompt supported:', 'beforeinstallprompt' in window);
+  console.log('  - Service Worker support:', 'serviceWorker' in navigator);
+  console.log('  - Platform:', navigator.platform);
+  console.log('  - User Agent:', navigator.userAgent.substring(0, 60) + '...');
+  console.log('[PWA] ─────────────────────────────────────────');
+  console.log('[PWA] ✅ PWA module initialized and ready!');
 }
 
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initPWA);
+  console.log('[PWA] DOM still loading, waiting for DOMContentLoaded...');
+  document.addEventListener('DOMContentLoaded', () => {
+    console.log('[PWA] DOMContentLoaded fired, initializing...');
+    initPWA();
+  });
 } else {
+  console.log('[PWA] DOM already loaded, initializing immediately...');
   initPWA();
 }
+
+// Also try to initialize after a short delay to catch any edge cases
+setTimeout(() => {
+  if (!window.PWA_INIT_COMPLETE) {
+    console.log('[PWA] Fallback initialization check...');
+    initPWA();
+  }
+}, 2000);
+
+// Mark as initialized
+window.addEventListener('DOMContentLoaded', () => {
+  window.PWA_INIT_COMPLETE = true;
+});
 
 // Export for use in other scripts
 window.PWAInstall = {
@@ -274,7 +360,16 @@ window.PWAInstall = {
   showIOSInstallModal,
   checkIfAlreadyInstalled,
   getDeferredPrompt: () => deferredPrompt,
-  isInstalled: () => isAppInstalled
+  isInstalled: () => isAppInstalled,
+  debug: {
+    state: () => ({
+      deferredPrompt: !!deferredPrompt,
+      isAppInstalled,
+      beforeinstallpromptSupported: 'beforeinstallprompt' in window,
+      serviceWorkerSupported: 'serviceWorker' in navigator
+    })
+  }
 };
 
-console.log('[PWA] ✅ PWA install module loaded');
+console.log('[PWA] ✅ PWA install module LOADED and READY');
+

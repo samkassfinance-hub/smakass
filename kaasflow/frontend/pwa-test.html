@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SamKass PWA Installation Test</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Outfit', Arial, sans-serif;
+            background: linear-gradient(135deg, #000000 0%, #0a0f0a 100%);
+            color: #ffffff;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #7ed321, #4caf1a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .subtitle {
+            color: #b0c4b0;
+            margin-bottom: 30px;
+            font-size: 0.9rem;
+        }
+        .card {
+            background: linear-gradient(145deg, #0d1a0d, #0a0f0a);
+            border: 1px solid #1a3a1a;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        .section-title {
+            color: #7ed321;
+            font-size: 1.2rem;
+            margin-bottom: 16px;
+            font-weight: 700;
+        }
+        .status {
+            margin-bottom: 16px;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            border-left: 4px solid #7ed321;
+            background: rgba(126, 211, 33, 0.05);
+        }
+        .status.error {
+            border-left-color: #ff4444;
+            background: rgba(255, 68, 68, 0.05);
+        }
+        .status.warning {
+            border-left-color: #ffa500;
+            background: rgba(255, 165, 0, 0.05);
+        }
+        .status strong { color: #7ed321; }
+        .status.error strong { color: #ff4444; }
+        .status.warning strong { color: #ffa500; }
+        
+        .console-output {
+            background: #000000;
+            border: 1px solid #1a3a1a;
+            border-radius: 8px;
+            padding: 16px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: #7ed321;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 16px;
+            line-height: 1.4;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #7ed321, #4caf1a);
+            color: #000;
+            border: none;
+            padding: 14px 24px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-bottom: 12px;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(126, 211, 33, 0.4);
+        }
+        .btn:active {
+            transform: translateY(0);
+        }
+        .btn-secondary {
+            background: #0d1a0d;
+            color: #7ed321;
+            border: 1px solid #1a3a1a;
+        }
+        .btn-secondary:hover {
+            background: #0a0f0a;
+            border-color: #7ed321;
+        }
+        
+        .checklist {
+            list-style: none;
+        }
+        .checklist li {
+            padding: 12px;
+            margin-bottom: 8px;
+            background: rgba(126, 211, 33, 0.05);
+            border-left: 3px solid #7ed321;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        .checklist li.unchecked {
+            opacity: 0.6;
+            border-left-color: #556655;
+        }
+        
+        code {
+            background: #0a1410;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #7ed321;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+        }
+        
+        .icon {
+            display: inline-block;
+            margin-right: 8px;
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 SamKass PWA Installation Tester</h1>
+        <p class="subtitle">Test if PWA install is working correctly on your device</p>
+
+        <!-- STATUS SECTION -->
+        <div class="card">
+            <div class="section-title"><span class="icon">📊</span>System Status</div>
+            <div id="status-container"></div>
+        </div>
+
+        <!-- CONSOLE OUTPUT -->
+        <div class="card">
+            <div class="section-title"><span class="icon">💻</span>Console Output (Live)</div>
+            <div class="console-output" id="console-output">
+                <div style="color: #556655;">Waiting for events...</div>
+            </div>
+        </div>
+
+        <!-- TEST BUTTONS -->
+        <div class="card">
+            <div class="section-title"><span class="icon">⚡</span>Quick Tests</div>
+            <button class="btn" onclick="testInstall()">
+                <span class="icon">📱</span>Test Install Prompt
+            </button>
+            <button class="btn btn-secondary" onclick="showDebugState()">
+                <span class="icon">🔍</span>Show Debug State
+            </button>
+            <button class="btn btn-secondary" onclick="showIOSFallback()">
+                <span class="icon">📲</span>Show iOS Modal (Test)
+            </button>
+            <button class="btn btn-secondary" onclick="clearConsole()">
+                <span class="icon">🗑️</span>Clear Console
+            </button>
+        </div>
+
+        <!-- CHECKLIST -->
+        <div class="card">
+            <div class="section-title"><span class="icon">✅</span>Pre-Installation Checklist</div>
+            <ul class="checklist" id="checklist"></ul>
+        </div>
+
+        <!-- INSTRUCTIONS -->
+        <div class="card">
+            <div class="section-title"><span class="icon">📖</span>How to Test</div>
+            <ol style="margin-left: 20px; color: #b0c4b0; line-height: 1.8;">
+                <li>Check the <strong>System Status</strong> above</li>
+                <li>Click <strong>"Test Install Prompt"</strong> button</li>
+                <li>Check the <strong>Console Output</strong> for messages</li>
+                <li>If no native prompt, an <strong>instruction modal</strong> will appear</li>
+                <li>Follow the on-screen instructions to install</li>
+            </ol>
+        </div>
+
+        <!-- HELP -->
+        <div class="card">
+            <div class="section-title"><span class="icon">❓</span>Troubleshooting</div>
+            <ul style="margin-left: 20px; color: #b0c4b0; line-height: 1.8;">
+                <li><strong>No status messages?</strong> → PWA module not loaded, refresh the page</li>
+                <li><strong>Service Worker failed?</strong> → <code>/sw.js</code> not found or not accessible</li>
+                <li><strong>Nothing happens on click?</strong> → Browser may not support PWA or app already installed</li>
+                <li><strong>Modal appears instead of prompt?</strong> → Normal on iOS, follow the instructions</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Load PWA module -->
+    <script src="pwa-install.js?v=1"></script>
+
+    <script>
+        // Initialize console capture
+        const consoleLog = console.log;
+        const consoleWarn = console.warn;
+        const consoleError = console.error;
+
+        function addConsoleMessage(msg, type = 'log') {
+            const output = document.getElementById('console-output');
+            const line = document.createElement('div');
+            line.style.color = type === 'error' ? '#ff4444' : type === 'warn' ? '#ffa500' : '#7ed321';
+            line.textContent = msg;
+            output.appendChild(line);
+            output.scrollTop = output.scrollHeight;
+        }
+
+        console.log = function(...args) {
+            consoleLog.apply(console, args);
+            addConsoleMessage(args.join(' '), 'log');
+        };
+
+        console.warn = function(...args) {
+            consoleWarn.apply(console, args);
+            addConsoleMessage(args.join(' '), 'warn');
+        };
+
+        console.error = function(...args) {
+            consoleError.apply(console, args);
+            addConsoleMessage(args.join(' '), 'error');
+        };
+
+        // Update status on load
+        function updateStatus() {
+            const state = window.PWAInstall?.debug?.state?.() || {};
+            const statusContainer = document.getElementById('status-container');
+            statusContainer.innerHTML = `
+                <div class="status ${state.beforeinstallpromptSupported ? '' : 'warning'}">
+                    <strong>beforeinstallprompt:</strong> ${state.beforeinstallpromptSupported ? '✅ Supported' : '⚠️ Not Supported'}
+                </div>
+                <div class="status ${state.serviceWorkerSupported ? '' : 'error'}">
+                    <strong>Service Worker:</strong> ${state.serviceWorkerSupported ? '✅ Supported' : '❌ Not Supported'}
+                </div>
+                <div class="status ${state.deferredPrompt ? '' : 'warning'}">
+                    <strong>Deferred Prompt:</strong> ${state.deferredPrompt ? '✅ Ready' : '⏳ Not Ready (may already be installed)'}
+                </div>
+                <div class="status ${!state.isAppInstalled ? '' : 'warning'}">
+                    <strong>App Installed:</strong> ${state.isAppInstalled ? '✅ Yes (app in standalone mode)' : '❌ No'}
+                </div>
+            `;
+
+            updateChecklist(state);
+        }
+
+        function updateChecklist(state) {
+            const checks = [
+                { label: 'PWA Module Loaded', passed: !!window.PWAInstall },
+                { label: 'beforeinstallprompt Supported', passed: state.beforeinstallpromptSupported },
+                { label: 'Service Worker Supported', passed: state.serviceWorkerSupported },
+                { label: 'Deferred Prompt Available', passed: state.deferredPrompt },
+                { label: 'App Not Yet Installed', passed: !state.isAppInstalled },
+            ];
+
+            const checklist = document.getElementById('checklist');
+            checklist.innerHTML = checks.map(check => `
+                <li ${!check.passed ? 'class="unchecked"' : ''}>
+                    ${check.passed ? '✅' : '⏳'} ${check.label}
+                </li>
+            `).join('');
+        }
+
+        async function testInstall() {
+            console.log('🧪 Starting PWA install test...');
+            if (window.PWAInstall) {
+                await window.PWAInstall.handleInstallClick();
+            } else {
+                console.error('PWA module not loaded');
+            }
+        }
+
+        function showDebugState() {
+            const state = window.PWAInstall?.debug?.state?.();
+            console.log('📋 PWA Debug State:', JSON.stringify(state, null, 2));
+        }
+
+        function showIOSFallback() {
+            if (window.PWAInstall) {
+                window.PWAInstall.showIOSInstallModal();
+            }
+        }
+
+        function clearConsole() {
+            document.getElementById('console-output').innerHTML = '<div style="color: #556655;">Console cleared</div>';
+        }
+
+        // Update status when PWA module loads
+        window.addEventListener('load', () => {
+            setTimeout(updateStatus, 1000);
+        });
+
+        if (document.readyState === 'complete') {
+            setTimeout(updateStatus, 500);
+        }
+
+        // Auto-update every 2 seconds
+        setInterval(updateStatus, 2000);
+
+        addConsoleMessage('🚀 PWA Test Page Loaded - Waiting for PWA module...', 'log');
+    </script>
+</body>
+</html>

@@ -1422,9 +1422,9 @@
 <body id="app-body">
 
   <!-- FLOATING BUBBLES - Only visible on auth screens -->
-  <!-- Logo Bubble with "Install App" Label (Top Left - MOVED FROM BOTTOM) -->
+  <!-- Logo Bubble with "Install App" Label (Bottom Left) -->
   <div id="logo-bubble-container" class="draggable-bubble auth-only-bubble"
-    style="position: fixed; top: 30px; left: 8%; display: none; flex-direction: column; align-items: center; z-index: 9999; cursor: pointer; touch-action: none;">
+    style="position: fixed; bottom: 100px; left: 8%; display: none; flex-direction: column; align-items: center; z-index: 9999; cursor: pointer; touch-action: none;">
     <div id="logo-bubble" class="custom-floating-bubble logo-bubble"
       style="width: 95px; height: 95px; border-radius: 50%; background: linear-gradient(135deg, #7ed321 0%, #4caf1a 50%, #3d9b15 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 20px 60px rgba(126, 211, 33, 0.7), 0 0 40px rgba(126, 211, 33, 0.4); animation: crazy-bubble-float-1 5s ease-in-out infinite; border: 4px solid rgba(255, 255, 255, 0.4); cursor: pointer; transition: all 0.3s ease; position: relative;">
       <div
@@ -1439,9 +1439,9 @@
     </div>
   </div>
 
-  <!-- Video Tutorial Bubble with Label (Top Right - MOVED FROM BOTTOM) -->
+  <!-- Video Tutorial Bubble with Label (Bottom Right) -->
   <div id="video-bubble-container" class="draggable-bubble auth-only-bubble"
-    style="position: fixed; top: 30px; right: 8%; display: none; flex-direction: column; align-items: center; z-index: 9999; cursor: pointer; touch-action: none;">
+    style="position: fixed; bottom: 100px; right: 8%; display: none; flex-direction: column; align-items: center; z-index: 9999; cursor: pointer; touch-action: none;">
     <div id="video-bubble" class="custom-floating-bubble video-bubble"
       style="width: 95px; height: 95px; border-radius: 50%; background: linear-gradient(135deg, #00cfff 0%, #0080c8 50%, #005f96 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 20px 60px rgba(0, 207, 255, 0.7), 0 0 40px rgba(0, 207, 255, 0.4); animation: crazy-bubble-float-2 5.5s ease-in-out infinite; border: 4px solid rgba(255, 255, 255, 0.4); transition: all 0.3s ease; position: relative;">
       <div
@@ -1906,21 +1906,28 @@
       const videoPlaceholder = document.getElementById('video-placeholder');
 
       if (logoBubbleContainer) {
-        makeDraggable(logoBubbleContainer, async function (e) {
-          // Don't trigger install if clicking on PIN inputs or any focused form element
-          if (e.target && (e.target.classList.contains('pin-digit-input') || 
-              e.target.closest('input:not(.pin-digit-input)') || 
-              e.target.closest('textarea') ||
-              e.target.closest('select') ||
-              document.activeElement?.classList.contains('pin-digit-input'))) {
-            return;
-          }
-          
-          // Use the centralized PWA install handler
-          if (window.PWAInstall) {
-            await window.PWAInstall.handleInstallClick();
+        makeDraggable(logoBubbleContainer, async function () {
+          // Directly trigger native PWA install prompt (no custom modal)
+          if (deferredPrompt) {
+            try {
+              // Show native browser install prompt
+              await deferredPrompt.prompt();
+              const { outcome } = await deferredPrompt.userChoice;
+              console.log(`User response to install prompt: ${outcome}`);
+              if (outcome === 'accepted') {
+                console.log('✅ User accepted the install prompt');
+              } else {
+                console.log('❌ User dismissed the install prompt');
+              }
+              deferredPrompt = null;
+            } catch (err) {
+              console.error('Install prompt error:', err);
+              // Fallback if native prompt fails
+              alert('To install:\n\n• Chrome/Edge: Click menu (⋮) > Install app\n• Safari: Tap share (↗) > Add to Home Screen\n• Firefox: Tap menu (⋮) > Install');
+            }
           } else {
-            console.warn('PWA install module not loaded yet');
+            // Native prompt not available, show instructions
+            alert('To install:\n\n• Chrome/Edge: Click menu (⋮) > Install app\n• Safari: Tap share (↗) > Add to Home Screen\n• Firefox: Tap menu (⋮) > Install');
           }
         });
       }
@@ -1943,10 +1950,12 @@
 
       if (pwaInstallBtn) {
         pwaInstallBtn.addEventListener('click', async function () {
-          if (window.deferredPrompt) {
-            window.deferredPrompt.prompt();
-            const { outcome } = await window.deferredPrompt.userChoice;
-            window.deferredPrompt = null;
+          if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            deferredPrompt = null;
+          } else {
+            alert('To install:\n\n• Chrome/Edge: Click menu (⋮) > Install app\n• Safari: Tap share (↗) > Add to Home Screen\n• Firefox: Tap menu (⋮) > Install');
           }
           pwaModal.style.display = 'none';
         });
@@ -3473,26 +3482,8 @@
   <!-- Supabase JS SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <!-- SERVICE WORKER REGISTRATION (must be before app.js) -->
-  <script>
-    // Register service worker for PWA support
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js')
-          .then(reg => console.log('✅ Service Worker registered'))
-          .catch(err => console.warn('⚠️ Service Worker registration failed:', err));
-      });
-    }
-  </script>
-
-  <!-- PWA INSTALL HANDLER (must load before app.js) -->
-  <script src="pwa-install.js?v=1"></script>
-
-  <!-- APP SCRIPT -->
+  <!-- App Script - MUST LOAD FIRST -->
   <script src="app.js?v=18"></script>
-  
-  <!-- AUTH SCRIPT (PWA Install Prompt) -->
-  <script src="auth.js?v=1"></script>
 
   <!-- Feature Scripts - Load after app.js -->
   <script src="supabase_sync.js?v=3" defer></script>
